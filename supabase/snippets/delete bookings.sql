@@ -1,0 +1,1 @@
+DELETE FROM public.court_slot_locks;  DELETE FROM public.bookings;
