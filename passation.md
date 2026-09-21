@@ -36,7 +36,7 @@
 ---
 
 ### 🔄 Milestone 2 — Auth Flow, Anti-Spam Verification & RBAC
-**IN PROGRESS (~60% done)**
+**IN PROGRESS (~75% done)**
 
 | Task | Status |
 |---|---|
@@ -48,10 +48,10 @@
 | RBAC Middleware protecting `/dashboard/*`, `/admin/*` + redirects | ✅ Done |
 | Admin verification dashboard (`/admin/verifications`) — Approve / Reject | ✅ Done |
 | Staff invite system (invite modal + `/accept-invite?token=` page) | ✅ Done |
-| Unified Player Auth modal (on public booking page) | 🔄 In Progress |
-| Session duration config (30-day remember-me for players, persistent for staff) | 🔄 In Progress |
+| **Unified Player Auth modal (on public booking page)** | ⬜ **NOT STARTED** |
+| **Session duration config (30-day remember-me for players, persistent for staff)** | ⬜ **NOT STARTED** |
 
-**✅ Fixed bugs in Milestone 2:**
+**✅ Fixed bugs in Milestone 2 (all resolved):**
 
 1. **`import { Link }` → `import Link from 'next/link'`** in `app/accept-invite/page.tsx` line 5 (Fixed)
 2. **Radix `Select` for `role` field** in `components/staff/StaffInviteForm.tsx` (Fixed with `Controller`)
@@ -157,13 +157,18 @@
 | `app/(auth)/signup-owner/` | 4-step signup with Leaflet map + doc upload |
 | `app/(auth)/login-owner/` | Owner login with org status check |
 
-### Staff Invite System (Milestone 2 — in progress)
+### Staff Invite System (Milestone 2 — COMPLETED)
 | File | Role |
 |---|---|
 | `lib/actions/staff-invites.ts` | 5 server actions: create / list / resend / cancel / accept |
-| `components/staff/StaffInviteForm.tsx` | Invite form — email + role (🐛 Select bug) |
+| `components/staff/StaffInviteForm.tsx` | Invite form — email + role (Fixed with `Controller`) |
 | `components/staff/StaffInviteList.tsx` | Invite list — status badges, resend, cancel |
-| `app/accept-invite/page.tsx` | Token validation + account creation (🐛 Link import bug) |
+| `app/accept-invite/page.tsx` | Token validation + account creation (Fixed Link import) |
+
+### Player Auth (Milestone 2 — NOT STARTED)
+| File | Role |
+|---|---|
+| `lib/validations/player-auth.ts` | Zod schemas for player sign-in/sign-up + anonymous booker |
 
 ### Infrastructure
 | File | Role |
@@ -187,17 +192,61 @@
 
 ---
 
-## 📌 Current Focus
+## 📌 Current Focus (as of 2026-09-21)
 
-**Milestone 2 — finish the remaining 4 tasks:**
-1. Fix 3 bugs in Staff Invite (Link import, Select Controller, wire Resend email)
-2. Build `/admin/verifications` — approve/reject dashboard
-3. Build Player Auth Modal
-4. Configure session durations (30-day for players)
+**Milestone 2 — finish the remaining 2 tasks:**
 
-Then → **Milestone 3** (Public Court Availability + Slot Matrix)
+1. **Build Unified Player Auth Modal** — appears on public booking page, handles:
+   - Player sign-in (email + password + 30-day remember-me)
+   - Player sign-up (name + email + phone + password + 30-day remember-me)
+   - Anonymous booking flow (name + phone only)
+   - Uses schemas from `lib/validations/player-auth.ts`
+
+2. **Configure session durations:**
+   - 30-day persistent session for players (via `rememberMe` cookie)
+   - Persistent session for staff/owners (no auto-expiry)
 
 ---
 
-*Last updated: 2026-09-20*
+## 🧠 Code Context — Critical Files for Current Task
+
+| File | Why it matters |
+|---|---|
+| `lib/validations/player-auth.ts` | **Single source of truth** for Player Auth schemas (sign-in, sign-up, anonymous) — already complete |
+| `lib/email/resend.ts` | Email utility — will need `sendPlayerAuthEmail` (booking confirmations, etc.) |
+| `lib/supabase/server.ts` | Server Supabase client — use for server actions in Player Auth |
+| `lib/actions/staff-invites.ts` | Reference pattern for server actions (create + send email + revalidate) |
+| `components/staff/StaffInviteForm.tsx` | Reference pattern for Radix Select + react-hook-form Controller |
+| `middleware.ts` | Session/cookie config lives here — need to add player session handling |
+
+---
+
+## 🚀 Immediate Next Steps (for new session)
+
+1. **Design Player Auth Modal component** — modal with tabs (Sign In / Sign Up / Anonymous), uses `lib/validations/player-auth.ts` schemas, Radix UI Dialog + Tabs, react-hook-form with Controller for Select
+2. **Create server actions** in `lib/actions/player-auth.ts`:
+   - `signInPlayer(email, password, rememberMe)` → sets auth cookie with 30-day maxAge if rememberMe
+   - `signUpPlayer(data)` → creates Supabase auth user + profile, sends welcome email
+   - `createAnonymousBooker(data)` → inserts into `anonymous_bookers`, returns booker ID
+3. **Wire modal into public booking page** (to be created in Milestone 3) — but build modal as reusable component now
+4. **Update middleware.ts** to handle player session cookies (30-day for rememberMe, session for non-rememberMe)
+5. **Test end-to-end**: sign up → verify email → sign in → book court
+
+---
+
+## 🐛 Technical 'Gotchas' — Do Not Forget
+
+| Gotcha | Context |
+|---|---|
+| **Tunisian phone regex** | `/^(\+?216\s?|00216\s?)?[234579]\d{1}[\s.-]?\d{3}[\s.-]?\d{3}$/` — defined in `lib/validations/player-auth.ts` line 12. Accepts: `98123456`, `+216 98 123 456`, `0021698123456` |
+| **Supabase Auth + rememberMe** | Supabase `signInWithPassword` doesn't natively support `rememberMe`. You must manually set the auth cookie maxAge via `supabase.auth.setSession()` or custom cookie handling after login. |
+| **Cookie handling in middleware** | `cookies()` is async. Use `request.cookies.get()` for reading, `response.cookies.set()` for writing in middleware. |
+| **Player vs Staff session duration** | Staff/owners: persistent (no expiry). Players: 30 days if `rememberMe=true`, session-only if `false`. Must distinguish in middleware by checking `profile.role`. |
+| **Anonymous bookers table** | `anonymous_bookers` has unique constraint on `(org_id, phone)`. Handle "phone already exists" gracefully — return existing booker ID or allow re-use. |
+| **Email domain** | Resend emails sent from `noreply@shiftgrid.tn` — ensure domain verified in Resend dashboard before production. |
+| **RLS on anonymous_bookers** | `INSERT` allowed for `anon` role (public booking). `SELECT` only for org members. Check migration `20260907000000_initial_schema.sql` lines 380-395. |
+
+---
+
+*Last updated: 2026-09-21*
 *Update this file at the end of every session — it's the brain, not the code.*
