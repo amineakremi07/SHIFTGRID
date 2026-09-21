@@ -11,8 +11,8 @@
 **Project Name:** ShiftGrid  
 **Domain:** Multi-tenant Sports Court Booking SaaS (Padel, Football, Tennis)  
 **Target Market:** Tunisia (Currency: `TND` / Tunisian Dinar)  
-**Date:** September 20, 2026  
-**Status:** Milestone 1 (100% Completed) | Milestone 2 (~85% Completed — Player Auth Modal + Session Wiring DONE; cookie expiry wired in middleware)
+**Date:** September 22, 2026  
+**Status:** Milestone 1 (100% Completed) | Milestone 2 (100% Completed — Player Auth Modal + Session Cookie Wire + Server Actions DONE)
 
 ---
 
@@ -47,6 +47,11 @@
   - Member bookers link to `profiles.id`.
   - Guest/walk-in bookers link to `anonymous_bookers.id` (storing `org_id`, `name`, `phone`).
 
+### 1.5 Player Auth & Session Cookie Wire (Milestone 2 — Completed 2026-09-22)
+- 3-tab `PlayerAuthModal` (Sign In / Sign Up / Guest).
+- `lib/actions/player-auth.ts`: signIn, signUp, anonymous booker (upsert by `org_id,phone`).
+- Session duration config: `SESSION_DURATION` (player 30d / staff 1yr / default 1d) + middleware cookie maxAge + server-action `cookieStore.set` after signIn/signUp when `rememberMe=true`.
+
 ### 1.4 Staff Management & Invitation Engine (Milestone 2 - Completed)
 - **Tokenized Invites:** Cryptographic token generation via RPC (`generate_invite_token`), 48-hour expiration window.
 - **Transactional Emails:** HTML email dispatch via Resend with dynamic acceptance links (`/accept-invite?token=...`).
@@ -74,18 +79,27 @@
 | `lib/actions/player-auth.ts` | **ACTIVE** | Server actions: signInPlayer, signUpPlayer, createAnonymousBooker — COMPLETED 2026-09-21 |
 | `components/staff/StaffInviteForm.tsx` | Active | Controlled Radix modal form for staff invitation dispatch. |
 | `components/staff/StaffInvitesTable.tsx` | Active | Table showing invite list, statuses, and action controls. |
-| `components/auth/PlayerAuthModal.tsx` | Target | 3-tab modal component (Connexion, Inscription, Réservation Express) returning a unified booker. |
+| `components/player-auth-modal.tsx` | ACTIVE | 3-tab unified player auth modal (Sign In / Sign Up / Guest) with `rememberMe`. |
+| `lib/actions/player-auth.ts` | ACTIVE | Server actions for signInPlayer / signUpPlayer / createAnonymousBooker + cookie wire. |
 | `app/accept-invite/page.tsx` | Active | Public token consumption and account setup page for invited staff. |
 
 ---
 
 ## 3. Current Task in Progress & Exact Next Steps
 
-### Current Milestone: Milestone 2 — Staff & Player Authentication (75% Done)
+### Current Milestone: Milestone 2 — COMPLETED (100% Done, 2026-09-22)
+### Completed Milestone 2 Tasks:
+- DB migration (org status + staff_invites) ✅
+- 4-step owner signup + doc upload ✅
+- Staff invite system (form + list + token accept) ✅
+- Unified Player Auth modal (`components/player-auth-modal.tsx`) ✅
+- Session cookie wire (`middleware.ts` SESSION_DURATION + `lib/actions/player-auth.ts` cookie injection) ✅
+- Anonymous booker server action + Zod validation ✅
 
-### Next Execution Steps:
-
-#### Step 1: Implement `lib/actions/player-auth.ts`
+### Next Milestone: Milestone 3 — Public Court Availability & Interactive Slot Matrix
+- Build `app/courts/page.tsx` public calendar
+- Dynamic slot resolver (60 min tennis / 90 min padel + 15 min buffer)
+- Visual slot states + Supabase Realtime subscriptions
 Implement Server Actions for player authentication and anonymous guest booker creation:
 ```typescript
 'use server'

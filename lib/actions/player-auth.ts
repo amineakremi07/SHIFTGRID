@@ -71,11 +71,15 @@ export async function signInPlayer(
   // If rememberMe, we need to set a long-lived session cookie
   // Supabase handles this via the session, but we can extend cookie lifetime
   // by updating the auth cookie options
-  if (rememberMe) {
-    // The session cookie is managed by Supabase SSR client
-    // Setting maxAge on the session cookie requires middleware intervention
-    // For now, we rely on the Supabase session which defaults to persistent
-    // The middleware will handle the 30-day expiry for players
+  if (rememberMe && authData.session) {
+    const cookieStore = await cookies()
+    cookieStore.set('sb-auth-token', authData.session.access_token, {
+      maxAge: THIRTY_DAYS_SECONDS,
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    })
   }
 
   return { success: true, userId: authData.user.id }
