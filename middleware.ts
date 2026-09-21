@@ -22,6 +22,13 @@ const RATE_LIMIT = {
   maxRequests: 60, // 60 requests per minute
 }
 
+// Session duration configuration (in seconds)
+const SESSION_DURATION = {
+  player: 30 * 24 * 60 * 60, // 30 days for players with rememberMe
+  staff: 365 * 24 * 60 * 60, // 1 year (effectively persistent) for staff/owners
+  default: 24 * 60 * 60, // 1 day default
+}
+
 function getRateLimitKey(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
   const ip = forwarded ? forwarded.split(',')[0] : request.ip || 'unknown'
@@ -113,6 +120,25 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Get user profile to determine session duration
+  let userRole: string | null = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    userRole = profile?.role ?? null
+  }
+
+  // Determine session maxAge based on role
+  let sessionMaxAge = SESSION_DURATION.default
+  if (userRole === 'player') {
+    sessionMaxAge = SESSION_DURATION.player
+  } else if (userRole === 'org_admin' || userRole === 'staff' || userRole === 'platform_admin') {
+    sessionMaxAge = SESSION_DURATION.staff
+  }
+
   // Protected routes - require authentication
   const protectedPaths = ['/dashboard', '/admin']
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
@@ -129,14 +155,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login-owner', request.url))
     }
 
-    // Check if user has platform_admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'platform_admin') {
+    if (userRole !== 'platform_admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
@@ -145,6 +164,23 @@ export async function middleware(request: NextRequest) {
   const authPaths = ['/login-owner', '/signup-owner']
   if (authPaths.includes(pathname) && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // Apply session cookie maxAge if user is authenticated
+  // This modifies the Supabase auth cookies to have the correct expiry
+  if (user && sessionMaxAge !== SESSION_DURATION.default) {
+    const authCookies = request.cookies.getAll().filter(c => c.name.startsWith('sb-') || c.name === 'auth-token')
+    authCookies.forEach(cookie => {
+      response.cookies.set({
+        name: cookie.name,
+        value: cookie.value,
+        maxAge: sessionMaxAge,
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      })
+    })
   }
 
   // Apply security headers to all responses

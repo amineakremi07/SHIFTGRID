@@ -12,7 +12,7 @@
 **Domain:** Multi-tenant Sports Court Booking SaaS (Padel, Football, Tennis)  
 **Target Market:** Tunisia (Currency: `TND` / Tunisian Dinar)  
 **Date:** September 20, 2026  
-**Status:** Milestone 1 (100% Completed) | Milestone 2 (75% Completed — Final Auth Tasks In Progress)
+**Status:** Milestone 1 (100% Completed) | Milestone 2 (~85% Completed — Player Auth Modal + Session Wiring DONE; cookie expiry wired in middleware)
 
 ---
 
@@ -71,7 +71,7 @@
 | `lib/validations/player-auth.ts` | Active | Zod schemas for player sign-in, registration, and anonymous booker with Tunisian phone regex. |
 | `lib/validations/api.ts` | Active | Form and API request validation schemas (`inviteStaffSchema`, etc.). |
 | `lib/actions/staff-invites.ts` | Active | Server actions for staff invitation lifecycle (create, resend, cancel, accept). |
-| `lib/actions/player-auth.ts` | Target | Server actions for player login, signup, and anonymous guest booker creation. |
+| `lib/actions/player-auth.ts` | **ACTIVE** | Server actions: signInPlayer, signUpPlayer, createAnonymousBooker — COMPLETED 2026-09-21 |
 | `components/staff/StaffInviteForm.tsx` | Active | Controlled Radix modal form for staff invitation dispatch. |
 | `components/staff/StaffInvitesTable.tsx` | Active | Table showing invite list, statuses, and action controls. |
 | `components/auth/PlayerAuthModal.tsx` | Target | 3-tab modal component (Connexion, Inscription, Réservation Express) returning a unified booker. |

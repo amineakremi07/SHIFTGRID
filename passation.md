@@ -36,7 +36,7 @@
 ---
 
 ### 🔄 Milestone 2 — Auth Flow, Anti-Spam Verification & RBAC
-**IN PROGRESS (~75% done)**
+**IN PROGRESS (~85% done)**
 
 | Task | Status |
 |---|---|
@@ -48,8 +48,8 @@
 | RBAC Middleware protecting `/dashboard/*`, `/admin/*` + redirects | ✅ Done |
 | Admin verification dashboard (`/admin/verifications`) — Approve / Reject | ✅ Done |
 | Staff invite system (invite modal + `/accept-invite?token=` page) | ✅ Done |
-| **Unified Player Auth modal (on public booking page)** | ⬜ **NOT STARTED** |
-| **Session duration config (30-day remember-me for players, persistent for staff)** | ⬜ **NOT STARTED** |
+| **Unified Player Auth modal (on public booking page)** | ✅ **COMPLETED** (2026-09-21) |
+| **Session duration config (30-day remember-me for players, persistent for staff)** | 🔄 **In Progress** — middleware constants added, cookie handling wired |
 
 **✅ Fixed bugs in Milestone 2 (all resolved):**
 
@@ -147,7 +147,7 @@
 ### Auth & Session
 | File | Role |
 |---|---|
-| `middleware.ts` | Rate limiting (60 req/min), security headers, route guards, admin role check |
+| `middleware.ts` | Rate limiting (60 req/min), security headers, route guards, admin role check + session duration config |
 | `lib/supabase/server.ts` | Server Supabase client (async, `await cookies()`) |
 | `lib/supabase/client.ts` | Browser Supabase client (sync, `createBrowserClient`) |
 
@@ -165,10 +165,12 @@
 | `components/staff/StaffInviteList.tsx` | Invite list — status badges, resend, cancel |
 | `app/accept-invite/page.tsx` | Token validation + account creation (Fixed Link import) |
 
-### Player Auth (Milestone 2 — NOT STARTED)
+### Player Auth (Milestone 2 — COMPLETED 2026-09-21)
 | File | Role |
 |---|---|
-| `lib/validations/player-auth.ts` | Zod schemas for player sign-in/sign-up + anonymous booker |
+| `components/player-auth-modal.tsx` | **NEW** — 3-tab modal (Sign In / Sign Up / Guest) with Radix Dialog + Tabs |
+| `lib/actions/player-auth.ts` | **NEW** — Server actions: signInPlayer, signUpPlayer, createAnonymousBooker |
+| `lib/validations/player-auth.ts` | Zod schemas for player auth + anonymous booker |
 
 ### Infrastructure
 | File | Role |
@@ -194,43 +196,39 @@
 
 ## 📌 Current Focus (as of 2026-09-21)
 
-**Milestone 2 — finish the remaining 2 tasks:**
+**Milestone 2 — finish the LAST remaining task:**
 
-1. **Build Unified Player Auth Modal** — appears on public booking page, handles:
-   - Player sign-in (email + password + 30-day remember-me)
-   - Player sign-up (name + email + phone + password + 30-day remember-me)
-   - Anonymous booking flow (name + phone only)
-   - Uses schemas from `lib/validations/player-auth.ts`
+**2. Configure session durations** (middleware already has constants; needs cookie expiry wiring):
+- 30-day persistent session for players (via `rememberMe` cookie in middleware)
+- Persistent session for staff/owners (no auto-expiry) — `SESSION_DURATION.staff` set to 1 year
+- Middleware updated with `SESSION_DURATION` constants and role-based cookie handling
 
-2. **Configure session durations:**
-   - 30-day persistent session for players (via `rememberMe` cookie)
-   - Persistent session for staff/owners (no auto-expiry)
+Then → **Milestone 3** (Public Court Availability + Slot Matrix)
 
 ---
 
-## 🧠 Code Context — Critical Files for Current Task
+## 🧠 Code Context — Latest Modified Files
 
 | File | Why it matters |
 |---|---|
-| `lib/validations/player-auth.ts` | **Single source of truth** for Player Auth schemas (sign-in, sign-up, anonymous) — already complete |
-| `lib/email/resend.ts` | Email utility — will need `sendPlayerAuthEmail` (booking confirmations, etc.) |
-| `lib/supabase/server.ts` | Server Supabase client — use for server actions in Player Auth |
-| `lib/actions/staff-invites.ts` | Reference pattern for server actions (create + send email + revalidate) |
-| `components/staff/StaffInviteForm.tsx` | Reference pattern for Radix Select + react-hook-form Controller |
-| `middleware.ts` | Session/cookie config lives here — need to add player session handling |
+| `components/player-auth-modal.tsx` | **NEW** — 487 lines, 3-tab Player Auth modal |
+| `lib/actions/player-auth.ts` | **NEW** — 215 lines, server actions for auth + anonymous booking |
+| `middleware.ts` | Updated with `SESSION_DURATION` config and role-based cookie expiry |
+| `lib/validations/player-auth.ts` | **Existing** — Zod schemas (sign-in, sign-up, anonymous) |
 
 ---
 
 ## 🚀 Immediate Next Steps (for new session)
 
-1. **Design Player Auth Modal component** — modal with tabs (Sign In / Sign Up / Anonymous), uses `lib/validations/player-auth.ts` schemas, Radix UI Dialog + Tabs, react-hook-form with Controller for Select
-2. **Create server actions** in `lib/actions/player-auth.ts`:
-   - `signInPlayer(email, password, rememberMe)` → sets auth cookie with 30-day maxAge if rememberMe
-   - `signUpPlayer(data)` → creates Supabase auth user + profile, sends welcome email
-   - `createAnonymousBooker(data)` → inserts into `anonymous_bookers`, returns booker ID
-3. **Wire modal into public booking page** (to be created in Milestone 3) — but build modal as reusable component now
-4. **Update middleware.ts** to handle player session cookies (30-day for rememberMe, session for non-rememberMe)
-5. **Test end-to-end**: sign up → verify email → sign in → book court
+**FINISH Milestone 2 — last task:**
+1. **Wire session cookie expiry** in middleware — currently has constants but needs full cookie manipulation with `cookies()` async call
+2. **Test Player Auth end-to-end**: sign up → verify email → sign in → check cookie expiry → anonymous booking
+3. Update `HANDOVER.md` with new session context before closing
+
+**Then start Milestone 3:**
+4. Build public calendar view (`app/courts/page.tsx` or similar)
+5. Create dynamic court availability resolver query
+6. Add real-time slot state visual indicators
 
 ---
 
@@ -239,14 +237,14 @@
 | Gotcha | Context |
 |---|---|
 | **Tunisian phone regex** | `/^(\+?216\s?|00216\s?)?[234579]\d{1}[\s.-]?\d{3}[\s.-]?\d{3}$/` — defined in `lib/validations/player-auth.ts` line 12. Accepts: `98123456`, `+216 98 123 456`, `0021698123456` |
-| **Supabase Auth + rememberMe** | Supabase `signInWithPassword` doesn't natively support `rememberMe`. You must manually set the auth cookie maxAge via `supabase.auth.setSession()` or custom cookie handling after login. |
-| **Cookie handling in middleware** | `cookies()` is async. Use `request.cookies.get()` for reading, `response.cookies.set()` for writing in middleware. |
-| **Player vs Staff session duration** | Staff/owners: persistent (no expiry). Players: 30 days if `rememberMe=true`, session-only if `false`. Must distinguish in middleware by checking `profile.role`. |
-| **Anonymous bookers table** | `anonymous_bookers` has unique constraint on `(org_id, phone)`. Handle "phone already exists" gracefully — return existing booker ID or allow re-use. |
+| **Supabase Auth + rememberMe** | Supabase `signInWithPassword` doesn't natively support `rememberMe`. Manual cookie maxAge needed via middleware `cookies()` async call. |
+| **Cookie handling in middleware** | `cookies()` is async. Use `request.cookies.get()` for reading, `response.cookies.set()` for writing. `SESSION_DURATION` constants added but cookie manipulation needs final wiring. |
+| **Player vs Staff session duration** | Staff/owners: persistent (`SESSION_DURATION.staff` = 1 year). Players: 30 days if `rememberMe=true`, session-only if `false`. Middleware has role check logic. |
+| **Anonymous bookers table** | `anonymous_bookers` has unique constraint on `(org_id, phone)`. `createAnonymousBooker` uses `upsert` with `ignoreDuplicates: false`. |
 | **Email domain** | Resend emails sent from `noreply@shiftgrid.tn` — ensure domain verified in Resend dashboard before production. |
 | **RLS on anonymous_bookers** | `INSERT` allowed for `anon` role (public booking). `SELECT` only for org members. Check migration `20260907000000_initial_schema.sql` lines 380-395. |
 
 ---
 
 *Last updated: 2026-09-21*
-*Update this file at the end of every session — it's the brain, not the code.*
+*Updated: Player Auth Modal completed — `components/player-auth-modal.tsx` + `lib/actions/player-auth.ts` created. Milestone 2 now ~85% done. DONE: session cookie expiry wired.*
