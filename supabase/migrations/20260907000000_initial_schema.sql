@@ -3,7 +3,12 @@
 -- Currency: TND (Tunisian Dinar)
 
 -- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- uuid-ossp lives in the `extensions` schema (Supabase convention). Unqualified
+-- uuid_generate_v4() then resolves via the default search_path, which includes
+-- `extensions`. pgcrypto provides gen_random_bytes()/digest(), used by the
+-- invite-token and API-key functions in later migrations.
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "btree_gist";
 
 -- ============================================================================
@@ -42,7 +47,7 @@ CREATE INDEX idx_courts_status ON courts(status);
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('platform_admin', 'org_admin', 'staff', 'member')),
+  role TEXT NOT NULL CHECK (role IN ('platform_admin', 'org_admin', 'staff', 'player')),
   display_name TEXT NOT NULL,
   phone TEXT,
   avatar_url TEXT,

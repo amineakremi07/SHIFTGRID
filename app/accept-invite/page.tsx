@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Mail, Lock, User, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react'
@@ -38,7 +38,7 @@ interface InviteData {
   organizationName?: string
 }
 
-export default function AcceptInvitePage() {
+function AcceptInviteContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
@@ -313,3 +313,17 @@ export default function AcceptInvitePage() {
     </div>
     )
   }
+
+export default function AcceptInvitePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <AcceptInviteContent />
+    </Suspense>
+  )
+}

@@ -88,12 +88,22 @@ export async function createStaffInvite(input: {
   }
 
   // Check if user is already a member
-  const { data: existingMember } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('org_id', organization_id)
-    .eq('email', email)
-    .single()
+  // NOTE: profiles has no `email` column (email lives on auth.users), so the
+  // membership check goes through the admin auth API rather than a profiles query.
+  const { data: authUsers } = await getSupabaseAdmin().auth.admin.listUsers()
+  const matchingUser = authUsers?.users?.find(
+    (u) => u.email?.toLowerCase() === email.toLowerCase()
+  )
+  let existingMember: { id: string } | null = null
+  if (matchingUser) {
+    const { data: memberProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('org_id', organization_id)
+      .eq('id', matchingUser.id)
+      .maybeSingle()
+    existingMember = memberProfile
+  }
 
   if (existingMember) {
     return { success: false, error: 'This email is already a member of your organization' }
@@ -198,7 +208,7 @@ export async function listStaffInvites(organization_id: string): Promise<ListInv
 
   return { success: true, invites: (invites || []).map(invite => ({
     ...invite,
-    inviter_name: (invite as any).profiles?.display_name
+    inviter_name: (invite as { profiles?: { display_name?: string } }).profiles?.display_name
   })) as StaffInvite[] }
 }
 
@@ -409,7 +419,7 @@ export async function acceptStaffInvite(token: string): Promise<{
           org_id: invite.org_id,
           role: invite.role,
           display_name: user.user_metadata?.full_name || invite.email.split('@')[0],
-          email: invite.email,
+          // NOTE: no `email` column on profiles — it lives on auth.users.
         })
 
       if (insertError) {

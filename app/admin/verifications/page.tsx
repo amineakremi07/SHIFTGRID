@@ -66,7 +66,7 @@ export default async function AdminVerificationsPage() {
 
         {organizations && organizations.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {organizations.map((org: any) => (
+            {organizations.map((org) => (
               <OrganizationCard key={org.id} organization={org} />
             ))}
           </div>

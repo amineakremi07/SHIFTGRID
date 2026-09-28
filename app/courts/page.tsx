@@ -1,24 +1,25 @@
-import { createClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
+import { createPublicClient } from '@/lib/supabase/public'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
+// Public data read with the anon role: never prerender it with build-time rows.
+export const dynamic = 'force-dynamic'
+
 export default async function CourtsPage() {
-  const cookieStore = await cookies()
-  const supabase = await createClient()
+  const supabase = createPublicClient()
 
   const { data: orgs } = await supabase
     .from('organizations')
     .select('id, name, address, city, status')
-    .eq('status', 'verified')
+    .eq('status', 'approved')
     .limit(20)
 
   const { data: courts } = await supabase
     .from('courts')
-    .select('id, org_id, name, sport, price_per_hour, is_active')
-    .eq('is_active', true)
+    .select('id, org_id, name, sport, price_per_hour, status')
+    .eq('status', 'active')
     .limit(50)
 
   return (
@@ -28,8 +29,8 @@ export default async function CourtsPage() {
         <p className="text-muted-foreground text-lg">Public court availability across Tunisia</p>
       </header>
       <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {(orgs ?? []).map((org: any) => {
-          const orgCourts = (courts ?? []).filter((c: any) => c.org_id === org.id)
+        {(orgs ?? []).map((org) => {
+          const orgCourts = (courts ?? []).filter((c) => c.org_id === org.id)
           return (
             <Card key={org.id} className="flex flex-col">
               <CardHeader>
@@ -43,7 +44,7 @@ export default async function CourtsPage() {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col gap-4">
                 <div className="flex flex-wrap gap-2">
-                  {orgCourts.map((c: any) => (
+                  {orgCourts.map((c) => (
                     <Badge key={c.id} variant="outline" className="text-xs">{c.sport}</Badge>
                   ))}
                   {orgCourts.length === 0 && (

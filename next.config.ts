@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Turbopack is the default bundler in Next.js 16. An explicit (empty) config
+  // opts in deliberately and silences the "webpack config with no turbopack
+  // config" build error. Turbopack needs no loaders for our CSS/TS setup.
+  turbopack: {},
+
   // Configure images to avoid remote image issues
   images: {
     remotePatterns: [
@@ -81,7 +86,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()'
+            value: 'camera=(), microphone=(), geolocation=(self)'
           },
           // HSTS - only in production
           ...(process.env.NODE_ENV === 'production'
@@ -90,16 +95,6 @@ const nextConfig: NextConfig = {
               value: 'max-age=31536000; includeSubDomains; preload'
             }]
             : []),
-        ],
-      },
-      // Cache static assets
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
         ],
       },
       // Cache images
@@ -125,28 +120,6 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Webpack optimizations
-  webpack: (config, { dev, isServer }) => {
-    // Production optimizations
-    if (!dev && !isServer) {
-      // Enable tree shaking
-      config.optimization.usedExports = true
-      config.optimization.sideEffects = true
-    }
-
-    // Bundle analyzer (when ANALYZE=true)
-    if (process.env.ANALYZE === 'true') {
-      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer')
-      config.plugins.push(
-        new BundleAnalyzerPlugin({
-          analyzerMode: 'static',
-          reportFilename: '../bundle-analyzer-report.html',
-        })
-      )
-    }
-
-    return config
-  },
 };
 
 export default nextConfig;

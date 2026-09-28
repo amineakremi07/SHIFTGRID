@@ -1,26 +1,210 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* ==========================================================================
+   ShiftGrid theme — see DESIGN.md ("Craft" style reference)
+   Two-tone flat surfaces, warm canvas, 8px radius, Lime Pulse action states.
+   Hierarchy comes from type scale and whitespace, never from shadows.
+   ========================================================================== */
 
 @theme inline {
+  /* --- Named brand tokens (DESIGN.md "Tokens — Colors") ------------------ */
+  --color-bone-linen: #f7f5f2;
+  --color-oat-milk: #eae6df;
+  --color-driftwood: #d7d2cc;
+  --color-ash-mauve: #645757;
+  --color-mahogany-hush: #504344;
+  --color-obsidian-plum: #2a1a1d;
+  --color-forest-depths: #1d3023;
+  --color-lime-pulse: #26d862;
+  --color-peacock-teal: #0e634f;
+
+  /* --- Semantic mappings consumed by shadcn primitives ------------------- */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* --- Type ------------------------------------------------------------- */
+  /* DESIGN.md specifies ABC Arizona Flare (proprietary, not licensed here).
+     Geist carries the system until those faces are available; the serif
+     fallback keeps the editorial intent from collapsing to a default sans. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-heading: var(--font-geist-sans), "Iowan Old Style", Georgia, serif;
+
+  /* --- Shape (DESIGN.md: base unit 8px; nav/tags 4px, cards/buttons 8px) - */
+  --radius-sm: 0.25rem;  /*  4px — nav, tags */
+  --radius-md: 0.375rem; /*  6px */
+  --radius-lg: var(--radius); /* 8px — cards, buttons (the system default) */
+  --radius-xl: 0.75rem;  /* 12px */
+  --radius-2xl: 1rem;    /* 16px */
+  --radius-3xl: 1.5rem;  /* 24px */
+  --radius-4xl: 2rem;    /* 32px */
+
+  /* --- Spacing scale (DESIGN.md base unit 8px, comfortable density) ------ */
+  --spacing-section: 3.5rem; /* 56px — section gap */
+  --spacing-card: 1.5rem;    /* 24px — card padding */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* --------------------------------------------------------------------------
+   Light — the default. Cream canvas dominates; separation comes from the
+   canvas/card step (#f7f5f2 -> #eae6df), not from shadow.
+   -------------------------------------------------------------------------- */
+:root {
+  --radius: 0.5rem; /* 8px */
+
+  --background: #f7f5f2;           /* Bone Linen  — page canvas */
+  --foreground: #2a1a1d;           /* Obsidian Plum — 15.3:1 on canvas */
+
+  --card: #eae6df;                 /* Oat Milk — one step down from canvas */
+  --card-foreground: #2a1a1d;
+
+  --popover: #f7f5f2;
+  --popover-foreground: #2a1a1d;
+
+  --primary: #26d862;              /* Lime Pulse — action only, never decor */
+  --primary-foreground: #2a1a1d;   /* dark plum on green, per DESIGN.md */
+
+  --secondary: #eae6df;            /* Oat Milk — quiet container */
+  --secondary-foreground: #2a1a1d;
+
+  --muted: #eae6df;
+  --muted-foreground: #645757;     /* Ash Mauve — captions, secondary text */
+
+  --accent: #eae6df;
+  --accent-foreground: #504344;    /* Mahogany Hush — small heading emphasis */
+
+  --destructive: #a4332c;
+  --destructive-foreground: #f7f5f2;
+
+  --success: #0e634f;              /* Peacock Teal — status, data emphasis.
+                                      NOT Lime Pulse: DESIGN.md reserves that
+                                      strictly for actions and links. */
+  --success-foreground: #f7f5f2;
+
+  --border: #d7d2cc;               /* Driftwood — hairline, reads as line work */
+  --input: #d7d2cc;
+  --ring: #26d862;                 /* focus ring picks up the action colour */
+
+  --chart-1: #0e634f;
+  --chart-2: #26d862;
+  --chart-3: #1d3023;
+  --chart-4: #645757;
+  --chart-5: #504344;
+
+  --sidebar: #eae6df;
+  --sidebar-foreground: #2a1a1d;
+  --sidebar-primary: #26d862;
+  --sidebar-primary-foreground: #2a1a1d;
+  --sidebar-accent: #f7f5f2;
+  --sidebar-accent-foreground: #504344;
+  --sidebar-border: #d7d2cc;
+  --sidebar-ring: #26d862;
+}
+
+/* --------------------------------------------------------------------------
+   Dark — built on Forest Depths, the same room DESIGN.md uses for the hero.
+   Only the canvas/ink pair is specified there; the intermediate surface steps
+   below are derived from Forest Depths and flagged as such.
+   -------------------------------------------------------------------------- */
+.dark {
+  --background: #1d3023;           /* Forest Depths */
+  --foreground: #f7f5f2;           /* Bone Linen — the only text colour
+                                      DESIGN.md permits on this surface */
+
+  --card: #24392b;                 /* derived: one step up from Forest Depths */
+  --card-foreground: #f7f5f2;
+
+  --popover: #24392b;
+  --popover-foreground: #f7f5f2;
+
+  --primary: #26d862;
+  --primary-foreground: #1d3023;
+
+  --secondary: #2c4534;            /* derived */
+  --secondary-foreground: #f7f5f2;
+
+  --muted: #2c4534;                /* derived */
+  --muted-foreground: #b6c2b8;     /* derived: Ash Mauve lifted for contrast */
+
+  --accent: #2c4534;
+  --accent-foreground: #f7f5f2;
+
+  --destructive: #e26d63;
+  --destructive-foreground: #1d3023;
+
+  --success: #3fd39f;              /* derived: Peacock Teal lifted to read on
+                                      the dark surface */
+  --success-foreground: #1d3023;
+
+  --border: #f7f5f21f;             /* Bone Linen @ 12% — hairline, not colour */
+  --input: #f7f5f229;
+  --ring: #26d862;
+
+  --chart-1: #3fd39f;
+  --chart-2: #26d862;
+  --chart-3: #b6c2b8;
+  --chart-4: #eae6df;
+  --chart-5: #d7d2cc;
+
+  --sidebar: #24392b;
+  --sidebar-foreground: #f7f5f2;
+  --sidebar-primary: #26d862;
+  --sidebar-primary-foreground: #1d3023;
+  --sidebar-accent: #2c4534;
+  --sidebar-accent-foreground: #f7f5f2;
+  --sidebar-border: #f7f5f21f;
+  --sidebar-ring: #26d862;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
 }

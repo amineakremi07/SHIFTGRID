@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { OwnerSignupForm } from '@/components/owner-signup-form'
+import { OwnerSignupForm } from '@/components/auth/owner-signup-form'
 
 export default function OwnerSignupPage() {
   return (

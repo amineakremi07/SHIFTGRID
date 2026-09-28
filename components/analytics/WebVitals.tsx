@@ -17,10 +17,10 @@ export function WebVitals() {
     if (typeof window === 'undefined') return
 
     // Import web-vitals library dynamically
-    import('web-vitals').then(({ onCLS, onFID, onLCP, onFCP, onTTFB, onINP }) => {
+    import('web-vitals').then(({ onCLS, onLCP, onFCP, onTTFB, onINP }) => {
       // Report each metric
+      // onFID removed in web-vitals v4+ — superseded by INP
       onCLS(reportWebVitals)
-      onFID(reportWebVitals)
       onLCP(reportWebVitals)
       onFCP(reportWebVitals)
       onTTFB(reportWebVitals)

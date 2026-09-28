@@ -1,0 +1,616 @@
+'use client'
+
+import * as React from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { Calendar, Check, Clock, Trophy, Zap } from 'lucide-react'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { SPRING } from '@/components/ui/motion-button'
+import { BUFFER_MIN, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
+import { cn } from '@/lib/utils'
+
+/* ==========================================================================
+   Public court availability matrix — Milestone 3.
+   Desktop: one column per court, side by side. Mobile: courts become tabs.
+   Visual language follows DESIGN.md — flat two-tone surfaces, Lime Pulse
+   reserved for action/selection, separation via the canvas→card step.
+   ========================================================================== */
+
+export type SlotState = 'available' | 'occupied' | 'locked_buffer' | 'past'
+
+export interface MatrixSlot {
+  /** ISO timestamp for slot start. */
+  start: string
+  /** ISO timestamp for slot end (excludes the maintenance buffer). */
+  end: string
+  state: SlotState
+  bookingId?: string | null
+  /** ISO timestamp a `locked_buffer` hold expires — drives the countdown. */
+  lockExpiresAt?: string | null
+}
+
+export interface MatrixCourt {
+  id: string
+  name: string
+  sport: Sport
+  /** Hourly rate in TND. Slot price is derived from the sport's duration. */
+  pricePerHour: number
+  slots: MatrixSlot[]
+}
+
+export interface MatrixSelection {
+  courtId: string
+  courtName: string
+  sport: Sport
+  slot: MatrixSlot
+  /** Derived slot price in TND. */
+  price: number
+  selectedDate: string
+}
+
+export interface CourtSlotMatrixProps {
+  /** Courts with their resolved slots. Defaults to mock data for preview. */
+  courtData?: MatrixCourt[]
+  /** YYYY-MM-DD. */
+  selectedDate?: string
+  /** Fires on select and on deselect (`null`). */
+  onSlotSelect?: (selection: MatrixSelection | null) => void
+  /**
+   * Controlled sport. When provided, the matrix hides its own sport tabs and
+   * follows this value — the caller owns the tab bar (e.g. the landing hero).
+   */
+  sport?: Sport
+  /** Fires when the internal tabs change the sport (uncontrolled mode). */
+  onSportChange?: (sport: Sport) => void
+  className?: string
+}
+
+/* ----------------------------- sport metadata ---------------------------- */
+
+const SPORTS: { value: Sport; label: string; icon: typeof Trophy }[] = [
+  { value: 'padel', label: 'Padel', icon: Zap },
+  { value: 'tennis', label: 'Tennis', icon: Trophy },
+  { value: 'football', label: 'Football', icon: Calendar },
+]
+
+/** Tennis 60min; padel & football 90min. All carry a 15min buffer after play. */
+function slotMinutes(sport: Sport) {
+  return SPORT_DURATION_MIN[sport]
+}
+
+function slotPrice(pricePerHour: number, sport: Sport) {
+  return (pricePerHour * slotMinutes(sport)) / 60
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+/** TND, the platform currency — never EUR/USD. */
+function formatTND(amount: number) {
+  return `${amount.toFixed(amount % 1 === 0 ? 0 : 2)} TND`
+}
+
+/* ------------------------------- mock data ------------------------------- */
+
+function buildMockSlots(
+  sport: Sport,
+  dateStr: string,
+  pattern: SlotState[]
+): MatrixSlot[] {
+  const minutes = slotMinutes(sport)
+  const step = minutes + BUFFER_MIN
+  let cursor = 8 * 60 // courts open 08:00
+
+  return pattern.map((state, i) => {
+    const startMin = cursor
+    cursor += step
+    const toIso = (m: number) =>
+      `${dateStr}T${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`
+
+    return {
+      start: toIso(startMin),
+      end: toIso(startMin + minutes),
+      state,
+      bookingId: state === 'occupied' ? `mock-booking-${i}` : null,
+      lockExpiresAt:
+        state === 'locked_buffer'
+          ? new Date(Date.now() + 4 * 60 * 1000).toISOString()
+          : null,
+    }
+  })
+}
+
+export function buildMockCourts(dateStr: string): MatrixCourt[] {
+  return [
+    {
+      id: 'mock-padel-1',
+      name: 'Padel Court A',
+      sport: 'padel',
+      pricePerHour: 60,
+      slots: buildMockSlots('padel', dateStr, [
+        'past',
+        'occupied',
+        'available',
+        'locked_buffer',
+        'available',
+        'available',
+      ]),
+    },
+    {
+      id: 'mock-padel-2',
+      name: 'Padel Court B',
+      sport: 'padel',
+      pricePerHour: 60,
+      slots: buildMockSlots('padel', dateStr, [
+        'past',
+        'available',
+        'available',
+        'occupied',
+        'occupied',
+        'available',
+      ]),
+    },
+    {
+      id: 'mock-tennis-1',
+      name: 'Tennis Court 1',
+      sport: 'tennis',
+      pricePerHour: 40,
+      slots: buildMockSlots('tennis', dateStr, [
+        'past',
+        'available',
+        'occupied',
+        'available',
+        'available',
+        'locked_buffer',
+        'available',
+      ]),
+    },
+    {
+      id: 'mock-football-1',
+      name: 'Football Pitch',
+      sport: 'football',
+      pricePerHour: 120,
+      slots: buildMockSlots('football', dateStr, [
+        'occupied',
+        'available',
+        'available',
+        'occupied',
+        'available',
+      ]),
+    },
+  ]
+}
+
+/* ----------------------------- lock countdown ---------------------------- */
+
+function useCountdown(expiresAt?: string | null) {
+  // `now` stays null until the first interval tick. That keeps state updates
+  // inside the callback (never the effect body) and, because the server and
+  // the first client render both produce no countdown, avoids a hydration
+  // mismatch on this statically prerendered page.
+  const [now, setNow] = React.useState<number | null>(null)
+
+  React.useEffect(() => {
+    if (!expiresAt) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [expiresAt])
+
+  if (!expiresAt || now === null) return null
+  const total = Math.floor(Math.max(0, new Date(expiresAt).getTime() - now) / 1000)
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
+}
+
+/* -------------------------------- slot cell ------------------------------ */
+
+const STATE_LABEL: Record<SlotState, string> = {
+  available: 'Available',
+  occupied: 'Booked',
+  locked_buffer: 'In Reservation',
+  past: 'Past',
+}
+
+function SlotCell({
+  court,
+  slot,
+  isSelected,
+  onSelect,
+  animate,
+}: {
+  court: MatrixCourt
+  slot: MatrixSlot
+  isSelected: boolean
+  onSelect: () => void
+  animate: boolean
+}) {
+  const countdown = useCountdown(
+    slot.state === 'locked_buffer' ? slot.lockExpiresAt : null
+  )
+  const isAvailable = slot.state === 'available'
+  const price = slotPrice(court.pricePerHour, court.sport)
+
+  const tooltip =
+    slot.state === 'available'
+      ? `${formatTND(price)} · ${slotMinutes(court.sport)} min + ${BUFFER_MIN} min buffer`
+      : slot.state === 'occupied'
+        ? 'Already booked'
+        : slot.state === 'locked_buffer'
+          ? countdown
+            ? `Held by another player — ${countdown} remaining`
+            : 'Held by another player'
+          : 'This slot has already passed'
+
+  const cell = (
+    <motion.button
+      type="button"
+      layout
+      variants={
+        animate
+          ? {
+              hidden: { opacity: 0, y: 8 },
+              show: { opacity: 1, y: 0 },
+            }
+          : undefined
+      }
+      whileHover={animate && isAvailable ? { y: -2 } : undefined}
+      whileTap={animate && isAvailable ? { scale: 0.98 } : undefined}
+      transition={SPRING}
+      onClick={isAvailable ? onSelect : undefined}
+      disabled={!isAvailable}
+      aria-pressed={isSelected}
+      aria-label={`${court.name}, ${formatTime(slot.start)} to ${formatTime(slot.end)}, ${STATE_LABEL[slot.state]}${isAvailable ? `, ${formatTND(price)}` : ''}`}
+      className={cn(
+        'relative w-full rounded-lg border p-3 text-left transition-colors',
+        'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+        isAvailable &&
+          !isSelected &&
+          'border-border bg-card hover:border-primary cursor-pointer',
+        // Selected: Lime Pulse fill — the one place green is a surface.
+        isSelected && 'border-primary bg-primary text-primary-foreground',
+        slot.state === 'occupied' &&
+          'border-border bg-muted cursor-not-allowed opacity-60',
+        slot.state === 'locked_buffer' &&
+          'border-border bg-card cursor-not-allowed opacity-60',
+        slot.state === 'past' &&
+          'border-border/50 bg-transparent cursor-not-allowed opacity-60'
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-sm font-medium tabular-nums">
+          <Clock className="size-3.5 opacity-70" aria-hidden />
+          {formatTime(slot.start)}
+        </span>
+
+        <AnimatePresence initial={false}>
+          {isSelected && (
+            <motion.span
+              key="check"
+              initial={animate ? { scale: 0, rotate: -30 } : false}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={animate ? { scale: 0, rotate: 30 } : undefined}
+              transition={SPRING}
+              className="flex size-5 items-center justify-center rounded-sm bg-primary-foreground/15"
+            >
+              <Check className="size-3.5" aria-hidden />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        {isAvailable || isSelected ? (
+          <span className="text-sm font-semibold tabular-nums">
+            {formatTND(price)}
+          </span>
+        ) : (
+          <Badge
+            variant={slot.state === 'locked_buffer' ? 'warning' : 'secondary'}
+            className="text-[0.7rem]"
+          >
+            {slot.state === 'locked_buffer' && countdown
+              ? `${STATE_LABEL[slot.state]} · ${countdown}`
+              : STATE_LABEL[slot.state]}
+          </Badge>
+        )}
+
+        <span
+          className={cn(
+            'text-xs tabular-nums',
+            isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'
+          )}
+        >
+          {formatTime(slot.end)}
+        </span>
+      </div>
+    </motion.button>
+  )
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {/* Disabled buttons swallow pointer events, so the trigger wraps them. */}
+        <span className="block">{cell}</span>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+/* ------------------------------ court column ----------------------------- */
+
+function CourtColumn({
+  court,
+  selection,
+  onSelect,
+  animate,
+}: {
+  court: MatrixCourt
+  selection: MatrixSelection | null
+  onSelect: (court: MatrixCourt, slot: MatrixSlot) => void
+  animate: boolean
+}) {
+  const openCount = court.slots.filter((s) => s.state === 'available').length
+
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between gap-2 text-base">
+          {court.name}
+          <Badge variant={openCount > 0 ? 'success' : 'secondary'}>
+            {openCount > 0 ? `${openCount} open` : 'Full'}
+          </Badge>
+        </CardTitle>
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {formatTND(court.pricePerHour)}/hour · {slotMinutes(court.sport)} min slots
+        </p>
+      </CardHeader>
+
+      <CardContent>
+        {court.slots.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No slots in this window.
+          </p>
+        )}
+        <motion.div
+          className="flex flex-col gap-2"
+          initial={animate ? 'hidden' : false}
+          animate="show"
+          variants={{
+            show: { transition: { staggerChildren: 0.04 } },
+          }}
+        >
+          {court.slots.map((slot) => (
+            <SlotCell
+              key={`${court.id}-${slot.start}`}
+              court={court}
+              slot={slot}
+              isSelected={
+                selection?.courtId === court.id &&
+                selection?.slot.start === slot.start
+              }
+              onSelect={() => onSelect(court, slot)}
+              animate={animate}
+            />
+          ))}
+        </motion.div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/* --------------------------------- matrix -------------------------------- */
+
+export function CourtSlotMatrix({
+  courtData,
+  selectedDate = new Date().toISOString().slice(0, 10),
+  onSlotSelect,
+  sport: controlledSport,
+  onSportChange,
+  className,
+}: CourtSlotMatrixProps) {
+  const reduceMotion = useReducedMotion()
+  const animate = !reduceMotion
+
+  // Mock data is memoised on the date so preview renders are stable.
+  const courts = React.useMemo(
+    () => courtData ?? buildMockCourts(selectedDate),
+    [courtData, selectedDate]
+  )
+
+  const availableSports = React.useMemo(
+    () => SPORTS.filter((s) => courts.some((c) => c.sport === s.value)),
+    [courts]
+  )
+
+  const isControlled = controlledSport !== undefined
+  const [internalSport, setInternalSport] = React.useState<Sport>(
+    availableSports[0]?.value ?? 'padel'
+  )
+  const sport = controlledSport ?? internalSport
+  const [selection, setSelection] = React.useState<MatrixSelection | null>(null)
+
+  const sportCourts = React.useMemo(
+    () => courts.filter((c) => c.sport === sport),
+    [courts, sport]
+  )
+
+  // Mobile shows one court at a time; keep the active court valid on switch.
+  const [mobileCourtId, setMobileCourtId] = React.useState<string | null>(null)
+  const activeMobileCourt =
+    sportCourts.find((c) => c.id === mobileCourtId) ?? sportCourts[0]
+
+  const handleSelect = React.useCallback(
+    (court: MatrixCourt, slot: MatrixSlot) => {
+      setSelection((prev) => {
+        const isSame =
+          prev?.courtId === court.id && prev?.slot.start === slot.start
+        const next: MatrixSelection | null = isSame
+          ? null
+          : {
+              courtId: court.id,
+              courtName: court.name,
+              sport: court.sport,
+              slot,
+              price: slotPrice(court.pricePerHour, court.sport),
+              selectedDate,
+            }
+        onSlotSelect?.(next)
+        return next
+      })
+    },
+    [onSlotSelect, selectedDate]
+  )
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <section className={cn('w-full', className)} aria-label="Court availability">
+        <Tabs
+          value={sport}
+          onValueChange={(v) => {
+            setInternalSport(v as Sport)
+            onSportChange?.(v as Sport)
+            setMobileCourtId(null)
+          }}
+        >
+          {/* Controlled mode: the caller renders the tab bar instead. */}
+          {!isControlled && (
+          <TabsList variant="line" className="mb-4">
+            {availableSports.map(({ value, label, icon: Icon }) => (
+              <TabsTrigger key={value} value={value} className="relative">
+                {/* Shared layoutId slides the indicator between sports. */}
+                {sport === value && animate && (
+                  <motion.span
+                    layoutId="activeSportTab"
+                    transition={SPRING}
+                    className="absolute inset-0 rounded-lg bg-card"
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Icon className="size-3.5" aria-hidden />
+                  {label}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          )}
+
+          {availableSports.map(({ value }) => (
+            <TabsContent key={value} value={value} className="mt-0">
+              {sportCourts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No courts configured for this sport.
+                </p>
+              ) : (
+                <>
+                  {/* Desktop: courts side by side. */}
+                  <div
+                    className="hidden gap-4 md:grid"
+                    style={{
+                      gridTemplateColumns: `repeat(${Math.min(sportCourts.length, 4)}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {sportCourts.map((court) => (
+                      <CourtColumn
+                        key={court.id}
+                        court={court}
+                        selection={selection}
+                        onSelect={handleSelect}
+                        animate={animate}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Mobile: one court at a time, chosen by a toggle group.
+                      Not role="tab" — the sports above own the tab semantics,
+                      and a second tab set confuses the accessibility tree. */}
+                  <div className="md:hidden">
+                    {sportCourts.length > 1 && (
+                      <div
+                        className="mb-3 flex flex-wrap gap-1.5"
+                        role="group"
+                        aria-label="Select court"
+                      >
+                        {sportCourts.map((court) => (
+                          <Button
+                            key={court.id}
+                            size="sm"
+                            variant={
+                              activeMobileCourt?.id === court.id
+                                ? 'default'
+                                : 'outline'
+                            }
+                            aria-pressed={activeMobileCourt?.id === court.id}
+                            onClick={() => setMobileCourtId(court.id)}
+                          >
+                            {court.name}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+
+                    {activeMobileCourt && (
+                      <CourtColumn
+                        court={activeMobileCourt}
+                        selection={selection}
+                        onSelect={handleSelect}
+                        animate={animate}
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        {/* Selection summary — the handoff point to the booking drawer. */}
+        <AnimatePresence>
+          {selection && (
+            <motion.div
+              initial={animate ? { opacity: 0, y: 8 } : false}
+              animate={{ opacity: 1, y: 0 }}
+              exit={animate ? { opacity: 0, y: 8 } : undefined}
+              transition={SPRING}
+              className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4"
+              aria-live="polite"
+            >
+              <div className="text-sm">
+                <p className="font-semibold">{selection.courtName}</p>
+                <p className="text-muted-foreground tabular-nums">
+                  {formatTime(selection.slot.start)}–{formatTime(selection.slot.end)}
+                  {' · '}
+                  {formatTND(selection.price)}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelection(null)
+                  onSlotSelect?.(null)
+                }}
+              >
+                Clear
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
+    </TooltipProvider>
+  )
+}
+
+export default CourtSlotMatrix

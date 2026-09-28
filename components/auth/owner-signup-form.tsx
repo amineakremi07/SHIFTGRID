@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
@@ -8,8 +9,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
 import { MapPin, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { ownerSignupSchema, type OwnerSignupData } from '@/lib/validations/owner-signup'
 import { submitOwnerSignup, checkRegistryNumber, geocodeAddress } from '@/lib/actions/owner-signup'
@@ -22,50 +21,22 @@ const SPORT_OPTIONS = [
   { value: 'football', label: 'Football (90 min, 12 or 14 players)' },
 ] as const
 
-interface MarkerPosition {
-  latitude: number
-  longitude: number
-}
+import type { MarkerPosition } from '@/components/auth/location-picker-map'
 
-const LocationPickerMap = ({ latitude, longitude, onPositionChange }: {
-  latitude: number
-  longitude: number
-  onPositionChange: (pos: MarkerPosition) => void
-}) => {
-  const mapRef = useRef<any>(null)
-
-  const MapEvents = () => {
-    const map = useMapEvents({
-      click(e) {
-        onPositionChange({ latitude: e.latlng.lat, longitude: e.latlng.lng })
-      },
-    })
-
-    useEffect(() => {
-      if (mapRef.current && map) {
-        map.setView([latitude, longitude], 15)
-      }
-    }, [latitude, longitude, map])
-
-    return null
-  }
-
-  return (
-    <MapContainer
-      ref={mapRef}
-      center={[latitude, longitude]}
-      zoom={13}
-      style={{ height: '400px', width: '100%', borderRadius: '0.5rem' }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+// react-leaflet touches `window` at module scope, so it must never be part of
+// the server/prerender bundle.
+const LocationPickerMap = dynamic(
+  () => import('@/components/auth/location-picker-map').then((m) => m.LocationPickerMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{ height: '400px' }}
+        className="w-full rounded-lg border bg-muted animate-pulse"
       />
-      <Marker position={[latitude, longitude]} />
-      <MapEvents />
-    </MapContainer>
-  )
-}
+    ),
+  }
+)
 
 const StepIndicator = ({ currentStep, totalSteps = 4 }: { currentStep: number; totalSteps?: number }) => (
   <div className="flex items-center justify-between mb-8">

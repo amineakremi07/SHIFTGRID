@@ -145,7 +145,7 @@ export async function signUpPlayer(
       org_id: data.orgId,
       role: 'player',
       display_name: data.displayName,
-      email: data.email,
+      // NOTE: no `email` column on profiles — it lives on auth.users.
       phone: data.phone,
     })
 

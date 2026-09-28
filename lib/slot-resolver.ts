@@ -28,10 +28,10 @@ export async function resolveCourtSlots(
   // fetch locks within the day range for this court
   const { data: locks } = await supabase
     .from('court_slot_locks')
-    .select('starts_at, ends_at, booking_id')
+    .select('occupied_from, occupied_until, booking_id')
     .eq('court_id', courtId)
-    .gte('starts_at', `${dateStr}T00:00:00`)
-    .lte('starts_at', `${dateStr}T23:59:59`)
+    .gte('occupied_from', `${dateStr}T00:00:00`)
+    .lte('occupied_from', `${dateStr}T23:59:59`)
 
   // fetch bookings within the day range for this court
   const { data: bookings } = await supabase
@@ -44,8 +44,8 @@ export async function resolveCourtSlots(
   const now = new Date().toISOString()
 
   const intervals: SlotInterval[] = baseSlots.map((s) => {
-    const lock = (locks ?? []).find((l: any) => l.starts_at === s.start)
-    const booking = (bookings ?? []).find((b: any) => b.starts_at === s.start)
+    const lock = (locks ?? []).find((l) => l.occupied_from === s.start)
+    const booking = (bookings ?? []).find((b) => b.starts_at === s.start)
 
     // past if start already elapsed
     if (s.start < now) return { ...s, state: 'past' }
@@ -53,7 +53,7 @@ export async function resolveCourtSlots(
     // locked buffer when a lock exists whose buffer period overlaps slot start
     const slotDuration = (SPORT_DURATION_MIN[sport] ?? 60) + (BUFFER_MIN ?? 15)
     const bufferEnd = new Date(new Date(s.start).getTime() + slotDuration * 60_000).toISOString()
-    if (lock && new Date(lock.ends_at) > new Date(s.start)) {
+    if (lock && new Date(lock.occupied_until) > new Date(s.start)) {
       return { ...s, state: 'locked_buffer', bookingId: lock.booking_id ?? booking?.id ?? null }
     }
 

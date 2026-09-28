@@ -6,7 +6,15 @@ import { createApiKeySchema, CreateApiKeyInput } from '@/lib/validations/api'
 // Create a new API key using database function
 export async function createApiKey(input: CreateApiKeyInput) {
   try {
-    const validatedInput = createApiKeySchema.parse(input)
+    const parsed = createApiKeySchema.safeParse(input)
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: 'Invalid input',
+        fieldErrors: parsed.error.flatten().fieldErrors,
+      }
+    }
+    const validatedInput = parsed.data
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -18,22 +26,22 @@ export async function createApiKey(input: CreateApiKeyInput) {
     // Get user's organization
     const { data: profile } = await supabase
       .from('profiles')
-      .select('organization_id, role')
+      .select('org_id, role')
       .eq('id', user.id)
       .single()
 
-    if (!profile?.organization_id) {
+    if (!profile?.org_id) {
       return { success: false, error: 'No organization found for user' }
     }
 
-    // Check permissions - only company_admin can create API keys
-    if (profile.role !== 'company_admin' && profile.role !== 'platform_admin') {
+    // Check permissions - only org_admin can create API keys
+    if (profile.role !== 'org_admin' && profile.role !== 'platform_admin') {
       return { success: false, error: 'Insufficient permissions to create API keys' }
     }
 
     // Call database function to generate API key
     const { data, error } = await supabase.rpc('generate_api_key', {
-      p_organization_id: profile.organization_id,
+      p_organization_id: profile.org_id,
       p_name: validatedInput.name,
       p_permissions: validatedInput.permissions,
       p_rate_limit: validatedInput.rate_limit,
@@ -81,23 +89,23 @@ export async function listApiKeys() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('organization_id, role')
+      .select('org_id, role')
       .eq('id', user.id)
       .single()
 
-    if (!profile?.organization_id) {
+    if (!profile?.org_id) {
       return { success: false, error: 'No organization found for user' }
     }
 
     // Check permissions
-    if (profile.role !== 'company_admin' && profile.role !== 'platform_admin' && profile.role !== 'staff') {
+    if (profile.role !== 'org_admin' && profile.role !== 'platform_admin' && profile.role !== 'staff') {
       return { success: false, error: 'Insufficient permissions' }
     }
 
     const { data: apiKeys, error } = await supabase
       .from('api_keys')
       .select('id, name, prefix, permissions, rate_limit, expires_at, last_used_at, is_active, created_at')
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', profile.org_id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -123,16 +131,16 @@ export async function revokeApiKey(apiKeyId: string) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('organization_id, role')
+      .select('org_id, role')
       .eq('id', user.id)
       .single()
 
-    if (!profile?.organization_id) {
+    if (!profile?.org_id) {
       return { success: false, error: 'No organization found' }
     }
 
     // Check permissions
-    if (profile.role !== 'company_admin' && profile.role !== 'platform_admin') {
+    if (profile.role !== 'org_admin' && profile.role !== 'platform_admin') {
       return { success: false, error: 'Insufficient permissions' }
     }
 
@@ -183,10 +191,10 @@ export async function validateApiKey(key: string): Promise<{
     const result = data[0]
     return {
       valid: result.valid,
-      organizationId: result.organization_id,
+      organizationId: result.organization_id ?? undefined,
       permissions: result.permissions,
       rateLimit: result.rate_limit,
-      error: result.error,
+      error: result.error ?? undefined,
     }
   } catch (error) {
     console.error('Validate API key error:', error)

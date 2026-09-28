@@ -21,7 +21,7 @@ import { createStaffInvite } from '@/lib/actions/staff-invites'
 const inviteSchema = z.object({
   email: z.string().email('Invalid email address'),
   role: z.enum(['org_admin', 'staff'], {
-    errorMap: () => ({ message: 'Role must be company_admin or staff' }),
+    errorMap: () => ({ message: 'Role must be org_admin or staff' }),
   }),
   organization_id: z.string().uuid('Invalid organization ID'),
 })

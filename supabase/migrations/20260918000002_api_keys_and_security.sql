@@ -95,7 +95,7 @@ DECLARE
   v_key RECORD;
 BEGIN
   -- Check if key has valid format
-  IF input_key IS NULL OR NOT input_key STARTS WITH 'sg_live_' THEN
+  IF input_key IS NULL OR NOT starts_with(input_key, 'sg_live_') THEN
     RETURN QUERY SELECT false, NULL::UUID, ARRAY[]::TEXT[], 0, 'Invalid API key format';
     RETURN;
   END IF;
@@ -227,7 +227,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ============================================================================
 
 GRANT SELECT, INSERT, UPDATE ON api_keys TO authenticated;
-GRANT USAGE ON api_keys_id_seq TO authenticated;
+-- (no sequence grant: api_keys.id is a UUID, there is no api_keys_id_seq)
 GRANT EXECUTE ON FUNCTION verify_api_key TO authenticated;
 GRANT EXECUTE ON FUNCTION generate_api_key TO authenticated;
 GRANT EXECUTE ON FUNCTION revoke_api_key TO authenticated;

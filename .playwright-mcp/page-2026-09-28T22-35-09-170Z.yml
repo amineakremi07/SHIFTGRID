@@ -1,0 +1,87 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - paragraph [ref=e4]: Milestone 3 · Preview
+    - heading "Court Slot Matrix" [level=1] [ref=e5]
+    - paragraph [ref=e6]: Running on mock data. Switch sports to see the shared-layout tab indicator, and select an available slot to see the selection state.
+  - region "Court availability" [ref=e7]:
+    - generic [ref=e8]:
+      - tablist [ref=e9]:
+        - tab "Padel" [selected] [ref=e10]
+        - tab "Tennis" [ref=e13]
+        - tab "Football" [ref=e15]
+      - tabpanel "Padel" [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]:
+              - generic [ref=e21]:
+                - text: Padel Court A
+                - generic [ref=e22]: 3 open
+              - paragraph [ref=e23]: 60 TND/hour · 90 min slots
+            - generic [ref=e25]:
+              - button "Padel Court A, 08:00 to 09:30, Past" [disabled] [ref=e27]:
+                - generic [ref=e28]: 08:00
+                - generic [ref=e33]:
+                  - generic [ref=e34]: Past
+                  - generic [ref=e35]: 09:30
+              - button "Padel Court A, 09:45 to 11:15, Booked" [disabled] [ref=e37]:
+                - generic [ref=e38]: 09:45
+                - generic [ref=e43]:
+                  - generic [ref=e44]: Booked
+                  - generic [ref=e45]: 11:15
+              - button "Padel Court A, 11:30 to 13:00, Available, 90 TND" [ref=e47] [cursor=pointer]:
+                - generic [ref=e48]: 11:30
+                - generic [ref=e53]:
+                  - generic [ref=e54]: 90 TND
+                  - generic [ref=e55]: 13:00
+              - button "Padel Court A, 13:15 to 14:45, In Reservation" [disabled] [ref=e57]:
+                - generic [ref=e58]: 13:15
+                - generic [ref=e63]:
+                  - generic [ref=e64]: In Reservation
+                  - generic [ref=e65]: 14:45
+              - button "Padel Court A, 15:00 to 16:30, Available, 90 TND" [ref=e67] [cursor=pointer]:
+                - generic [ref=e68]: 15:00
+                - generic [ref=e73]:
+                  - generic [ref=e74]: 90 TND
+                  - generic [ref=e75]: 16:30
+              - button "Padel Court A, 16:45 to 18:15, Available, 90 TND" [ref=e77] [cursor=pointer]:
+                - generic [ref=e78]: 16:45
+                - generic [ref=e83]:
+                  - generic [ref=e84]: 90 TND
+                  - generic [ref=e85]: 18:15
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - text: Padel Court B
+                - generic [ref=e89]: 3 open
+              - paragraph [ref=e90]: 60 TND/hour · 90 min slots
+            - generic [ref=e92]:
+              - button "Padel Court B, 08:00 to 09:30, Past" [disabled] [ref=e94]:
+                - generic [ref=e95]: 08:00
+                - generic [ref=e100]:
+                  - generic [ref=e101]: Past
+                  - generic [ref=e102]: 09:30
+              - button "Padel Court B, 09:45 to 11:15, Available, 90 TND" [ref=e104] [cursor=pointer]:
+                - generic [ref=e105]: 09:45
+                - generic [ref=e110]:
+                  - generic [ref=e111]: 90 TND
+                  - generic [ref=e112]: 11:15
+              - button "Padel Court B, 11:30 to 13:00, Available, 90 TND" [ref=e114] [cursor=pointer]:
+                - generic [ref=e115]: 11:30
+                - generic [ref=e120]:
+                  - generic [ref=e121]: 90 TND
+                  - generic [ref=e122]: 13:00
+              - button "Padel Court B, 13:15 to 14:45, Booked" [disabled] [ref=e124]:
+                - generic [ref=e125]: 13:15
+                - generic [ref=e130]:
+                  - generic [ref=e131]: Booked
+                  - generic [ref=e132]: 14:45
+              - button "Padel Court B, 15:00 to 16:30, Booked" [disabled] [ref=e134]:
+                - generic [ref=e135]: 15:00
+                - generic [ref=e140]:
+                  - generic [ref=e141]: Booked
+                  - generic [ref=e142]: 16:30
+              - button "Padel Court B, 16:45 to 18:15, Available, 90 TND" [ref=e144] [cursor=pointer]:
+                - generic [ref=e145]: 16:45
+                - generic [ref=e150]:
+                  - generic [ref=e151]: 90 TND
+                  - generic [ref=e152]: 18:15

@@ -1,29 +1,25 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { cache } from 'react'
+import { createServerClient, createBrowserClient as createSsrBrowserClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import type { Database } from '@/lib/types/database'
 
 /**
- * Optimized Supabase client for Server Components
+ * Request-scoped Supabase clients.
  * Callers: lib/actions/staff-invites.ts, lib/actions/player-auth.ts, lib/actions/admin-verification.ts
- * Affected API: Supabase Admin & Server Clients
- * Data schemas: Supabase Client interfaces
- * User instruction: fix the 3 bugs first then hop on next task
  */
-
-// Singleton pattern for client reuse within a request
-let serverClientInstance: ReturnType<typeof createServerClient> | null = null
 
 /**
- * Get or create the Supabase server client
- * Reuses the same client within a single request
+ * Get the Supabase server client for the current request.
+ *
+ * Memoised with React `cache()`, which is scoped to a single request. A
+ * module-level singleton would be shared across every request served by a warm
+ * server instance and would leak one user's authenticated client to another.
  */
-export async function getSupabaseServerClient() {
-  if (serverClientInstance) {
-    return serverClientInstance
-  }
-
+export const getSupabaseServerClient = cache(async () => {
   const cookieStore = await cookies()
 
-  serverClientInstance = createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -37,13 +33,10 @@ export async function getSupabaseServerClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            // Called from a Server Component; the proxy refreshes sessions.
           }
         },
       },
-      // Optimize for Server Components
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -51,17 +44,14 @@ export async function getSupabaseServerClient() {
       },
     }
   )
-
-  return serverClientInstance
-}
+})
 
 /**
  * Create a new Supabase client for API routes
  * Uses service role key for admin operations
  */
 export function createAdminClient() {
-  const { createClient } = require('@supabase/supabase-js')
-  return createClient(
+  return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
@@ -80,27 +70,21 @@ export const getSupabaseAdmin = createAdminClient
  * Use in Client Components only
  */
 export function createBrowserClient() {
-  const { createBrowserClient: createClient } = require('@supabase/ssr')
-  return createClient(
+  return createSsrBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 }
 
 /**
- * Clear the singleton instance (useful for testing or request boundaries)
- */
-export function clearServerClientInstance() {
-  serverClientInstance = null
-}
-
-/**
  * Get user session from server client
  */
 export async function getServerSession() {
+  // getUser() revalidates against the auth server; getSession() trusts the
+  // cookie and is unsafe/deprecated in the SSR context.
   const supabase = await getSupabaseServerClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  return session
+  const { data: { user } } = await supabase.auth.getUser()
+  return user ? { user } : null
 }
 
 /**
@@ -125,7 +109,7 @@ export async function getServerProfile() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, role, organization_id, full_name, avatar_url')
+    .select('id, role, org_id, display_name, avatar_url')
     .eq('id', user.id)
     .single()
 
@@ -169,7 +153,7 @@ export async function isStaff(): Promise<boolean> {
  */
 export async function getUserOrgId(): Promise<string | null> {
   const profile = await getServerProfile()
-  return profile?.organization_id || null
+  return profile?.org_id || null
 }
 
 /**
