@@ -249,6 +249,7 @@ Two-tone flat surfaces. Hierarchy comes from the surface step, type scale, and w
 | `20260928000004_court_pricing_and_city.sql` | `courts.price_per_hour` (TND), `organizations.city` |
 | `20260929000000_backend_remediation.sql` | Fixes the 8 defects found by verification (see below) |
 | `20260929000001_lock_down_trigger_functions.sql` | Revokes API-role EXECUTE on the 3 SECURITY DEFINER trigger functions; moves `btree_gist` to `extensions` |
+| `20260929000002_bookings_policy_polish.sql` | `platform_admin` reads all bookings; INSERT split: players may only insert their own `pending_payment` booking, `org_admin`/`staff` keep org-scoped insert (walk-ins) |
 
 > ✅ **Local and remote migration history are aligned** (7 versions, identical names). Done by editing `supabase_migrations.schema_migrations` — what `supabase migration repair` does — because the MCP `apply_migration` stamps its own timestamps. If you ever apply a migration via MCP again, re-align the version afterwards.
 
@@ -269,10 +270,12 @@ Trigger chain + GiST (9/9) · RLS/security suite (51/51, one test re-run after I
 | 7 | `DELETE` granted on `courts`/`bookings`, gated by RLS (`org_admin` own org, `platform_admin`) |
 | 8 | `search_path = public, extensions` pinned on every custom function (advisor `function_search_path_mutable`: 12 → 0); `btree_gist` moved out of `public`. `anon` also lost `TRUNCATE/REFERENCES/TRIGGER` and SELECT on `profiles`, `payment_records`, `anonymous_bookers`, `staff_invites` |
 
+### ✅ Also fixed (17/17 verified)
+
+`platform_admin` now reads bookings across all orgs. Players can insert only `booker_profile_id = auth.uid()`, `booker_anon_id IS NULL`, `status = 'pending_payment'` (there is no `pending` value in the CHECK). A player also cannot flip their own booking to `confirmed` (the existing cancel policy's `WITH CHECK` covers it).
+
 ### 🟡 Still open
 
-- **`platform_admin` cannot read `bookings`** (0 of 2 in the probe). The SELECT policy lists only `org_admin`/`staff`. The spec says platform admin sees all data.
-- **Player-supplied booking fields are unconstrained on INSERT.** The policy only checks `org_id`; a player could set another user's `booker_profile_id` or `status`. Observed in the policy text, **not tested**.
 - **`verification-docs` bucket does not exist** in the project, and the code uses `getPublicUrl`, so registration proofs would be world-readable if it were created public. Owner signup's document upload currently fails.
 - Remaining advisor warnings are intentional: `user_org_id`/`user_role`/`org_is_approved` must stay callable (RLS policies invoke them as the caller); the API-key RPCs are `authenticated`-only and check role internally. **Leaked-password protection** is a dashboard setting.
 - `listStaffInvites` still allows `staff` in its app-side role check, but RLS now returns nothing for them.
