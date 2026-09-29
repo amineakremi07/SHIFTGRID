@@ -77,6 +77,10 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
       .insert({
         name: company.companyName,
         address: fullAddress,
+        // Structured fields the public club search reads (city label, distance).
+        city: company.city,
+        latitude: location.latitude,
+        longitude: location.longitude,
         sport_types: company.sportTypes,
         timezone: 'Africa/Tunis',
         status: 'pending',

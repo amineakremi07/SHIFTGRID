@@ -40,6 +40,8 @@ export type Database = {
           name: string
           address: string | null
           city: string | null
+          latitude: number | null
+          longitude: number | null
           sport_types: Sport[]
           timezone: string
           status: OrgStatus
@@ -55,6 +57,8 @@ export type Database = {
           name: string
           address?: string | null
           city?: string | null
+          latitude?: number | null
+          longitude?: number | null
           sport_types?: Sport[]
           timezone?: string
           status?: OrgStatus

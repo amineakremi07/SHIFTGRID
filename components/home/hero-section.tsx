@@ -1,20 +1,12 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Menu, Trophy, Users } from 'lucide-react'
+import { ArrowRight, Trophy, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet'
+import { Navbar } from '@/components/nav/navbar'
 import { SPRING } from '@/components/ui/motion-button'
 import { cn } from '@/lib/utils'
 
@@ -25,17 +17,6 @@ import { cn } from '@/lib/utils'
    text on this surface — and the single Lime Pulse element is the CTA.
    ========================================================================== */
 
-/**
- * `Facilities` and `Pricing` have no pages yet, so they anchor to the sections
- * that currently cover them. Point them at real routes when those exist.
- */
-const NAV_LINKS = [
-  { label: 'Home', href: '/' },
-  { label: 'Courts', href: '#discover' },
-  { label: 'Facilities', href: '#how-it-works' },
-  { label: 'Pricing', href: '#discover' },
-] as const
-
 /** Decorative, hence aria-hidden: initials on the neutral palette. */
 const AVATARS = [
   { initials: 'YB', className: 'bg-oat-milk' },
@@ -43,20 +24,6 @@ const AVATARS = [
   { initials: 'SK', className: 'bg-bone-linen' },
   { initials: '+', className: 'bg-peacock-teal text-bone-linen' },
 ]
-
-function BrandMark({ className }: { className?: string }) {
-  return (
-    <Link
-      href="/"
-      className={cn(
-        'font-heading text-xl font-semibold tracking-tight text-bone-linen',
-        className
-      )}
-    >
-      ShiftGrid
-    </Link>
-  )
-}
 
 /** Faint padel-court linework — sport-specific texture, no fills. */
 function CourtLines({ className }: { className?: string }) {
@@ -123,83 +90,7 @@ export function HeroSection() {
         />
         <CourtLines className="pointer-events-none absolute -bottom-10 right-10 -z-10 hidden h-[560px] rotate-6 text-bone-linen/10 lg:block" />
 
-        {/* ------------------------------ nav ------------------------------ */}
-        <header className="flex items-center justify-between px-5 py-5 md:px-10">
-          <BrandMark />
-
-          <nav aria-label="Primary" className="hidden items-center gap-8 md:flex">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="text-sm text-bone-linen/75 transition-colors hover:text-bone-linen"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="hidden items-center gap-2 md:flex">
-            <Button
-              asChild
-              variant="ghost"
-              className="text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
-            >
-              <Link href="/login-owner">Login</Link>
-            </Button>
-            {/* Outlined, not green: the hero CTA is this view's one Lime Pulse. */}
-            <Button
-              asChild
-              variant="outline"
-              className="border-bone-linen/40 bg-transparent text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
-            >
-              <Link href="/signup-owner">Register</Link>
-            </Button>
-          </div>
-
-          {/* Mobile menu */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen md:hidden"
-                aria-label="Open menu"
-              >
-                <Menu />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right">
-              <SheetHeader>
-                <SheetTitle>ShiftGrid</SheetTitle>
-              </SheetHeader>
-              <nav aria-label="Mobile" className="flex flex-col gap-1 px-4">
-                {NAV_LINKS.map((link) => (
-                  <SheetClose asChild key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="rounded-lg px-3 py-2 text-base hover:bg-muted"
-                    >
-                      {link.label}
-                    </Link>
-                  </SheetClose>
-                ))}
-              </nav>
-              <div className="mt-4 flex flex-col gap-2 px-4">
-                <SheetClose asChild>
-                  <Button asChild variant="outline">
-                    <Link href="/login-owner">Login</Link>
-                  </Button>
-                </SheetClose>
-                <SheetClose asChild>
-                  <Button asChild>
-                    <Link href="/signup-owner">Register</Link>
-                  </Button>
-                </SheetClose>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </header>
+        <Navbar />
 
         {/* ----------------------------- content ---------------------------- */}
         <div className="relative px-5 pb-14 pt-8 md:px-10 md:pb-20 md:pt-14 lg:pb-28">

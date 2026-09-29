@@ -140,7 +140,8 @@ lib/
 components/
   ui/           Radix/Shadcn atomic primitives (lowercase filenames)
   courts/       Court + slot domain components (court-slot-matrix, slot-realtime, date-navigator)
-  home/         Public landing: hero-section, discovery-hub, how-it-works
+  home/         Public landing: hero-section, club-discovery, how-it-works
+  nav/          navbar (public site navigation)
   booking/      Booking flow components
   dashboard/    Owner/staff dashboard components
   staff/        Staff invite management
@@ -168,6 +169,10 @@ components/
 | **`useSearchParams()` needs `<Suspense>`** | Otherwise the production build fails at prerender. `/accept-invite` and `/login-owner` are wrapped. |
 | **react-leaflet must be `ssr: false`** | It touches `window` at module scope. Loaded via `next/dynamic` in `components/auth/location-picker-map.tsx`. |
 | **Tunisian phone regex** | `/^(\+?216\s?\|00216\s?)?[234579]\d{1}[\s.-]?\d{3}[\s.-]?\d{3}$/` in `lib/validations/player-auth.ts`. Accepts `98123456`, `+216 98 123 456`, `0021698123456`. |
+| **Landing is organization-first** | `app/page.tsx` loads approved orgs + active courts via `createPublicClient()`, `buildClubs()` (`lib/clubs.ts`, pure and unit-testable) aggregates them, `ClubDiscovery` filters client-side. Cards link to `/courts/[orgId]`. `revalidate = 60`. Clubs with no active court are hidden; `price_per_hour = 0` means "not set" (shown as *Price on request*), never free. |
+| **`.env.local` points at local Docker** | `NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321` (not running), so every real-data page shows its "couldn't load" state locally until you point it at the hosted project. The landing distinguishes *failed* from *empty* precisely so this is visible. |
+| **Signup used to drop structured location** | `owner-signup.ts` folded `city` into `address` and only emailed lat/lng. It now saves `city`, `latitude`, `longitude`. Clubs registered earlier have none and sort last under "Nearest to me". |
+| **PostHog analytics (lazy)** | `app/providers.tsx` (`PHProvider`, wraps `app/layout.tsx`). `posthog-js` is a dynamic `import()` inside the effect, so its ~93 KB gzip chunk is fetched only after hydration and only when `NEXT_PUBLIC_POSTHOG_KEY` is set (template: `.env.local.example`); no key means no download. **Do not import `posthog-js/react`** — it imports `posthog-js` statically and would put the library back in the initial bundle (so `usePostHog` is unavailable; call `import('posthog-js')` at the use site, same singleton). Config: `person_profiles: 'identified_only'`, autocapture on, `capture_pageview: 'history_change'`. Nothing calls `identify()` yet and there is no consent gate, so add one before enabling in production for Tunisian users. |
 | **Public pages use `createPublicClient()`** | `/courts` and `/courts/[orgId]` read as `anon` with an explicit column list. `anon` has column-level SELECT on `organizations` — `select('*')` will fail with `permission denied`. Pages using it need `export const dynamic = 'force-dynamic'`. |
 | **BEFORE triggers fire alphabetically** | Name them with numeric prefixes (`trg_10_…`, `trg_20_…`) when order matters. |
 | **`anonymous_bookers` unique on `(org_id, phone)`** | `createAnonymousBooker` upserts with `ignoreDuplicates: false`. **`anon` has NO insert grant or policy** (verified: `permission denied`), so guest checkout only works through the service-role client. `SELECT` is org staff only. |
@@ -249,6 +254,7 @@ Two-tone flat surfaces. Hierarchy comes from the surface step, type scale, and w
 | `20260928000004_court_pricing_and_city.sql` | `courts.price_per_hour` (TND), `organizations.city` |
 | `20260929000000_backend_remediation.sql` | Fixes the 8 defects found by verification (see below) |
 | `20260929000001_lock_down_trigger_functions.sql` | Revokes API-role EXECUTE on the 3 SECURITY DEFINER trigger functions; moves `btree_gist` to `extensions` |
+| `20260929000003_organization_coordinates.sql` | `organizations.latitude/longitude` (nullable, range + both-or-neither CHECKs), readable by `anon`. Signup now saves them, plus `city`. |
 | `20260929000002_bookings_policy_polish.sql` | `platform_admin` reads all bookings; INSERT split: players may only insert their own `pending_payment` booking, `org_admin`/`staff` keep org-scoped insert (walk-ins) |
 
 > ✅ **Local and remote migration history are aligned** (7 versions, identical names). Done by editing `supabase_migrations.schema_migrations` — what `supabase migration repair` does — because the MCP `apply_migration` stamps its own timestamps. If you ever apply a migration via MCP again, re-align the version afterwards.

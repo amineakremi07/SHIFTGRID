@@ -298,6 +298,8 @@ export type Database = {
           city: string | null
           created_at: string
           id: string
+          latitude: number | null
+          longitude: number | null
           name: string
           registry_number: string | null
           sport_types: string[]
@@ -313,6 +315,8 @@ export type Database = {
           city?: string | null
           created_at?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name: string
           registry_number?: string | null
           sport_types?: string[]
@@ -328,6 +332,8 @@ export type Database = {
           city?: string | null
           created_at?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           registry_number?: string | null
           sport_types?: string[]
