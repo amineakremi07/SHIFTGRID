@@ -36,7 +36,14 @@ async function loadClubs(): Promise<{ clubs: Club[]; failed: boolean }> {
   ])
 
   if (orgs.error || courts.error) {
-    console.error('Failed to load clubs', orgs.error ?? courts.error)
+    // Log plain strings: a Supabase error object can print as `{}`, which hides
+    // the cause (e.g. "TypeError: fetch failed" when the URL is unreachable).
+    console.error('Failed to load clubs:', {
+      organizations: orgs.error?.message,
+      organizationsDetails: orgs.error?.details,
+      courts: courts.error?.message,
+      courtsDetails: courts.error?.details,
+    })
     return { clubs: [], failed: true }
   }
   return { clubs: buildClubs(orgs.data, courts.data), failed: false }
@@ -60,7 +67,7 @@ export default async function Home() {
             <Link href="#discover" className="hover:text-foreground">
               Clubs
             </Link>
-            <Link href="/signup-owner" className="hover:text-foreground">
+            <Link href="/register?role=owner" className="hover:text-foreground">
               List your club
             </Link>
           </nav>

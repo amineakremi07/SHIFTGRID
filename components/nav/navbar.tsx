@@ -74,7 +74,7 @@ export function Navbar() {
           variant="outline"
           className="border-bone-linen/40 bg-transparent text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
         >
-          <Link href="/signup-owner">Register</Link>
+          <Link href="/register">Register</Link>
         </Button>
       </div>
 
@@ -114,7 +114,7 @@ export function Navbar() {
             </SheetClose>
             <SheetClose asChild>
               <Button asChild>
-                <Link href="/signup-owner">Register</Link>
+                <Link href="/register">Register</Link>
               </Button>
             </SheetClose>
           </div>

@@ -6,12 +6,9 @@ import { ownerSignupSchema, type OwnerSignupData } from '@/lib/validations/owner
 import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
-const supabaseAdmin = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Clients are created inside the action, not here. Constructing them at import
+// time made merely importing this file (and so rendering /register) throw
+// whenever RESEND_API_KEY or the service-role key was missing.
 
 export async function submitOwnerSignup(formData: OwnerSignupData) {
   const validated = ownerSignupSchema.safeParse(formData)
@@ -22,6 +19,11 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
   const { company, location, document, owner } = validated.data
 
   try {
+    const supabaseAdmin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: owner.ownerEmail,
       password: owner.password,
@@ -141,7 +143,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     }
 
     try {
-      await resend.emails.send({
+      await new Resend(process.env.RESEND_API_KEY).emails.send({
         from: 'ShiftGrid <noreply@shiftgrid.tn>',
         to: process.env.ADMIN_EMAIL!,
         subject: `New Organization Pending Verification: ${company.companyName}`,
@@ -167,7 +169,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     }
 
     try {
-      await resend.emails.send({
+      await new Resend(process.env.RESEND_API_KEY).emails.send({
         from: 'ShiftGrid <noreply@shiftgrid.tn>',
         to: owner.ownerEmail,
         subject: 'Your ShiftGrid Organization Registration Received',

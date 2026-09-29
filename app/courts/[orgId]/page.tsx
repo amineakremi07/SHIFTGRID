@@ -1,56 +1,184 @@
-import { createPublicClient } from '@/lib/supabase/public'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { resolveCourtSlots } from '@/lib/slot-resolver'
-import { CourtDetailClient } from '@/components/courts/court-detail-client'
+import { ArrowLeft, MapPin } from 'lucide-react'
 
-// Public data read with the anon role: never prerender it with build-time rows.
+import type { BookingDrawerMember } from '@/components/booking/booking-drawer'
+import type { MatrixCourt } from '@/components/courts/court-slot-matrix'
+import { ClubBookingView } from '@/components/courts/club-booking-view'
+import { generateCourtSlots } from '@/lib/court-slots'
+import { addDays, venueDateString, venueInstant } from '@/lib/court-time'
+import { SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
+import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
+
+/** Personalised (the drawer knows who is signed in) and live, so never prerendered. */
 export const dynamic = 'force-dynamic'
 
-export default async function CourtDetailPage({
+/** How far ahead a slot can be booked; mirrors the server action. */
+const MAX_DAYS_AHEAD = 60
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DATE = /^\d{4}-\d{2}-\d{2}$/
+
+function isSport(value: string): value is Sport {
+  return value in SPORT_DURATION_MIN
+}
+
+/** Who is browsing, for the drawer's Member tab. Null when signed out. */
+async function loadMember(orgId: string): Promise<BookingDrawerMember | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name, phone, role, org_id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  return {
+    displayName: profile?.display_name ?? user.email ?? 'Your account',
+    email: user.email ?? null,
+    phone: profile?.phone ?? null,
+    role: profile?.role ?? 'unknown',
+    isMember: profile?.role === 'player' && profile.org_id === orgId,
+  }
+}
+
+export default async function ClubPage({
   params,
   searchParams,
 }: {
   params: Promise<{ orgId: string }>
   searchParams?: Promise<{ date?: string }>
 }) {
-  const supabase = createPublicClient()
-
   const { orgId } = await params
-  const dateStr = (await searchParams)?.date ?? new Date().toISOString().split('T')[0]
+  if (!UUID.test(orgId)) notFound()
+
+  // Clamp the requested day into the bookable window (venue time, not the server's).
+  const today = venueDateString()
+  const maxDate = addDays(today, MAX_DAYS_AHEAD)
+  const requested = (await searchParams)?.date
+  const dateStr = requested && DATE.test(requested) ? requested : today
+  const day = dateStr < today ? today : dateStr > maxDate ? maxDate : dateStr
+
+  // Public (anon) reads: RLS exposes only approved clubs, active courts, and lock ranges.
+  const supabase = createPublicClient()
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('id, name, address, city, status')
+    .select('id, name, address, city')
     .eq('id', orgId)
-    .single()
+    .eq('status', 'approved')
+    .maybeSingle()
+  if (!org) notFound()
 
-  if (!org || org.status !== 'approved') return notFound()
-
-  const { data: courts } = await supabase
+  const { data: courts, error: courtsError } = await supabase
     .from('courts')
-    .select('id, name, sport, status, price_per_hour')
+    .select('id, name, sport, price_per_hour, open_time, close_time, night_surcharge_per_hour, night_starts_at')
     .eq('org_id', orgId)
     .eq('status', 'active')
+    .order('name')
 
-  const courtsWithSlots = await Promise.all(
-    (courts ?? []).map(async (court) => {
-      const slots = await resolveCourtSlots(court.id, court.sport, dateStr)
-      return { ...court, slots }
+  // Locks overlapping the day (through 24:00 + 24h so late-night slots are covered).
+  const courtIds = (courts ?? []).map((c) => c.id)
+  const { data: locks, error: locksError } = courtIds.length
+    ? await supabase
+        .from('court_slot_locks')
+        .select('court_id, occupied_from, occupied_until')
+        .in('court_id', courtIds)
+        .lt('occupied_from', venueInstant(day, 2880).toISOString())
+        .gt('occupied_until', venueInstant(day, 0).toISOString())
+    : { data: [], error: null }
+
+  // If availability could not be read, say so. Rendering every slot as free would
+  // invite players to book slots that are already taken.
+  const loadFailed = Boolean(courtsError || locksError)
+  if (loadFailed) {
+    console.error('Failed to load club availability:', {
+      courts: courtsError?.message,
+      courtsDetails: courtsError?.details,
+      locks: locksError?.message,
+      locksDetails: locksError?.details,
     })
-  )
+  }
+
+  const now = new Date()
+  const matrixCourts: MatrixCourt[] = loadFailed
+    ? []
+    : (courts ?? []).flatMap((court) => {
+        if (!isSport(court.sport)) return []
+        const courtLocks = (locks ?? [])
+          .filter((l) => l.court_id === court.id)
+          .map((l) => ({ from: l.occupied_from, until: l.occupied_until }))
+
+        return [
+          {
+            id: court.id,
+            name: court.name,
+            sport: court.sport,
+            pricePerHour: Number(court.price_per_hour),
+            nightSurchargePerHour: Number(court.night_surcharge_per_hour),
+            nightStartsAt: court.night_starts_at,
+            slots: generateCourtSlots({
+              sport: court.sport,
+              openTime: court.open_time,
+              closeTime: court.close_time,
+              dateStr: day,
+              locks: courtLocks,
+              now,
+            }),
+          },
+        ]
+      })
+
+  const member = await loadMember(orgId)
 
   return (
-    <main className="max-w-6xl mx-auto px-6 py-12">
-      <header className="mb-10">
-        <h1 className="text-4xl font-extrabold tracking-tight mb-2">{org.name}</h1>
-        <p className="text-muted-foreground text-lg">{org.address ?? ''}, {org.city ?? ''}</p>
+    <main className="mx-auto w-full max-w-[1200px] px-5 py-10">
+      <Link
+        href="/#discover"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        All clubs
+      </Link>
+
+      <header className="mb-8 mt-4">
+        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{org.name}</h1>
+        <p className="mt-2 flex items-center gap-1.5 text-muted-foreground">
+          <MapPin className="size-4 shrink-0" aria-hidden />
+          {[org.address, org.city].filter(Boolean).join(' · ') || 'Tunisia'}
+        </p>
       </header>
 
-      <CourtDetailClient
-        courtsWithSlots={courtsWithSlots}
-        orgId={orgId}
-        dateStr={dateStr}
-      />
+      {loadFailed ? (
+        <div role="alert" className="rounded-xl bg-card px-6 py-12 text-center">
+          <p className="text-lg font-semibold">We couldn&apos;t load availability right now</p>
+          <p className="mx-auto mt-1 max-w-[46ch] text-sm text-muted-foreground">
+            Please refresh in a moment. Slots are not shown, so you can&apos;t book one by mistake.
+          </p>
+        </div>
+      ) : matrixCourts.length === 0 ? (
+        <div className="rounded-xl bg-card px-6 py-12 text-center">
+          <p className="text-lg font-semibold">No courts are open for booking yet</p>
+          <p className="mx-auto mt-1 max-w-[46ch] text-sm text-muted-foreground">
+            This club hasn&apos;t set up its courts. Check back soon.
+          </p>
+        </div>
+      ) : (
+        <ClubBookingView
+          orgId={org.id}
+          orgName={org.name}
+          dateStr={day}
+          minDate={today}
+          maxDate={maxDate}
+          courts={matrixCourts}
+          member={member}
+        />
+      )}
     </main>
   )
 }

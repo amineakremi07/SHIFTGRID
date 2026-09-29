@@ -251,6 +251,8 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          night_starts_at: string
+          night_surcharge_per_hour: number
           open_time: string
           org_id: string
           price_per_hour: number
@@ -263,6 +265,8 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          night_starts_at?: string
+          night_surcharge_per_hour?: number
           open_time?: string
           org_id: string
           price_per_hour?: number
@@ -275,6 +279,8 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          night_starts_at?: string
+          night_surcharge_per_hour?: number
           open_time?: string
           org_id?: string
           price_per_hour?: number
@@ -501,6 +507,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_booking: {
+        Args: {
+          p_amount: number
+          p_court_id: string
+          p_guest_name?: string
+          p_guest_phone?: string
+          p_org_id: string
+          p_player_count: number
+          p_profile_id?: string
+          p_sport: string
+          p_starts_at: string
+        }
+        Returns: Json
+      }
       generate_api_key: {
         Args: {
           p_expires_at?: string

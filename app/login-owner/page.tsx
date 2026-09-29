@@ -176,12 +176,12 @@ function OwnerLoginContent() {
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
             <p>Don't have an organization yet?{' '}
-              <Link href="/signup-owner" className="text-primary hover:underline font-medium">
+              <Link href="/register?role=owner" className="text-primary hover:underline font-medium">
                 Register your sports complex
               </Link>
             </p>
             <p className="mt-2">Are you a player?{' '}
-              <Link href="/booking" className="text-primary hover:underline font-medium">
+              <Link href="/#discover" className="text-primary hover:underline font-medium">
                 Book a court
               </Link>
             </p>

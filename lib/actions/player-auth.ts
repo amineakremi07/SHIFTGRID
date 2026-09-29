@@ -7,9 +7,11 @@ import { cookies } from 'next/headers'
 import {
   playerSignInSchema,
   playerSignUpSchema,
+  playerRegisterSchema,
   anonymousBookerSchema,
   type PlayerSignInInput,
   type PlayerSignUpInput,
+  type PlayerRegisterInput,
   type AnonymousBookerInput,
 } from '@/lib/validations/player-auth'
 
@@ -163,6 +165,78 @@ export async function signUpPlayer(
   revalidatePath('/dashboard')
 
   return { success: true, userId: authData.user.id }
+}
+
+export type RegisterPlayerResult =
+  | { success: true; /** False if the account exists but automatic sign-in failed. */ signedIn: boolean }
+  | { success: false; error: string }
+
+/**
+ * Register a player from `/register`: create the account, the `player` profile,
+ * and sign them in.
+ *
+ * The auth user is created already-confirmed (as owner signup does) so the
+ * immediate sign-in works regardless of the project's email-confirmation
+ * setting; there is also no `/auth/callback` route for confirmation links yet.
+ * The trade-off is that the email is not verified. Add verification (with a real
+ * callback route) before relying on the address.
+ */
+export async function registerPlayer(input: PlayerRegisterInput): Promise<RegisterPlayerResult> {
+  const parsed = playerRegisterSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message }
+  }
+  const { fullName, email, phone, password, orgId } = parsed.data
+
+  const admin = getSupabaseAdmin()
+
+  const { data: org } = await admin
+    .from('organizations')
+    .select('status')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (org?.status !== 'approved') {
+    return { success: false, error: 'That club is not available for registration.' }
+  }
+
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName, phone },
+  })
+
+  if (createError || !created.user) {
+    if (
+      createError?.code === 'email_exists' ||
+      /already (been )?registered|already exists/i.test(createError?.message ?? '')
+    ) {
+      return { success: false, error: 'An account with this email already exists. Try signing in instead.' }
+    }
+    console.error('registerPlayer: could not create user:', createError?.message)
+    return { success: false, error: 'We could not create your account. Please try again.' }
+  }
+
+  const { error: profileError } = await admin.from('profiles').insert({
+    id: created.user.id,
+    org_id: orgId,
+    role: 'player',
+    display_name: fullName,
+    phone,
+  })
+
+  if (profileError) {
+    console.error('registerPlayer: could not create profile:', profileError.message)
+    // No orphaned auth user without a profile.
+    await admin.auth.admin.deleteUser(created.user.id)
+    return { success: false, error: 'We could not create your player profile. Please try again.' }
+  }
+
+  // Sets the session cookies (and re-checks that this is a player account).
+  const signIn = await signInPlayer(email, password, true)
+  revalidatePath('/')
+
+  return { success: true, signedIn: signIn.success }
 }
 
 export async function createAnonymousBooker(

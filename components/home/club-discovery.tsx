@@ -386,7 +386,7 @@ export function ClubDiscovery({
           body="Clubs appear here once they are verified and have courts set up."
           action={
             <Button asChild variant="outline">
-              <Link href="/signup-owner">List your club</Link>
+              <Link href="/register?role=owner">List your club</Link>
             </Button>
           }
         />

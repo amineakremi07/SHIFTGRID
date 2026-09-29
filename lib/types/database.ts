@@ -84,6 +84,8 @@ export type Database = {
           close_time: string
           /** Hourly rate in TND. */
           price_per_hour: number
+          night_surcharge_per_hour: number
+          night_starts_at: string
           created_at: string
           updated_at: string
         }
@@ -94,6 +96,8 @@ export type Database = {
           name: string
           status?: CourtStatus
           price_per_hour?: number
+          night_surcharge_per_hour?: number
+          night_starts_at?: string
           open_time?: string
           close_time?: string
           created_at?: string
@@ -304,6 +308,20 @@ export type Database = {
     Views: Record<never, never>
 
     Functions: {
+      create_booking: {
+        Args: {
+          p_amount: number
+          p_court_id: string
+          p_guest_name?: string
+          p_guest_phone?: string
+          p_org_id: string
+          p_player_count: number
+          p_profile_id?: string
+          p_sport: string
+          p_starts_at: string
+        }
+        Returns: Json
+      }
       user_org_id: {
         Args: Record<string, never>
         Returns: string

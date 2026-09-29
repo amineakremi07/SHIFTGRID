@@ -6,25 +6,14 @@ export const SPORT_DURATION_MIN = {
 
 export const BUFFER_MIN = 15
 
+/** Legal player counts per sport (mirrors the bookings.valid_player_count CHECK). */
+export const PLAYER_COUNT_OPTIONS = {
+  padel: [4],
+  tennis: [2, 4],
+  football: [12, 14],
+} as const
+
 export type Sport = keyof typeof SPORT_DURATION_MIN
 
-export function getSlotDuration(sport: Sport): number {
-  return (SPORT_DURATION_MIN[sport] || 60) + BUFFER_MIN
-}
-
-export function generateSlotIntervals(
-  sport: Sport,
-  startHour: number, // 0-23
-  endHour: number,   // 0-23
-  dateStr: string // YYYY-MM-DD
-): Array<{ start: string; end: string }> {
-  const duration = getSlotDuration(sport)
-  const slots = []
-  for (let h = startHour; h < endHour; h++) {
-    const start = `${dateStr}T${String(h).padStart(2, '0')}:00:00`
-    const endHourCalc = h + Math.ceil(duration / 60)
-    const end = `${dateStr}T${String(endHourCalc).padStart(2, '0')}:00:00`
-    slots.push({ start, end })
-  }
-  return slots
-}
+// Slot generation lives in `lib/court-slots.ts`. (An earlier hourly generator was
+// removed: it ignored the sport's real cadence and produced naive local times.)
