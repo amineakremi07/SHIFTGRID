@@ -51,6 +51,8 @@ export type Database = {
           registry_number: string | null
           verified_at: string | null
           verified_by: string | null
+          /** Shown to the owner when status is 'rejected'. Private (not granted to anon). */
+          rejection_reason: string | null
           created_at: string
           updated_at: string
         }
@@ -69,6 +71,7 @@ export type Database = {
           registry_number?: string | null
           verified_at?: string | null
           verified_by?: string | null
+          rejection_reason?: string | null
           created_at?: string
           updated_at?: string
         }

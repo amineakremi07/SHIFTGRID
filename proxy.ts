@@ -127,7 +127,7 @@ export async function proxy(request: NextRequest) {
 
   // Admin-only routes.
   if (pathname.startsWith('/admin') && userRole !== 'platform_admin') {
-    return withSecurityHeaders(NextResponse.redirect(new URL('/dashboard', request.url)))
+    return withSecurityHeaders(NextResponse.redirect(new URL('/', request.url)))
   }
 
   // Redirect authenticated users away from auth pages.

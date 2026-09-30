@@ -1,208 +1,151 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 
-function getSupabaseAdmin() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+import { requireAdmin } from '@/lib/admin/access'
+import { documentRef } from '@/lib/admin/verification'
+import { sendOrgDecisionEmail } from '@/lib/email/org-decision'
+import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
+import type { OrgStatus } from '@/lib/types/database'
+
+/**
+ * Platform-admin decisions on club registrations.
+ *
+ * All of this uses the service-role client (RLS does not protect it), so every
+ * action begins with requireAdmin(), which reads the verified session.
+ */
+
+const uuid = z.string().uuid()
+const SIGNED_URL_SECONDS = 300
+
+export type DecisionResult =
+  | { ok: true; emailSent: boolean }
+  | { ok: false; message: string }
+
+export type DocumentResult =
+  | { ok: true; url: string; kind: 'pdf' | 'image' | 'other'; name: string | null }
+  | { ok: false; message: string }
+
+function refreshPages() {
+  revalidatePath('/admin/verification')
+  // The public discovery page and club list show approved clubs only.
+  revalidatePath('/')
+  revalidatePath('/courts')
 }
 
-export async function getPendingVerifications() {
-  const supabase = await createClient()
+/** Owner of an org (its org_admin profile) and their auth email. */
+async function findOwner(orgId: string) {
+  const admin = getSupabaseAdmin()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('id, display_name')
+    .eq('org_id', orgId)
+    .eq('role', 'org_admin')
+    .limit(1)
+    .maybeSingle()
+  if (!profile) return null
+  const { data } = await admin.auth.admin.getUserById(profile.id)
+  return data.user?.email ? { name: profile.display_name, email: data.user.email } : null
+}
 
-  const { data: organizations, error } = await supabase
+async function decide(
+  orgId: string,
+  decision: 'approved' | 'rejected',
+  reason?: string
+): Promise<DecisionResult> {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth
+  if (!uuid.safeParse(orgId).success) return { ok: false, message: 'Invalid organization.' }
+
+  const admin = getSupabaseAdmin()
+  // Approving may also reverse an earlier rejection; rejecting only applies to
+  // clubs still waiting. The status filter makes a stale double-click a no-op.
+  const from: OrgStatus[] = decision === 'approved' ? ['pending', 'rejected'] : ['pending']
+
+  const { data, error } = await admin
     .from('organizations')
-    .select(`
-      id,
-      name,
-      registry_number,
-      address,
-      sport_types,
-      verification_documents,
-      created_at,
-      profiles!inner(
-        display_name,
-        phone,
-        email
-      )
-    `)
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false })
+    .update({
+      status: decision,
+      verified_at: new Date().toISOString(),
+      verified_by: auth.userId,
+      rejection_reason: decision === 'rejected' ? (reason ?? null) : null,
+    })
+    .eq('id', orgId)
+    .in('status', from)
+    .select('id, name')
 
   if (error) {
-    console.error('Error fetching pending verifications:', error)
-    return { organizations: [], error: error.message }
+    console.error('decide failed', { code: error.code, message: error.message })
+    return { ok: false, message: 'Could not save the decision. Please try again.' }
+  }
+  const org = data?.[0]
+  if (!org) {
+    refreshPages()
+    return { ok: false, message: 'This organization was already reviewed. The list has been refreshed.' }
   }
 
-  // Map sport_types to court counts
-  const organizationsWithCourts = organizations?.map((org) => {
-    const courtCounts = { padel: 0, tennis: 0, football: 0 }
-    if (org.sport_types) {
-      for (const sport of org.sport_types) {
-        if (sport in courtCounts) {
-          courtCounts[sport as keyof typeof courtCounts]++
-        }
-      }
-    }
-    return { ...org, courtCounts }
-  })
+  const owner = await findOwner(orgId)
+  const emailed = owner
+    ? await sendOrgDecisionEmail({
+        to: owner.email,
+        ownerName: owner.name,
+        clubName: org.name,
+        decision,
+        reason,
+      })
+    : { sent: false }
 
-  return { organizations: organizationsWithCourts, error: null }
+  refreshPages()
+  return { ok: true, emailSent: emailed.sent }
 }
 
-export async function getOrganizationById(orgId: string) {
-  const supabase = await createClient()
-
-  const { data: organization, error } = await supabase
-    .from('organizations')
-    .select(`
-      id,
-      name,
-      registry_number,
-      address,
-      sport_types,
-      verification_documents,
-      created_at,
-      profiles!inner(
-        display_name,
-        phone,
-        email
-      )
-    `)
-    .eq('id', orgId)
-    .single()
-
-  if (error || !organization) {
-    return { organization: null, error: error?.message || 'Organization not found' }
-  }
-
-  return { organization, error: null }
+export async function approveOrganization(orgId: string): Promise<DecisionResult> {
+  return decide(orgId, 'approved')
 }
 
-export async function getVerificationDocumentUrl(orgId: string) {
-  const { data: organization, error } = await getSupabaseAdmin()
+const reasonSchema = z
+  .string()
+  .trim()
+  .min(10, 'Please give a reason of at least 10 characters.')
+  .max(1000, 'The reason is too long (1000 characters max).')
+
+export async function rejectOrganization(orgId: string, reason: string): Promise<DecisionResult> {
+  const parsed = reasonSchema.safeParse(reason)
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message }
+  return decide(orgId, 'rejected', parsed.data)
+}
+
+/** A short-lived signed URL for the registration proof. The bucket is private. */
+export async function getVerificationDocument(orgId: string): Promise<DocumentResult> {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth
+  if (!uuid.safeParse(orgId).success) return { ok: false, message: 'Invalid organization.' }
+
+  const admin = getSupabaseAdmin()
+  const { data: org } = await admin
     .from('organizations')
     .select('verification_documents')
     .eq('id', orgId)
-    .single()
+    .maybeSingle()
 
-  if (error || !organization?.verification_documents?.proof) {
-    return { url: null, error: error?.message || 'No verification document found' }
-  }
+  const ref = documentRef(org?.verification_documents)
+  const name = ref.path ?? ref.legacyUrl ?? null
+  if (!ref.path && !ref.legacyUrl) return { ok: false, message: 'No document was uploaded for this club.' }
 
-  return { url: organization.verification_documents.proof, error: null }
-}
-
-export async function approveOrganization(orgId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { success: false, error: 'Unauthorized' }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'platform_admin') {
-    return { success: false, error: 'Access denied. Platform admin access required.' }
-  }
-
-  const { error } = await getSupabaseAdmin()
-    .from('organizations')
-    .update({
-      status: 'approved',
-      verified_at: new Date().toISOString(),
-      verified_by: user.id,
-    })
-    .eq('id', orgId)
-
-  if (error) {
-    return { success: false, error: error.message }
-  }
-
-  revalidatePath('/admin/verifications')
-  return { success: true, message: 'Organization approved successfully' }
-}
-
-export async function rejectOrganization(orgId: string, reason: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { success: false, error: 'Unauthorized' }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'platform_admin') {
-    return { success: false, error: 'Access denied. Platform admin access required.' }
-  }
-
-  const { error } = await getSupabaseAdmin()
-    .from('organizations')
-    .update({
-      status: 'rejected',
-      verified_at: new Date().toISOString(),
-      verified_by: user.id,
-      verification_documents: {
-        rejection_reason: reason,
-      },
-    })
-    .eq('id', orgId)
-
-  if (error) {
-    return { success: false, error: error.message }
-  }
-
-  revalidatePath('/admin/verifications')
-  return { success: true, message: 'Organization rejected' }
-}
-
-export async function downloadVerificationDocument(orgId: string) {
-  const { data: organization, error } = await getSupabaseAdmin()
-    .from('organizations')
-    .select('verification_documents')
-    .eq('id', orgId)
-    .single()
-
-  if (error || !organization?.verification_documents?.proof) {
-    return { success: false, error: 'No verification document found' }
-  }
-
-  const docUrl = organization.verification_documents.proof
-
-  try {
-    const response = await fetch(docUrl)
-    if (!response.ok) {
-      throw new Error('Failed to download document')
+  let url = ref.legacyUrl
+  if (ref.path) {
+    const { data, error } = await admin.storage
+      .from('verification-docs')
+      .createSignedUrl(ref.path, SIGNED_URL_SECONDS)
+    if (error || !data) {
+      console.error('createSignedUrl failed', { message: error?.message })
+      return { ok: false, message: 'Could not open the document. It may have been removed.' }
     }
-
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `verification-doc-${orgId}.${docUrl.split('.').pop() || 'pdf'}`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
-
-    return { success: true }
-  } catch (err) {
-    return { success: false, error: 'Failed to download document' }
+    url = data.signedUrl
   }
+
+  const ext = (ref.path ?? ref.legacyUrl ?? '').split('?')[0].split('.').pop()?.toLowerCase()
+  const kind = ext === 'pdf' ? 'pdf' : ext && ['jpg', 'jpeg', 'png'].includes(ext) ? 'image' : 'other'
+  return { ok: true, url: url!, kind, name }
 }

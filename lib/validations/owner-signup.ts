@@ -29,13 +29,14 @@ export const locationSchema = z.object({
 })
 
 export const documentSchema = z.object({
-  verificationDoc: z.instanceof(File).refine(
+  // Required: a club cannot be verified without its registration proof.
+  verificationDoc: z.instanceof(File, { message: 'Please upload your verification document' }).refine(
     (file) => file.size <= 5 * 1024 * 1024,
     'File must be less than 5MB'
   ).refine(
     (file) => ['application/pdf', 'image/jpeg', 'image/png'].includes(file.type),
     'File must be PDF, JPEG, or PNG'
-  ).optional(),
+  ),
 })
 
 export const ownerAccountSchema = z.object({

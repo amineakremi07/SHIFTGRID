@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { MapPin, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
-import { ownerSignupSchema, type OwnerSignupData } from '@/lib/validations/owner-signup'
+import { documentSchema, ownerSignupSchema, type OwnerSignupData } from '@/lib/validations/owner-signup'
 import { submitOwnerSignup, checkRegistryNumber, geocodeAddress } from '@/lib/actions/owner-signup'
 
 const TUNISIA_CENTER = [34.0, 9.5] as [number, number]
@@ -39,17 +39,17 @@ const LocationPickerMap = dynamic(
 )
 
 const StepIndicator = ({ currentStep, totalSteps = 4 }: { currentStep: number; totalSteps?: number }) => (
-  <div className="flex items-center justify-between mb-8">
+  <div className="mb-8 flex w-full items-center justify-center" role="list" aria-label="Registration progress">
     {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
-      <div key={step} className="flex items-center">
+      <div key={step} role="listitem" className={cn('flex items-center', step < totalSteps && 'flex-1')}>
         <div
           className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors',
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-medium transition-colors',
             step < currentStep
               ? 'bg-green-500 text-white'
               : step === currentStep
               ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground'
+              : 'bg-[#d7d2cc] text-muted-foreground'
           )}
         >
           {step < currentStep ? <CheckCircle className="h-5 w-5" /> : step}
@@ -57,8 +57,8 @@ const StepIndicator = ({ currentStep, totalSteps = 4 }: { currentStep: number; t
         {step < totalSteps && (
           <div
             className={cn(
-              'h-1 w-16 mx-2 transition-colors',
-              step < currentStep ? 'bg-green-500' : 'bg-muted'
+              'mx-2 h-1 min-w-4 flex-1 transition-colors',
+              step < currentStep ? 'bg-green-500' : 'bg-[#d7d2cc]'
             )}
           />
         )}
@@ -153,6 +153,24 @@ export function OwnerSignupForm() {
     }
   }
 
+  const [docFile, setDocFile] = useState<File | null>(null)
+  const [docError, setDocError] = useState<string | null>(null)
+
+  // Validate with the same rules the server uses, on a real native File.
+  const chooseDocument = (file: File | undefined) => {
+    if (!file) return
+    const parsed = documentSchema.shape.verificationDoc.safeParse(file)
+    if (!parsed.success) {
+      setDocFile(null)
+      setDocError(parsed.error.issues[0].message)
+      setValue('document.verificationDoc', undefined as unknown as File)
+      return
+    }
+    setDocFile(file)
+    setDocError(null)
+    setValue('document.verificationDoc', file, { shouldValidate: true })
+  }
+
   const nextStep = () => {
     if (currentStep < 4) setCurrentStep(currentStep + 1)
   }
@@ -190,6 +208,8 @@ export function OwnerSignupForm() {
     if (result.success) {
       setSubmitSuccess(true)
       reset()
+      setDocFile(null)
+      setDocError(null)
       setCurrentStep(1)
       setMapPosition({ latitude: TUNISIA_CENTER[0], longitude: TUNISIA_CENTER[1] })
     } else {
@@ -219,7 +239,7 @@ export function OwnerSignupForm() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold">Register Your Sports Complex</h1>
         <p className="text-muted-foreground mt-2">
@@ -227,9 +247,10 @@ export function OwnerSignupForm() {
         </p>
       </div>
 
+      <div className="w-full rounded-xl bg-[#eae6df] p-5 sm:p-8">
       <StepIndicator currentStep={currentStep} />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-6">
         {submitError && (
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
             {submitError}
@@ -531,26 +552,49 @@ export function OwnerSignupForm() {
               Max 5MB. PDF, JPEG, or PNG.
             </p>
 
-            <div className="border-2 border-dashed border-input rounded-lg p-8 text-center">
-              <Input
+            <div
+              className={cn(
+                'rounded-lg border-2 border-dashed bg-[#f7f5f2] p-8 text-center transition-colors',
+                docError ? 'border-destructive' : 'border-input'
+              )}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault()
+                chooseDocument(e.dataTransfer.files?.[0])
+              }}
+            >
+              {/* Deliberately NOT register()ed: for a file input RHF reads a FileList,
+                  which z.instanceof(File) rejects ("Input not instance of File"). The
+                  File is extracted here and handed to the form explicitly. */}
+              <input
                 type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                {...register('document.verificationDoc')}
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                 className="sr-only"
                 id="verificationDoc"
                 onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) setValue('document.verificationDoc', file)
+                  chooseDocument(e.target.files?.[0])
+                  e.target.value = '' // allow re-picking the same file after an error
                 }}
-                error={!!errors.document?.verificationDoc}
+                aria-invalid={docError ? true : undefined}
+                aria-describedby={docError ? 'verificationDoc-error' : undefined}
               />
               <label htmlFor="verificationDoc" className="cursor-pointer">
-                <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <MapPin className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
                 <p className="text-lg font-medium">Click to upload or drag and drop</p>
-                <p className="text-sm text-muted-foreground mt-1">PDF, JPEG, PNG up to 5MB</p>
+                <p className="mt-1 text-sm text-muted-foreground">PDF, JPEG, PNG up to 5MB</p>
               </label>
-              {errors.document?.verificationDoc && (
-                <p className="text-sm text-destructive mt-2">{errors.document.verificationDoc.message}</p>
+
+              {docFile && !docError && (
+                <p className="mt-4 inline-flex items-center gap-2 rounded-md bg-[#eae6df] px-3 py-1.5 text-sm">
+                  <CheckCircle className="h-4 w-4 text-green-600" aria-hidden />
+                  <span className="max-w-[28ch] truncate">{docFile.name}</span>
+                  <span className="text-muted-foreground">({(docFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                </p>
+              )}
+              {docError && (
+                <p id="verificationDoc-error" role="alert" className="mt-3 text-sm text-destructive">
+                  {docError}
+                </p>
               )}
             </div>
 
@@ -558,7 +602,16 @@ export function OwnerSignupForm() {
               <Button type="button" variant="outline" onClick={prevStep}>
                 Back
               </Button>
-              <Button type="button" onClick={() => void validateAndNext('document')}>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!docFile || docError) {
+                    setDocError(docError ?? 'Please upload your verification document to continue.')
+                    return
+                  }
+                  void validateAndNext('document')
+                }}
+              >
                 Next
               </Button>
             </div>
@@ -653,6 +706,7 @@ export function OwnerSignupForm() {
           </div>
         )}
       </form>
+      </div>
     </div>
   )
 }

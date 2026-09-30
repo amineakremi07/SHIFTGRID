@@ -47,6 +47,33 @@ export const getSupabaseServerClient = cache(async () => {
 })
 
 /**
+ * Why the configured service-role key cannot work, or null if it looks right.
+ *
+ * A publishable/anon key in this slot is the classic mistake: the auth and
+ * storage admin endpoints then answer "This endpoint requires a valid Bearer
+ * token", which says nothing about the real cause.
+ */
+export function serviceRoleKeyProblem(): string | null {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  if (!key) return 'SUPABASE_SERVICE_ROLE_KEY is not set.'
+  if (key === process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || key.startsWith('sb_publishable_')) {
+    return 'SUPABASE_SERVICE_ROLE_KEY holds the publishable/anon key. Use the secret key (Dashboard > Project Settings > API Keys > secret, or the legacy service_role key).'
+  }
+  if (key.startsWith('sb_secret_')) return null
+  if (key.startsWith('eyJ')) {
+    try {
+      const payload = JSON.parse(Buffer.from(key.split('.')[1] ?? '', 'base64url').toString('utf8'))
+      return payload.role === 'service_role'
+        ? null
+        : `SUPABASE_SERVICE_ROLE_KEY is a JWT with role "${payload.role}", not "service_role".`
+    } catch {
+      return 'SUPABASE_SERVICE_ROLE_KEY is not a valid JWT.'
+    }
+  }
+  return 'SUPABASE_SERVICE_ROLE_KEY does not look like a Supabase secret key (still the template placeholder?).'
+}
+
+/**
  * Create a new Supabase client for API routes
  * Uses service role key for admin operations
  */

@@ -13,7 +13,7 @@ export default async function OrgDashboardLayout({ children }: { children: React
   const access = await getOrgAccess()
 
   if (access.kind === 'signed_out') redirect('/login-owner?redirect=/dashboard/org/bookings')
-  if (access.kind === 'platform_admin') redirect('/admin/verifications')
+  if (access.kind === 'platform_admin') redirect('/admin/verification')
   if (access.kind === 'not_staff') redirect('/register?role=owner')
 
   const { ctx } = access
@@ -48,6 +48,12 @@ export default async function OrgDashboardLayout({ children }: { children: React
                 ? 'A platform admin is reviewing your registration. Courts and bookings unlock once it is approved.'
                 : 'Bookings and court management are unavailable. Please contact support.'}
             </p>
+            {ctx.orgStatus === 'rejected' && ctx.rejectionReason && (
+              <p className="mx-auto mt-3 max-w-[52ch] rounded-lg bg-[#f7f5f2] px-4 py-3 text-sm">
+                <span className="text-[#645757]">Reason: </span>
+                {ctx.rejectionReason}
+              </p>
+            )}
           </div>
         ) : (
           children

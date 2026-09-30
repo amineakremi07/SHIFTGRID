@@ -1,7 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/types/database'
+import { createAdminClient, serviceRoleKeyProblem } from '@/lib/supabase/optimized-client'
 import { ownerSignupSchema, type OwnerSignupData } from '@/lib/validations/owner-signup'
 import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
@@ -18,11 +18,31 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
 
   const { company, location, document, owner } = validated.data
 
+  // What this signup has created so far, so a failure at ANY step can undo it and
+  // leave no orphaned auth user, stored file or organization behind.
+  const created: { ownerId?: string; docPath?: string; orgId?: string } = {}
+  let rollback: () => Promise<void> = async () => {}
+
   try {
-    const supabaseAdmin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    // Signup runs before anyone has a session, so every write here (auth user,
+    // storage upload, organization, profile, courts) uses the service-role client.
+    // Never the cookie-based user client: it has no JWT yet.
+    const keyProblem = serviceRoleKeyProblem()
+    if (keyProblem) {
+      console.error('Owner signup blocked:', keyProblem)
+      return {
+        success: false,
+        error: 'Registration is temporarily unavailable (server configuration). Please contact support.',
+      }
+    }
+    const supabaseAdmin = createAdminClient()
+
+    rollback = async () => {
+      // Children first. Organization deletion cascades to courts and profiles.
+      if (created.orgId) await supabaseAdmin.from('organizations').delete().eq('id', created.orgId)
+      if (created.docPath) await supabaseAdmin.storage.from('verification-docs').remove([created.docPath])
+      if (created.ownerId) await supabaseAdmin.auth.admin.deleteUser(created.ownerId)
+    }
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: owner.ownerEmail,
@@ -39,22 +59,11 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     }
 
     const ownerId = authData.user.id
+    created.ownerId = ownerId
 
-    const { error: identityError } = await supabaseAdmin
-      .from('identities')
-      .insert({
-        id: ownerId,
-        user_id: ownerId,
-        provider_id: ownerId,
-        identity_data: { email: owner.ownerEmail },
-        provider: 'email',
-      })
-
-    if (identityError) {
-      console.error('Identity creation error:', identityError)
-    }
-
-    let docUrl: string | null = null
+    // The proof goes into a PRIVATE bucket; only the object path is stored, and
+    // admins open it through a short-lived signed URL (see admin-verification.ts).
+    let docPath: string | null = null
     if (document.verificationDoc) {
       const fileExt = document.verificationDoc.name.split('.').pop()
       const fileName = `${ownerId}-${Date.now()}.${fileExt}`
@@ -63,13 +72,12 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
         .upload(fileName, document.verificationDoc)
 
       if (uploadError) {
+        console.error('Verification document upload failed:', uploadError.message)
+        await rollback()
         return { success: false, error: 'Failed to upload verification document' }
       }
-
-      const { data: urlData } = supabaseAdmin.storage
-        .from('verification-docs')
-        .getPublicUrl(uploadData.path)
-      docUrl = urlData.publicUrl
+      docPath = uploadData.path
+      created.docPath = docPath
     }
 
     const fullAddress = `${company.address}, ${company.city}${company.postalCode ? `, ${company.postalCode}` : ''}, Tunisia`
@@ -87,17 +95,19 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
         timezone: 'Africa/Tunis',
         status: 'pending',
         registry_number: company.registryNumber || null,
-        verification_documents: docUrl ? { proof: docUrl } : {},
+        verification_documents: docPath ? { path: docPath, name: document.verificationDoc?.name ?? null } : {},
       })
       .select('id')
       .single()
 
     if (orgError || !orgData) {
-      await supabaseAdmin.auth.admin.deleteUser(ownerId)
-      return { success: false, error: orgError?.message || 'Failed to create organization' }
+      console.error('Organization insert failed:', { code: orgError?.code, message: orgError?.message })
+      await rollback()
+      return { success: false, error: 'Failed to create organization. Please try again.' }
     }
 
     const orgId = orgData.id
+    created.orgId = orgId
 
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -110,12 +120,12 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
       })
 
     if (profileError) {
-      await supabaseAdmin.from('organizations').delete().eq('id', orgId)
-      await supabaseAdmin.auth.admin.deleteUser(ownerId)
+      console.error('Owner profile insert failed:', { code: profileError.code, message: profileError.message })
+      await rollback()
       return { success: false, error: 'Failed to create owner profile' }
     }
 
-    const courtsToInsert = []
+    const courtsToInsert: Database['public']['Tables']['courts']['Insert'][] = []
     let courtCounter = 1
 
     for (const sport of company.sportTypes) {
@@ -125,7 +135,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
           org_id: orgId,
           sport,
           name: `${sport.charAt(0).toUpperCase() + sport.slice(1)} Court ${courtCounter++}`,
-          status: 'active',
+          status: 'active' as const,
           open_time: company.openTime,
           close_time: company.closeTime,
         })
@@ -138,7 +148,9 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
         .insert(courtsToInsert)
 
       if (courtsError) {
-        console.error('Courts creation error:', courtsError)
+        console.error('Courts creation failed:', { code: courtsError.code, message: courtsError.message })
+        await rollback()
+        return { success: false, error: 'Failed to create your courts. Please try again.' }
       }
     }
 
@@ -159,9 +171,9 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
           <p><strong>Hours:</strong> ${company.openTime} - ${company.closeTime}</p>
           <p><strong>Employees:</strong> ${company.employeeCount}</p>
           <p><strong>Location:</strong> ${location.latitude}, ${location.longitude}</p>
-          <p><strong>Document:</strong> ${docUrl ? `<a href="${docUrl}">View Document</a>` : 'None provided'}</p>
+          <p><strong>Document:</strong> ${docPath ? 'Uploaded (open it in the portal)' : 'None provided'}</p>
           <hr>
-          <p>Review and approve/reject at: <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/verifications">${process.env.NEXT_PUBLIC_APP_URL}/admin/verifications</a></p>
+          <p>Review and approve/reject at: <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/verification">${process.env.NEXT_PUBLIC_APP_URL}/admin/verification</a></p>
         `,
       })
     } catch (emailError) {
@@ -187,11 +199,13 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
       console.error('Owner confirmation email failed:', emailError)
     }
 
-    revalidatePath('/admin/verifications')
+    revalidatePath('/admin/verification')
     return { success: true, orgId, message: 'Registration submitted successfully. You will be contacted for verification.' }
 
   } catch (error) {
-    console.error('Owner signup error:', error)
+    console.error('Owner signup error:', error instanceof Error ? error.message : 'unknown')
+    // An exception after some records exist must not leave them orphaned.
+    await rollback().catch((e) => console.error('Owner signup rollback failed:', e instanceof Error ? e.message : 'unknown'))
     return { success: false, error: 'An unexpected error occurred. Please try again.' }
   }
 }

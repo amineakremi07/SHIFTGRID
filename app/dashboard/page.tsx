@@ -21,7 +21,7 @@ export default async function DashboardPage() {
   }
 
   if (profile.role === 'platform_admin') {
-    redirect('/admin/verifications')
+    redirect('/admin/verification')
   }
 
   if (profile.role === 'org_admin' || profile.role === 'staff') {

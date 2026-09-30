@@ -9,6 +9,8 @@ export type OrgContext = {
   orgId: string
   orgName: string
   orgStatus: OrgStatus
+  /** Why the club was rejected, when it was. */
+  rejectionReason: string | null
   displayName: string
 }
 
@@ -44,7 +46,7 @@ export const getOrgAccess = cache(async (): Promise<OrgAccess> => {
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('id, name, status')
+    .select('id, name, status, rejection_reason')
     .eq('id', profile.org_id)
     .maybeSingle()
   if (!org) return { kind: 'not_staff', role: profile.role }
@@ -57,6 +59,7 @@ export const getOrgAccess = cache(async (): Promise<OrgAccess> => {
       orgId: org.id,
       orgName: org.name,
       orgStatus: org.status,
+      rejectionReason: org.rejection_reason,
       displayName: profile.display_name,
     },
   }
