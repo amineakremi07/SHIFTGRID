@@ -24,6 +24,10 @@ export default async function DashboardPage() {
     redirect('/admin/verifications')
   }
 
+  if (profile.role === 'org_admin' || profile.role === 'staff') {
+    redirect('/dashboard/org/bookings')
+  }
+
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="border-b bg-background">
@@ -31,7 +35,7 @@ export default async function DashboardPage() {
           <h1 className="text-xl font-bold">Dashboard</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
-              {profile.role === 'org_admin' ? 'Organization Admin' : 'Staff'}
+              {profile.role}
             </span>
             <form action="/logout" method="post">
               <button type="submit" className="text-sm text-primary hover:underline">
@@ -82,7 +86,7 @@ export default async function DashboardPage() {
               <span className="text-sm text-muted-foreground mt-1">Invite and manage team</span>
             </a>
             <a
-              href="/dashboard/bookings"
+              href="/dashboard/org/bookings"
               className="flex flex-col items-center justify-center p-6 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <div className="h-12 w-12 mb-3 flex items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -94,7 +98,7 @@ export default async function DashboardPage() {
               <span className="text-sm text-muted-foreground mt-1">Calendar and schedule</span>
             </a>
             <a
-              href="/dashboard/settings"
+              href="/dashboard/org/settings"
               className="flex flex-col items-center justify-center p-6 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <div className="h-12 w-12 mb-3 flex items-center justify-center rounded-full bg-primary/10 text-primary">

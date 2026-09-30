@@ -23,6 +23,7 @@ export function ClubBookingView({
   maxDate,
   courts,
   member,
+  closedNotice = null,
 }: {
   orgId: string
   orgName: string
@@ -31,6 +32,8 @@ export function ClubBookingView({
   maxDate: string
   courts: MatrixCourt[]
   member: BookingDrawerMember | null
+  /** Shown above the matrix when the club is closed on the chosen day. */
+  closedNotice?: string | null
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -96,6 +99,12 @@ export function ClubBookingView({
         onChange={changeDate}
         pending={pending}
       />
+
+      {closedNotice && (
+        <p role="status" className="rounded-lg bg-card px-4 py-3 text-sm text-muted-foreground">
+          {closedNotice}
+        </p>
+      )}
 
       <div className={cn('transition-opacity', pending && 'opacity-60')} aria-busy={pending}>
         <CourtSlotMatrix

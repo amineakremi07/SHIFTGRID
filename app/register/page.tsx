@@ -48,7 +48,7 @@ export default async function RegisterPage({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border">
-        <div className="mx-auto flex h-16 w-full max-w-4xl items-center justify-between px-5">
+        <div className="mx-auto flex h-16 w-full max-w-[1920px] items-center justify-between px-4 sm:px-6 lg:px-8 xl:px-12">
           <Link href="/" className="font-heading text-xl font-semibold tracking-tight">
             ShiftGrid
           </Link>
@@ -58,13 +58,15 @@ export default async function RegisterPage({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-12 md:py-16">
+      <main className="mx-auto w-full max-w-[1920px] flex-1 px-4 py-12 sm:px-6 md:py-16 lg:px-8">
+        <div className="mx-auto w-full max-w-4xl">
         <RegisterFlow
           clubs={clubRows ?? []}
           initialRole={initialRole}
           initialClubId={initialClubId}
           next={next}
         />
+        </div>
       </main>
     </div>
   )

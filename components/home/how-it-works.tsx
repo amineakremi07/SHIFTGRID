@@ -49,7 +49,7 @@ export function HowItWorks() {
     <section
       id="how-it-works"
       aria-labelledby="how-title"
-      className="mx-auto w-full max-w-[1200px] scroll-mt-6 px-5 pb-20 pt-4 md:pb-28"
+      className="mx-auto w-full max-w-[1920px] scroll-mt-6 px-4 pb-20 sm:px-6 lg:px-8 xl:px-12 pt-4 md:pb-28"
     >
       <p className="text-xs uppercase tracking-wide text-muted-foreground">
         How it works

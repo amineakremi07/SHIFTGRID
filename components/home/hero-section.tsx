@@ -81,8 +81,8 @@ export function HeroSection() {
   const reduce = useReducedMotion()
 
   return (
-    <section className="px-3 pt-3 md:px-5 md:pt-5" aria-labelledby="hero-title">
-      <div className="relative isolate mx-auto max-w-[1400px] overflow-hidden rounded-2xl bg-forest-depths text-bone-linen">
+    <section className="mx-auto w-full max-w-[1920px] px-3 pt-3 sm:px-5 md:pt-5 xl:px-9" aria-labelledby="hero-title">
+      <div className="relative isolate w-full overflow-hidden rounded-2xl bg-forest-depths text-bone-linen">
         {/* Atmosphere: a deep teal wash and court linework. Both decorative. */}
         <div
           aria-hidden

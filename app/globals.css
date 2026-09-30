@@ -11,6 +11,9 @@
    ========================================================================== */
 
 @theme inline {
+  /* Ultra-wide step (1920px) for 2K/4K monitors; Tailwind stops at 2xl (1536px). */
+  --breakpoint-3xl: 120rem;
+
   /* --- Named brand tokens (DESIGN.md "Tokens — Colors") ------------------ */
   --color-bone-linen: #f7f5f2;
   --color-oat-milk: #eae6df;

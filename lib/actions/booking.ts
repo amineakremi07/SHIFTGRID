@@ -3,13 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { createBookingSchema, type CreateBookingInput } from '@/lib/validations/booking'
-import { computePrice } from '@/lib/pricing'
-import { generateCourtSlots } from '@/lib/court-slots'
-import { addDays, minutesSinceVenueDayStart, timeToMinutes, venueDateString } from '@/lib/court-time'
-import { PLAYER_COUNT_OPTIONS, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
-
-/** How far ahead a slot can be booked. */
-const MAX_DAYS_AHEAD = 60
+import { checkBookableSlot } from '@/lib/booking-core'
 
 export type BookingErrorCode =
   | 'invalid_input'
@@ -40,15 +34,13 @@ export type BookingResult =
 
 const fail = (code: BookingErrorCode, message: string): BookingResult => ({ ok: false, code, message })
 
-function isSport(value: string): value is Sport {
-  return value in SPORT_DURATION_MIN
-}
-
 /** Map a Postgres / PostgREST error from create_booking to something a player can act on. */
 function mapDatabaseError(error: { code?: string; message?: string }): BookingResult {
   // 23P01 = exclusion_violation: the GiST constraint on court_slot_locks caught a
   // double booking (two players racing for the same court and time).
-  if (error.code === '23P01') {
+  // An identical start time collides on the (court_id, occupied_from) primary key
+  // first, which is 23505 rather than 23P01; both mean "someone else got it".
+  if (error.code === '23P01' || (error.code === '23505' && error.message?.includes('court_slot_locks'))) {
     return fail('slot_taken', 'This slot was just taken by another player. Please select another time.')
   }
   const message = error.message ?? ''
@@ -94,59 +86,16 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
 
   const admin = getSupabaseAdmin()
 
-  // --- the court, from the database (never from the client) ---------------
-  const { data: court } = await admin
-    .from('courts')
-    .select(
-      'id, org_id, sport, status, open_time, close_time, price_per_hour, night_surcharge_per_hour, night_starts_at'
-    )
-    .eq('id', data.courtId)
-    .maybeSingle()
-
-  if (!court || court.org_id !== data.orgId || court.status !== 'active' || !isSport(court.sport)) {
-    return fail('unavailable', 'This court is no longer available for booking.')
-  }
-  const sport = court.sport
-
-  const { data: org } = await admin
-    .from('organizations')
-    .select('status')
-    .eq('id', data.orgId)
-    .maybeSingle()
-  if (org?.status !== 'approved') {
-    return fail('unavailable', 'This club is not accepting bookings right now.')
-  }
-
-  // --- the slot must be a real slot, inside the booking window -------------
-  const today = venueDateString()
-  if (data.date < today || data.date > addDays(today, MAX_DAYS_AHEAD)) {
-    return fail('invalid_slot', 'That date is not open for booking.')
-  }
-  const startsAtMs = Date.parse(data.startsAt)
-  const onGrid = generateCourtSlots({
-    sport,
-    openTime: court.open_time,
-    closeTime: court.close_time,
-    dateStr: data.date,
-    locks: [],
-    now: new Date(0), // "past" is enforced by the database against the real clock
-  }).some((slot) => Date.parse(slot.start) === startsAtMs)
-  if (!onGrid) {
-    return fail('invalid_slot', 'That time is not available on this court. Please pick a listed slot.')
-  }
-
-  if (!(PLAYER_COUNT_OPTIONS[sport] as readonly number[]).includes(data.playerCount)) {
-    return fail('invalid_input', 'That number of players is not allowed for this sport.')
-  }
-
-  // --- price: same function the drawer used ---------------------------------
-  const price = computePrice({
-    pricePerHour: Number(court.price_per_hour),
-    nightSurchargePerHour: Number(court.night_surcharge_per_hour),
-    nightStartsAtMinutes: timeToMinutes(court.night_starts_at),
-    startMinutes: minutesSinceVenueDayStart(data.startsAt, data.date),
-    durationMinutes: SPORT_DURATION_MIN[sport],
+  // --- court, slot, hours, player count and price: one shared check ---------
+  const checked = await checkBookableSlot(admin, {
+    orgId: data.orgId,
+    courtId: data.courtId,
+    date: data.date,
+    startsAt: data.startsAt,
+    playerCount: data.playerCount,
   })
+  if (!checked.ok) return fail(checked.code, checked.message)
+  const { sport, price } = checked
 
   // --- who is booking --------------------------------------------------------
   let profileId: string | undefined

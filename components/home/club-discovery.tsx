@@ -242,7 +242,7 @@ export function ClubDiscovery({
     <section
       id="discover"
       aria-labelledby="discover-title"
-      className="mx-auto w-full max-w-[1200px] scroll-mt-6 px-5 py-16 md:py-20"
+      className="mx-auto w-full max-w-[1920px] scroll-mt-6 px-4 py-16 sm:px-6 lg:px-8 xl:px-12 md:py-20"
     >
       <p className="text-xs uppercase tracking-wide text-muted-foreground">
         Discover
@@ -402,7 +402,7 @@ export function ClubDiscovery({
         />
       ) : (
         <motion.ul
-          className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5"
           initial={animate ? 'hidden' : false}
           animate="show"
           variants={{ show: { transition: { staggerChildren: 0.05 } } }}

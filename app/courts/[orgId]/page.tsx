@@ -7,6 +7,7 @@ import type { MatrixCourt } from '@/components/courts/court-slot-matrix'
 import { ClubBookingView } from '@/components/courts/club-booking-view'
 import { generateCourtSlots } from '@/lib/court-slots'
 import { addDays, venueDateString, venueInstant } from '@/lib/court-time'
+import { effectiveHours, parseWeeklyHours, weekdayKey, WEEKDAY_LABELS } from '@/lib/operating-hours'
 import { SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { createClient } from '@/lib/supabase/server'
 import { createPublicClient } from '@/lib/supabase/public'
@@ -69,7 +70,7 @@ export default async function ClubPage({
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('id, name, address, city')
+    .select('id, name, address, city, weekly_hours')
     .eq('id', orgId)
     .eq('status', 'approved')
     .maybeSingle()
@@ -106,6 +107,8 @@ export default async function ClubPage({
   }
 
   const now = new Date()
+  const weekly = parseWeeklyHours(org.weekly_hours)
+  const closedToday = Boolean(weekly && !weekly[weekdayKey(day)].open)
   const matrixCourts: MatrixCourt[] = loadFailed
     ? []
     : (courts ?? []).flatMap((court) => {
@@ -113,6 +116,8 @@ export default async function ClubPage({
         const courtLocks = (locks ?? [])
           .filter((l) => l.court_id === court.id)
           .map((l) => ({ from: l.occupied_from, until: l.occupied_until }))
+
+        const hours = effectiveHours(weekly, day, court)
 
         return [
           {
@@ -122,14 +127,16 @@ export default async function ClubPage({
             pricePerHour: Number(court.price_per_hour),
             nightSurchargePerHour: Number(court.night_surcharge_per_hour),
             nightStartsAt: court.night_starts_at,
-            slots: generateCourtSlots({
-              sport: court.sport,
-              openTime: court.open_time,
-              closeTime: court.close_time,
-              dateStr: day,
-              locks: courtLocks,
-              now,
-            }),
+            slots: hours
+              ? generateCourtSlots({
+                  sport: court.sport,
+                  openTime: hours.openTime,
+                  closeTime: hours.closeTime,
+                  dateStr: day,
+                  locks: courtLocks,
+                  now,
+                })
+              : [],
           },
         ]
       })
@@ -137,7 +144,7 @@ export default async function ClubPage({
   const member = await loadMember(orgId)
 
   return (
-    <main className="mx-auto w-full max-w-[1200px] px-5 py-10">
+    <main className="mx-auto w-full max-w-[1920px] px-4 py-10 sm:px-6 lg:px-8 xl:px-12">
       <Link
         href="/#discover"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -170,6 +177,7 @@ export default async function ClubPage({
         </div>
       ) : (
         <ClubBookingView
+          closedNotice={closedToday ? `${org.name} is closed on ${WEEKDAY_LABELS[weekdayKey(day)]}s.` : null}
           orgId={org.id}
           orgName={org.name}
           dateStr={day}

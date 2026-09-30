@@ -61,7 +61,7 @@ export default async function Home() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4 px-5 py-8 text-sm text-muted-foreground">
+        <div className="mx-auto flex max-w-[1920px] flex-wrap items-center justify-between gap-4 px-4 py-8 sm:px-6 lg:px-8 xl:px-12 text-sm text-muted-foreground">
           <p>&copy; 2026 ShiftGrid. Sports court booking in Tunisia.</p>
           <nav aria-label="Footer" className="flex gap-6">
             <Link href="#discover" className="hover:text-foreground">

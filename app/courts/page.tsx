@@ -23,12 +23,12 @@ export default async function CourtsPage() {
     .limit(50)
 
   return (
-    <main className="max-w-6xl mx-auto px-6 py-12">
+    <main className="max-w-[1920px] mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
       <header className="mb-10">
         <h1 className="text-4xl font-extrabold tracking-tight mb-2">Sports Complexes</h1>
         <p className="text-muted-foreground text-lg">Public court availability across Tunisia</p>
       </header>
-      <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5">
         {(orgs ?? []).map((org) => {
           const orgCourts = (courts ?? []).filter((c) => c.org_id === org.id)
           return (

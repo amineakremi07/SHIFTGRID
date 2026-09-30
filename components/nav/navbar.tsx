@@ -45,7 +45,7 @@ export function BrandMark({ className }: { className?: string }) {
 
 export function Navbar() {
   return (
-    <header className="flex items-center justify-between px-5 py-5 md:px-10">
+    <header className="mx-auto flex w-full max-w-[1920px] items-center justify-between px-4 py-5 sm:px-6 lg:px-8 xl:px-12">
       <BrandMark />
 
       <nav aria-label="Primary" className="hidden items-center gap-8 md:flex">

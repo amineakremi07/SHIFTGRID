@@ -9,7 +9,7 @@ import { CourtSlotMatrix } from '@/components/courts/court-slot-matrix'
  */
 export default function CourtMatrixPreviewPage() {
   return (
-    <main className="mx-auto w-full max-w-[1200px] px-6 py-14">
+    <main className="mx-auto w-full max-w-[1920px] px-4 py-14 sm:px-6 lg:px-8 xl:px-12">
       <header className="mb-8">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">
           Milestone 3 · Preview

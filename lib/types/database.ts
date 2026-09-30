@@ -42,6 +42,8 @@ export type Database = {
           city: string | null
           latitude: number | null
           longitude: number | null
+          /** Per-weekday hours (lib/operating-hours.ts). Null = use each court's own hours. */
+          weekly_hours: Json | null
           sport_types: Sport[]
           timezone: string
           status: OrgStatus
@@ -59,6 +61,7 @@ export type Database = {
           city?: string | null
           latitude?: number | null
           longitude?: number | null
+          weekly_hours?: Json | null
           sport_types?: Sport[]
           timezone?: string
           status?: OrgStatus
@@ -319,6 +322,7 @@ export type Database = {
           p_profile_id?: string
           p_sport: string
           p_starts_at: string
+          p_status?: 'pending_payment' | 'confirmed'
         }
         Returns: Json
       }

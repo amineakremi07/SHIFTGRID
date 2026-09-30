@@ -88,7 +88,8 @@ export function OwnerSignupForm() {
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isValid },
+    trigger,
+    formState: { errors },
     reset,
   } = useForm<OwnerSignupData>({
     resolver: zodResolver(ownerSignupSchema),
@@ -156,7 +157,27 @@ export function OwnerSignupForm() {
     if (currentStep < 4) setCurrentStep(currentStep + 1)
   }
 
+  // Validate only the current step's fields. (The old Next button was disabled by
+  // the whole form's `isValid`, which includes the owner-account step the user
+  // has not reached yet, so it could never be enabled.)
+  const [stepError, setStepError] = useState<string | null>(null)
+  const validateAndNext = async (section: 'company' | 'location' | 'document') => {
+    const ok = await trigger(section)
+    if (!ok) {
+      setStepError('Some required fields are missing or invalid. Please fix the highlighted fields below.')
+      // Bring the first problem into view once the error text has rendered.
+      requestAnimationFrame(() =>
+        document.querySelector('[aria-invalid="true"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      )
+      return false
+    }
+    setStepError(null)
+    nextStep()
+    return true
+  }
+
   const prevStep = () => {
+    setStepError(null)
     if (currentStep > 1) setCurrentStep(currentStep - 1)
   }
 
@@ -423,11 +444,17 @@ export function OwnerSignupForm() {
               </div>
             </div>
 
+            {stepError && (
+              <p role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                {stepError}
+              </p>
+            )}
+
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={prevStep} disabled={currentStep === 1}>
                 Back
               </Button>
-              <Button type="button" onClick={nextStep} disabled={!isValid}>
+              <Button type="button" onClick={() => validateAndNext('company')}>
                 Next
               </Button>
             </div>
@@ -488,7 +515,7 @@ export function OwnerSignupForm() {
               <Button type="button" onClick={() => {
                 setValue('location.latitude', mapPosition.latitude)
                 setValue('location.longitude', mapPosition.longitude)
-                nextStep()
+                void validateAndNext('location')
               }}>
                 Next
               </Button>
@@ -531,7 +558,7 @@ export function OwnerSignupForm() {
               <Button type="button" variant="outline" onClick={prevStep}>
                 Back
               </Button>
-              <Button type="button" onClick={nextStep}>
+              <Button type="button" onClick={() => void validateAndNext('document')}>
                 Next
               </Button>
             </div>
