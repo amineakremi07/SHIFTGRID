@@ -4,6 +4,7 @@ import * as React from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Calendar, Check, Clock, Trophy, Zap } from 'lucide-react'
 
+import { useRealtimeBookings } from '@/hooks/use-realtime-bookings'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -62,6 +63,12 @@ export interface CourtSlotMatrixProps {
   selectedDate?: string
   /** Fires on select and on deselect (`null`). */
   onSlotSelect?: (selection: MatrixSelection | null) => void
+  /**
+   * Live updates. When given, the matrix listens for bookings and cancellations
+   * at this club and calls `onChange` (typically a server refresh) so slots flip
+   * between available and taken in every open tab. Omit for mock/preview data.
+   */
+  realtime?: { orgId: string; onChange: () => void }
   /**
    * Controlled sport. When provided, the matrix hides its own sport tabs and
    * follows this value — the caller owns the tab bar (e.g. the landing hero).
@@ -427,12 +434,15 @@ function CourtColumn({
   )
 }
 
+const noop = () => {}
+
 /* --------------------------------- matrix -------------------------------- */
 
 export function CourtSlotMatrix({
   courtData,
   selectedDate = venueDateString(),
   onSlotSelect,
+  realtime,
   sport: controlledSport,
   onSportChange,
   className,
@@ -445,6 +455,12 @@ export function CourtSlotMatrix({
     () => courtData ?? buildMockCourts(selectedDate),
     [courtData, selectedDate]
   )
+
+  const courtIds = React.useMemo(() => courts.map((c) => c.id), [courts])
+  useRealtimeBookings(realtime?.orgId ?? '', selectedDate, realtime?.onChange ?? noop, {
+    enabled: Boolean(realtime),
+    courtIds,
+  })
 
   const availableSports = React.useMemo(
     () => SPORTS.filter((s) => courts.some((c) => c.sport === s.value)),
@@ -468,26 +484,25 @@ export function CourtSlotMatrix({
   const activeMobileCourt =
     sportCourts.find((c) => c.id === mobileCourtId) ?? sportCourts[0]
 
+  // Not inside a setState updater: updaters run during render, and calling the
+  // parent's callback from there updates the parent mid-render (a React error).
   const handleSelect = React.useCallback(
     (court: MatrixCourt, slot: MatrixSlot) => {
-      setSelection((prev) => {
-        const isSame =
-          prev?.courtId === court.id && prev?.slot.start === slot.start
-        const next: MatrixSelection | null = isSame
-          ? null
-          : {
-              courtId: court.id,
-              courtName: court.name,
-              sport: court.sport,
-              slot,
-              price: slotPrice(court, slot, selectedDate),
-              selectedDate,
-            }
-        onSlotSelect?.(next)
-        return next
-      })
+      const isSame = selection?.courtId === court.id && selection?.slot.start === slot.start
+      const next: MatrixSelection | null = isSame
+        ? null
+        : {
+            courtId: court.id,
+            courtName: court.name,
+            sport: court.sport,
+            slot,
+            price: slotPrice(court, slot, selectedDate),
+            selectedDate,
+          }
+      setSelection(next)
+      onSlotSelect?.(next)
     },
-    [onSlotSelect, selectedDate]
+    [selection, onSlotSelect, selectedDate]
   )
 
   return (

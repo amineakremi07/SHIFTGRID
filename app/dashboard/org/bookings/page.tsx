@@ -136,5 +136,5 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
     ]
   })
 
-  return <BookingsBoard dateStr={day} today={today} minDate={minDate} maxDate={maxDate} courts={courts} bookings={bookings} />
+  return <BookingsBoard orgId={ctx.orgId} dateStr={day} today={today} minDate={minDate} maxDate={maxDate} courts={courts} bookings={bookings} />
 }

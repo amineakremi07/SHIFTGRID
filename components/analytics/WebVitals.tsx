@@ -33,7 +33,7 @@ export function WebVitals() {
     // Track memory usage periodically
     const memoryInterval = setInterval(() => {
       if ('memory' in performance) {
-        const memory = (performance as any).memory
+        const memory = (performance as Performance & { memory: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory
         if (memory.usedJSHeapSize > memory.jsHeapSizeLimit * 0.9) {
           console.warn('High memory usage detected:', {
             used: Math.round(memory.usedJSHeapSize / 1024 / 1024) + ' MB',

@@ -378,7 +378,7 @@ export function PlayerAuthModal({
             <div className="text-sm text-yellow-800">
               <p className="font-medium">Anonymous Booking</p>
               <p className="mt-1">
-                No account needed. You'll receive booking confirmations via SMS.
+                No account needed. After booking you get a private link to cancel if your plans change.
                 Your name and phone will be saved for future bookings at this complex.
               </p>
             </div>

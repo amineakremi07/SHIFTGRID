@@ -18,8 +18,11 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { cancelBooking, createWalkInBooking } from '@/lib/actions/org-bookings'
+import { useRealtimeBookings } from '@/hooks/use-realtime-bookings'
+import { cancelBookingAction } from '@/lib/actions/bookings'
+import { createWalkInBooking } from '@/lib/actions/org-bookings'
 import { formatVenueTime, minutesSinceVenueDayStart, timeToMinutes } from '@/lib/court-time'
 import { computePrice } from '@/lib/pricing'
 import { PLAYER_COUNT_OPTIONS, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
@@ -75,6 +78,7 @@ const isOpen = (b: BoardBooking) => b.status === 'pending_payment' || b.status =
 type WalkInTarget = { court: BoardCourt; slot: BoardSlot }
 
 export function BookingsBoard({
+  orgId,
   dateStr,
   today,
   minDate,
@@ -82,6 +86,7 @@ export function BookingsBoard({
   courts,
   bookings,
 }: {
+  orgId: string
   dateStr: string
   today: string
   minDate: string
@@ -95,11 +100,14 @@ export function BookingsBoard({
   const [walkIn, setWalkIn] = React.useState<WalkInTarget | null>(null)
   const [toCancel, setToCancel] = React.useState<BoardBooking | null>(null)
 
-  // Keep the day fresh while the tab is open (online bookings land here too).
+  // Live: online bookings, other staff's walk-ins and cancellations refresh the day.
+  useRealtimeBookings(orgId, dateStr, () => router.refresh())
+
+  // Safety net in case realtime is blocked (corporate proxies, sleeping laptops).
   React.useEffect(() => {
     const id = window.setInterval(() => {
       if (document.visibilityState === 'visible') router.refresh()
-    }, 30_000)
+    }, 120_000)
     return () => window.clearInterval(id)
   }, [router])
 
@@ -457,11 +465,12 @@ function CancelDialog({
   onDone: () => void
 }) {
   const [busy, setBusy] = React.useState(false)
+  const [reason, setReason] = React.useState('')
 
   const confirm = async () => {
     if (!booking) return
     setBusy(true)
-    const result = await cancelBooking(booking.id)
+    const result = await cancelBookingAction({ bookingId: booking.id, reason })
     setBusy(false)
     if (!result.ok) {
       toast.error(result.message)
@@ -469,6 +478,7 @@ function CancelDialog({
       return
     }
     toast.success('Booking cancelled. The slot is free again.')
+    setReason('')
     onDone()
   }
 
@@ -482,6 +492,17 @@ function CancelDialog({
               `${booking.bookerName} · ${formatVenueTime(booking.startsAt)}–${formatVenueTime(booking.endsAt)} · ${booking.reference}. The slot becomes bookable again immediately.`}
           </DialogDescription>
         </DialogHeader>
+        <div className="grid gap-1.5">
+          <Label htmlFor="cancel-reason">Reason (optional)</Label>
+          <Textarea
+            id="cancel-reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={2}
+            maxLength={300}
+            placeholder="e.g. Customer called to cancel"
+          />
+        </div>
         <DialogFooter className="gap-2 sm:justify-end">
           <Button variant="outline" onClick={onClose}>
             Keep booking

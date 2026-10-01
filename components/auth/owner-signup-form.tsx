@@ -38,6 +38,8 @@ const LocationPickerMap = dynamic(
   }
 )
 
+type SportType = OwnerSignupData['company']['sportTypes'][number]
+
 const StepIndicator = ({ currentStep, totalSteps = 4 }: { currentStep: number; totalSteps?: number }) => (
   <div className="mb-8 flex w-full items-center justify-center" role="list" aria-label="Registration progress">
     {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
@@ -369,7 +371,7 @@ export function OwnerSignupForm() {
                     key={sport.value}
                     className={cn(
                       'flex items-center gap-2 rounded-lg border p-3 cursor-pointer transition-colors',
-                      watchedCompany.sportTypes.includes(sport.value as any)
+                      watchedCompany.sportTypes.includes(sport.value as SportType)
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-input hover:border-primary/50'
                     )}
@@ -377,11 +379,11 @@ export function OwnerSignupForm() {
                     <input
                       type="checkbox"
                       value={sport.value}
-                      checked={watchedCompany.sportTypes.includes(sport.value as any)}
+                      checked={watchedCompany.sportTypes.includes(sport.value as SportType)}
                       onChange={(e) => {
                         const newSports = [...watchedCompany.sportTypes]
-                        if (e.target.checked) newSports.push(sport.value as any)
-                        else newSports.splice(newSports.indexOf(sport.value as any), 1)
+                        if (e.target.checked) newSports.push(sport.value as SportType)
+                        else newSports.splice(newSports.indexOf(sport.value as SportType), 1)
                         setValue('company.sportTypes', newSports)
                       }}
                       className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
@@ -622,7 +624,7 @@ export function OwnerSignupForm() {
           <div className="space-y-6">
             <StepLabel step={4} label="Owner Account" />
             <p className="text-muted-foreground">
-              Create your owner account. You'll use this to log in and manage your sports complex.
+              Create your owner account. You&apos;ll use this to log in and manage your sports complex.
             </p>
 
             <div className="grid gap-4 md:grid-cols-2">

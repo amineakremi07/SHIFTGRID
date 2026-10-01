@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { createBookingSchema, type CreateBookingInput } from '@/lib/validations/booking'
 import { checkBookableSlot } from '@/lib/booking-core'
+import { guestCancelPath } from '@/lib/guest-cancel'
 
 export type BookingErrorCode =
   | 'invalid_input'
@@ -24,6 +25,8 @@ export type BookingResult =
       amount: number
       startsAt: string
       endsAt: string
+      /** Guests only: a secret link to cancel without an account. Shown once. */
+      cancelPath: string | null
     }
   | {
       ok: false
@@ -130,6 +133,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     starts_at: string
     ends_at: string
     amount: number
+    cancel_token: string | null
   }
   return {
     ok: true,
@@ -138,5 +142,6 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     amount: Number(row.amount),
     startsAt: row.starts_at,
     endsAt: row.ends_at,
+    cancelPath: row.cancel_token ? guestCancelPath(row.cancel_token) : null,
   }
 }

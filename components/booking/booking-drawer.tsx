@@ -169,6 +169,42 @@ export function PriceSummary({ selection }: { selection: BookingDrawerSelection 
 
 /* ------------------------------- confirmation ----------------------------- */
 
+/** The guest's only way to cancel online, so it is shown prominently and copyable. */
+function GuestCancelLink({ path }: { path: string }) {
+  const [copied, setCopied] = React.useState(false)
+  const url = typeof window === 'undefined' ? path : `${window.location.origin}${path}`
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Could not copy. Select the link and copy it by hand.')
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-border p-4 text-sm">
+      <p className="font-medium">Need to cancel? Save this link.</p>
+      <p className="mt-1 text-muted-foreground">
+        It is the only way to cancel online without an account, free until 24 hours before your slot.
+        Anyone with the link can cancel, so keep it private.
+      </p>
+      <input
+        readOnly
+        value={url}
+        aria-label="Cancellation link"
+        onFocus={(e) => e.currentTarget.select()}
+        className="mt-3 w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
+      />
+      <Button type="button" variant="outline" size="sm" className="mt-2" onClick={copy}>
+        {copied ? 'Copied' : 'Copy link'}
+      </Button>
+    </div>
+  )
+}
+
 function Confirmation({
   selection,
   result,
@@ -228,6 +264,8 @@ function Confirmation({
           <dd className="font-semibold tabular-nums">{formatTND(result.amount)}</dd>
         </div>
       </dl>
+
+      {result.cancelPath && <GuestCancelLink path={result.cancelPath} />}
 
       <Button className="h-11 w-full" onClick={onDone}>
         Done

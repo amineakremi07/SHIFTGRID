@@ -12,6 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { homeLinkFor, useAuthNav, type AuthNav } from '@/hooks/use-auth-nav'
 import { cn } from '@/lib/utils'
 
 /**
@@ -44,6 +45,9 @@ export function BrandMark({ className }: { className?: string }) {
 }
 
 export function Navbar() {
+  const auth = useAuthNav()
+  const me = auth.status === 'signed_in' ? homeLinkFor(auth.role) : null
+
   return (
     <header className="mx-auto flex w-full max-w-[1920px] items-center justify-between px-4 py-5 sm:px-6 lg:px-8 xl:px-12">
       <BrandMark />
@@ -58,24 +62,18 @@ export function Navbar() {
             {link.label}
           </Link>
         ))}
+        {me && (
+          <Link
+            href={me.href}
+            className="text-sm font-medium text-bone-linen transition-colors hover:text-bone-linen/80"
+          >
+            {me.label}
+          </Link>
+        )}
       </nav>
 
-      <div className="hidden items-center gap-2 md:flex">
-        <Button
-          asChild
-          variant="ghost"
-          className="text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
-        >
-          <Link href="/login-owner">Login</Link>
-        </Button>
-        {/* Outlined, not green: the hero CTA is this view's one Lime Pulse. */}
-        <Button
-          asChild
-          variant="outline"
-          className="border-bone-linen/40 bg-transparent text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
-        >
-          <Link href="/register">Register</Link>
-        </Button>
+      <div className="hidden min-w-[9.5rem] items-center justify-end gap-2 md:flex">
+        <AuthActions auth={auth} />
       </div>
 
       {/* Mobile menu */}
@@ -107,19 +105,79 @@ export function Navbar() {
             ))}
           </nav>
           <div className="mt-4 flex flex-col gap-2 px-4">
-            <SheetClose asChild>
-              <Button asChild variant="outline">
-                <Link href="/login-owner">Login</Link>
-              </Button>
-            </SheetClose>
-            <SheetClose asChild>
-              <Button asChild>
-                <Link href="/register">Register</Link>
-              </Button>
-            </SheetClose>
+            {auth.status === 'signed_in' && me ? (
+              <>
+                <SheetClose asChild>
+                  <Button asChild>
+                    <Link href={me.href}>{me.label}</Link>
+                  </Button>
+                </SheetClose>
+                <form action="/logout" method="post">
+                  <Button type="submit" variant="outline" className="w-full">
+                    Sign out
+                  </Button>
+                </form>
+              </>
+            ) : auth.status === 'signed_out' ? (
+              <>
+                <SheetClose asChild>
+                  <Button asChild variant="outline">
+                    <Link href="/login-owner">Login</Link>
+                  </Button>
+                </SheetClose>
+                <SheetClose asChild>
+                  <Button asChild>
+                    <Link href="/register">Register</Link>
+                  </Button>
+                </SheetClose>
+              </>
+            ) : null}
           </div>
         </SheetContent>
       </Sheet>
     </header>
+  )
+}
+
+/**
+ * Right-hand side of the desktop header: signed-out visitors get the signup/login
+ * call to action, signed-in users a sign-out button (their main link sits in the
+ * nav). While the session is unknown nothing is drawn, so neither group flashes.
+ */
+function AuthActions({ auth }: { auth: AuthNav }) {
+  if (auth.status === 'loading') return null
+
+  if (auth.status === 'signed_in') {
+    return (
+      <form action="/logout" method="post">
+        <Button
+          type="submit"
+          variant="outline"
+          className="border-bone-linen/40 bg-transparent text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
+        >
+          Sign out
+        </Button>
+      </form>
+    )
+  }
+
+  return (
+    <>
+      <Button
+        asChild
+        variant="ghost"
+        className="text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
+      >
+        <Link href="/login-owner">Login</Link>
+      </Button>
+      {/* Outlined, not green: the hero CTA is this view's one Lime Pulse. */}
+      <Button
+        asChild
+        variant="outline"
+        className="border-bone-linen/40 bg-transparent text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
+      >
+        <Link href="/register">Register</Link>
+      </Button>
+    </>
   )
 }

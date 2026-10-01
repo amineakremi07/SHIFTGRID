@@ -229,7 +229,9 @@ export function trackBundleSize(chunkName: string, size: number): void {
  */
 export function trackMemoryUsage(): void {
   if (typeof performance !== 'undefined' && 'memory' in performance) {
-    const memory = (performance as any).memory
+    const memory = (performance as Performance & {
+      memory: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number }
+    }).memory
     recordMetric('memory:used', memory.usedJSHeapSize, 'bytes', { type: 'memory' })
     recordMetric('memory:total', memory.totalJSHeapSize, 'bytes', { type: 'memory' })
     recordMetric('memory:limit', memory.jsHeapSizeLimit, 'bytes', { type: 'memory' })

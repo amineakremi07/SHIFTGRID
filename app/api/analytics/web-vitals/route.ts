@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       : Date.now() - 24 * 60 * 60 * 1000 // Last 24 hours
 
     const vitals = ['cls', 'fid', 'lcp', 'fcp', 'ttfb', 'inp']
-    const results: Record<string, any> = {}
+    const results: Record<string, unknown> = {}
 
     for (const vital of vitals) {
       const aggregated = getAggregatedMetrics(`web-vital:${vital}`, since)

@@ -59,7 +59,7 @@ export default async function DashboardPage() {
             <p className="text-sm text-muted-foreground mt-1">Awaiting confirmation</p>
           </div>
           <div className="bg-background p-6 rounded-lg border">
-            <h3 className="text-lg font-semibold">Today's Bookings</h3>
+            <h3 className="text-lg font-semibold">Today&apos;s Bookings</h3>
             <p className="text-3xl font-bold mt-2">--</p>
             <p className="text-sm text-muted-foreground mt-1">Scheduled sessions</p>
           </div>
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
           <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
           <div className="grid gap-4 md:grid-cols-3">
             <a
-              href="/dashboard/staff"
+              href="/dashboard/org/staff"
               className="flex flex-col items-center justify-center p-6 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <div className="h-12 w-12 mb-3 flex items-center justify-center rounded-full bg-primary/10 text-primary">

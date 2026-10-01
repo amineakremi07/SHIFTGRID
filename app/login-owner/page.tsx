@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
+import { safeRedirectPath } from '@/lib/safe-redirect'
 import { cn } from '@/lib/utils'
 
 const loginSchema = z.object({
@@ -24,7 +25,10 @@ type LoginFormData = z.infer<typeof loginSchema>
 function OwnerLoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+  // The route guards send `?redirect=`; older links used `?callbackUrl=`. Never
+  // trust either: only same-site paths are followed.
+  const requestedUrl = safeRedirectPath(searchParams.get('redirect') ?? searchParams.get('callbackUrl'))
+  const callbackUrl = requestedUrl ?? '/dashboard'
 
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -33,8 +37,8 @@ function OwnerLoginContent() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema) as any,
+  } = useForm<z.input<typeof loginSchema>, unknown, LoginFormData>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
@@ -66,6 +70,14 @@ function OwnerLoginContent() {
         .select('role, org_id')
         .eq('id', user.id)
         .single()
+
+      // Platform admins have no club; they go straight to the verification portal
+      // (or to another /admin page they were heading for).
+      if (profile?.role === 'platform_admin') {
+        router.push(requestedUrl?.startsWith('/admin') ? requestedUrl : '/admin/verification')
+        router.refresh()
+        return
+      }
 
       if (profile && (profile.role === 'org_admin' || profile.role === 'staff')) {
         const { data: org } = await supabase
@@ -106,7 +118,7 @@ function OwnerLoginContent() {
           </Link>
           <h1 className="text-2xl font-semibold mt-6">Owner Login</h1>
           <p className="text-muted-foreground mt-2">
-            Access your sports complex dashboard
+            Access your sports complex dashboard. Platform admins can sign in here too.
           </p>
         </div>
 
@@ -175,7 +187,7 @@ function OwnerLoginContent() {
           </form>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>Don't have an organization yet?{' '}
+            <p>Don&apos;t have an organization yet?{' '}
               <Link href="/register?role=owner" className="text-primary hover:underline font-medium">
                 Register your sports complex
               </Link>

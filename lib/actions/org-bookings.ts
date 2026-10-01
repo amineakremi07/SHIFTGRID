@@ -6,7 +6,6 @@ import { z } from 'zod'
 import { checkBookableSlot } from '@/lib/booking-core'
 import { requireOrgAction } from '@/lib/org-access'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
-import { createClient } from '@/lib/supabase/server'
 import { guestDetailsSchema } from '@/lib/validations/booking'
 
 export type OrgBookingResult =
@@ -78,35 +77,4 @@ export async function createWalkInBooking(input: WalkInInput): Promise<OrgBookin
   revalidatePath('/dashboard/org/bookings')
   revalidatePath(`/courts/${auth.ctx.orgId}`)
   return { ok: true, reference: (booked as { reference: string }).reference }
-}
-
-/**
- * Cancel a booking. Only flips `status`; the `handle_booking_cancellation`
- * trigger deletes the court_slot_locks row, which frees the slot for everyone.
- * Runs as the caller (RLS: org_admin/staff of this org) and is scoped to the
- * caller's org and to bookings that are still open.
- */
-export async function cancelBooking(bookingId: string): Promise<OrgBookingResult> {
-  const auth = await requireOrgAction(['org_admin', 'staff'])
-  if (!auth.ok) return auth
-  if (!z.string().uuid().safeParse(bookingId).success) return { ok: false, message: 'Invalid booking.' }
-
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('bookings')
-    .update({ status: 'cancelled' })
-    .eq('id', bookingId)
-    .eq('org_id', auth.ctx.orgId)
-    .in('status', ['pending_payment', 'confirmed'])
-    .select('id')
-
-  if (error) {
-    console.error('cancelBooking failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not cancel the booking. Please try again.' }
-  }
-  if (!data?.length) return { ok: false, message: 'This booking is already cancelled or finished.' }
-
-  revalidatePath('/dashboard/org/bookings')
-  revalidatePath(`/courts/${auth.ctx.orgId}`)
-  return { ok: true }
 }

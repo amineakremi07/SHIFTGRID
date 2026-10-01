@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -9,32 +9,31 @@ export interface MarkerPosition {
   longitude: number
 }
 
-export const LocationPickerMap = ({ latitude, longitude, onPositionChange }: {
+interface MapProps {
   latitude: number
   longitude: number
   onPositionChange: (pos: MarkerPosition) => void
-}) => {
-  const mapRef = useRef<any>(null)
+}
 
-  const MapEvents = () => {
-    const map = useMapEvents({
-      click(e) {
-        onPositionChange({ latitude: e.latlng.lat, longitude: e.latlng.lng })
-      },
-    })
+/** Click-to-place and re-centre. Defined at module level: a component created
+ *  inside another's render is a new component type on every render. */
+function MapEvents({ latitude, longitude, onPositionChange }: MapProps) {
+  const map = useMapEvents({
+    click(e) {
+      onPositionChange({ latitude: e.latlng.lat, longitude: e.latlng.lng })
+    },
+  })
 
-    useEffect(() => {
-      if (mapRef.current && map) {
-        map.setView([latitude, longitude], 15)
-      }
-    }, [latitude, longitude, map])
+  useEffect(() => {
+    map.setView([latitude, longitude], 15)
+  }, [latitude, longitude, map])
 
-    return null
-  }
+  return null
+}
 
+export const LocationPickerMap = ({ latitude, longitude, onPositionChange }: MapProps) => {
   return (
     <MapContainer
-      ref={mapRef}
       center={[latitude, longitude]}
       zoom={13}
       style={{ height: '400px', width: '100%', borderRadius: '0.5rem' }}
@@ -44,7 +43,7 @@ export const LocationPickerMap = ({ latitude, longitude, onPositionChange }: {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <Marker position={[latitude, longitude]} />
-      <MapEvents />
+      <MapEvents latitude={latitude} longitude={longitude} onPositionChange={onPositionChange} />
     </MapContainer>
   )
 }

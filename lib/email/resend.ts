@@ -2,7 +2,6 @@
 
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 export interface StaffInviteEmailData {
   email: string
@@ -14,6 +13,13 @@ export interface StaffInviteEmailData {
 }
 
 export async function sendStaffInviteEmail(data: StaffInviteEmailData): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.RESEND_API_KEY) {
+    console.error('Staff invite email skipped: RESEND_API_KEY is not set')
+    return { success: false, error: 'Email is not configured' }
+  }
+  // Built per call, not at import, so a missing key cannot break unrelated pages.
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
   try {
     const roleLabel = data.role === 'org_admin' ? 'Organization Admin' : 'Staff Member'
     const result = await resend.emails.send({

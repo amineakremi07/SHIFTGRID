@@ -7,6 +7,7 @@ import { BookingDrawer, type BookingDrawerMember, type BookingDrawerSelection } 
 import { PlayerAuthModal } from '@/components/booking/player-auth-modal'
 import { CourtSlotMatrix, type MatrixCourt, type MatrixSelection } from '@/components/courts/court-slot-matrix'
 import { DayPicker } from '@/components/courts/day-picker'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 /**
@@ -44,6 +45,25 @@ export function ClubBookingView({
   const [authOpen, setAuthOpen] = React.useState(false)
   // Remounting the matrix is how its highlighted slot is cleared.
   const [matrixKey, setMatrixKey] = React.useState(0)
+  // The player just booked this slot themselves: it will read as taken after the
+  // refresh, and that must not be mistaken for someone else getting there first.
+  const [justBooked, setJustBooked] = React.useState(false)
+
+  // A live update can take the slot the player is looking at. Close the drawer
+  // rather than let them fill in a form for a slot that is gone. (State is adjusted
+  // during render, the React-recommended way to derive it from props.)
+  const selectedSlotTaken = React.useMemo(() => {
+    if (!selection || justBooked) return false
+    const slot = courts.find((c) => c.id === selection.courtId)?.slots.find((s) => s.start === selection.startsAt)
+    return Boolean(slot && slot.state !== 'available')
+  }, [courts, selection, justBooked])
+  if (drawerOpen && selectedSlotTaken) {
+    setDrawerOpen(false)
+    setMatrixKey((k) => k + 1)
+  }
+  React.useEffect(() => {
+    if (selectedSlotTaken) toast.error('That slot was just taken. Please pick another time.')
+  }, [selectedSlotTaken])
 
   const changeDate = (next: string) => {
     setDrawerOpen(false)
@@ -58,6 +78,7 @@ export function ClubBookingView({
     const court = courts.find((c) => c.id === picked.courtId)
     if (!court) return
 
+    setJustBooked(false)
     setSelection({
       courtId: court.id,
       courtName: court.name,
@@ -76,7 +97,10 @@ export function ClubBookingView({
     setDrawerOpen(open)
     // Closing the drawer un-highlights the slot. (The selection itself is kept so
     // the drawer's content does not vanish mid slide-out.)
-    if (!open) setMatrixKey((k) => k + 1)
+    if (!open) {
+      setMatrixKey((k) => k + 1)
+      setJustBooked(false)
+    }
   }
 
   // Two modal layers at once are fragile, so hand over: drawer closes, sign-in
@@ -112,6 +136,7 @@ export function ClubBookingView({
           courtData={courts}
           selectedDate={dateStr}
           onSlotSelect={handleSlotSelect}
+          realtime={{ orgId, onChange: () => router.refresh() }}
         />
       </div>
 
@@ -123,7 +148,10 @@ export function ClubBookingView({
         selection={selection}
         member={member}
         onRequestSignIn={requestSignIn}
-        onBooked={() => router.refresh()}
+        onBooked={() => {
+          setJustBooked(true)
+          router.refresh()
+        }}
         onSlotUnavailable={() => router.refresh()}
       />
 

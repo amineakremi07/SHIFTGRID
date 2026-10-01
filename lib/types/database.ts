@@ -174,6 +174,9 @@ export type Database = {
           status: BookingStatus
           payment_method: PaymentMethod
           cancellation_deadline: string
+          cancellation_reason: string | null
+          /** SHA-256 of the guest's cancel token (never the token itself). Guests only. */
+          guest_cancel_token_hash: string | null
           created_at: string
           updated_at: string
         }
@@ -192,6 +195,8 @@ export type Database = {
           status?: BookingStatus
           payment_method: PaymentMethod
           cancellation_deadline?: string
+          cancellation_reason?: string | null
+          guest_cancel_token_hash?: string | null
           created_at?: string
           updated_at?: string
         }

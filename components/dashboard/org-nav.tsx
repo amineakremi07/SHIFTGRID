@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, Clock, LayoutGrid } from 'lucide-react'
+import { CalendarDays, Clock, LayoutGrid, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -10,6 +10,7 @@ const ITEMS = [
   { href: '/dashboard/org/bookings', label: 'Bookings', icon: CalendarDays, ownerOnly: false },
   { href: '/dashboard/org/courts', label: 'Courts', icon: LayoutGrid, ownerOnly: true },
   { href: '/dashboard/org/settings', label: 'Hours', icon: Clock, ownerOnly: true },
+  { href: '/dashboard/org/staff', label: 'Team', icon: Users, ownerOnly: true },
 ]
 
 export function OrgNav({ role }: { role: 'org_admin' | 'staff' }) {
