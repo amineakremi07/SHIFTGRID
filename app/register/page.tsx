@@ -52,8 +52,8 @@ export default async function RegisterPage({
           <Link href="/" className="font-heading text-xl font-semibold tracking-tight">
             ShiftGrid
           </Link>
-          <Link href="/login-owner" className="text-sm text-muted-foreground hover:text-foreground">
-            Club owner? Log in
+          <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
+            Already registered? Log in
           </Link>
         </div>
       </header>

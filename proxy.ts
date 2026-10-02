@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { landingPathFor } from '@/lib/auth-landing'
+import type { UserRole } from '@/lib/types/database'
 import { createProxyClient } from '@/lib/supabase/middleware'
 
 /**
@@ -131,9 +133,9 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth pages.
-  const authPaths = ['/login-owner', '/signup-owner']
+  const authPaths = ['/login', '/login-owner', '/signup-owner']
   if (authPaths.includes(pathname) && user) {
-    return withSecurityHeaders(NextResponse.redirect(new URL('/dashboard', request.url)))
+    return withSecurityHeaders(NextResponse.redirect(new URL(landingPathFor(userRole as UserRole | null), request.url)))
   }
 
   const response = getResponse()

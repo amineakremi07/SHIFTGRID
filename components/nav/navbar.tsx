@@ -12,8 +12,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { BrandMark } from '@/components/brand/brand-mark'
 import { homeLinkFor, useAuthNav, type AuthNav } from '@/hooks/use-auth-nav'
-import { cn } from '@/lib/utils'
 
 /**
  * Public site navigation, rendered on the dark hero (transparent, Bone Linen
@@ -30,27 +30,13 @@ export const NAV_LINKS = [
   { label: 'Facilities', href: '#how-it-works' },
 ] as const
 
-export function BrandMark({ className }: { className?: string }) {
-  return (
-    <Link
-      href="/"
-      className={cn(
-        'font-heading text-xl font-semibold tracking-tight text-bone-linen',
-        className
-      )}
-    >
-      ShiftGrid
-    </Link>
-  )
-}
-
 export function Navbar() {
   const auth = useAuthNav()
   const me = auth.status === 'signed_in' ? homeLinkFor(auth.role) : null
 
   return (
     <header className="mx-auto flex w-full max-w-[1920px] items-center justify-between px-4 py-5 sm:px-6 lg:px-8 xl:px-12">
-      <BrandMark />
+      <BrandMark href={auth.status === 'signed_in' && auth.role === 'player' ? '/#discover' : '/'} />
 
       <nav aria-label="Primary" className="hidden items-center gap-8 md:flex">
         {NAV_LINKS.map((link) => (
@@ -122,7 +108,7 @@ export function Navbar() {
               <>
                 <SheetClose asChild>
                   <Button asChild variant="outline">
-                    <Link href="/login-owner">Login</Link>
+                    <Link href="/login">Login</Link>
                   </Button>
                 </SheetClose>
                 <SheetClose asChild>
@@ -168,7 +154,7 @@ function AuthActions({ auth }: { auth: AuthNav }) {
         variant="ghost"
         className="text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
       >
-        <Link href="/login-owner">Login</Link>
+        <Link href="/login">Login</Link>
       </Button>
       {/* Outlined, not green: the hero CTA is this view's one Lime Pulse. */}
       <Button

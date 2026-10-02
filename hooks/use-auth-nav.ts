@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 
+import { landingPathFor } from '@/lib/auth-landing'
 import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/lib/types/database'
 
@@ -53,13 +54,14 @@ export function useAuthNav(): AuthNav {
 
 /** The one link a signed-in person most wants in the header, by role. */
 export function homeLinkFor(role: UserRole | null): { label: string; href: string } {
+  const href = landingPathFor(role)
   switch (role) {
     case 'org_admin':
     case 'staff':
-      return { label: 'Dashboard', href: '/dashboard/org/bookings' }
+      return { label: 'Dashboard', href }
     case 'platform_admin':
-      return { label: 'Admin', href: '/admin/verification' }
+      return { label: 'Admin', href }
     default:
-      return { label: 'My reservations', href: '/reservations' }
+      return { label: 'My reservations', href }
   }
 }

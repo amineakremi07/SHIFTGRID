@@ -230,7 +230,15 @@ export type Database = {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['payment_records']['Insert']>
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'payment_records_booking_id_fkey'
+            columns: ['booking_id']
+            isOneToOne: false
+            referencedRelation: 'bookings'
+            referencedColumns: ['id']
+          },
+        ]
       }
 
       court_slot_locks: {
