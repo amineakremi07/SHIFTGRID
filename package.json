@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "playwright test",
-    "verify:db": "node scripts/verify-payments.mjs && node scripts/verify-booking-concurrency.mjs"
+    "verify:db": "node scripts/verify-payments.mjs && node scripts/verify-booking-concurrency.mjs && node scripts/test-rls-security.mjs",
+    "verify:security": "node scripts/test-rls-security.mjs",
+    "pwa:icons": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

@@ -9,8 +9,8 @@
  *   1. the create_booking() RPC (what the app uses), called concurrently with the
  *      service role;
  *   2. the database itself, reached the way a hostile client would: a signed-in
- *      player inserting straight into `bookings` through the REST API (RLS lets a
- *      player insert only their own pending booking), racing the RPC for the
+ *      player inserting straight into `bookings` through the REST API (players have no
+ *      INSERT policy on `bookings`, so every such insert must be refused), racing the RPC for the
  *      same court and time.
  * In every race exactly one booking must exist afterwards, owning exactly one
  * court_slot_locks row; losers get 23505 (same start) or 23P01 (overlap).
@@ -153,6 +153,7 @@ try {
     const results = await Promise.all([rpcBook(t, 'rpc'), direct(), direct(), direct()])
     const wins = results.filter((r) => !r.error)
     check(wins.length === 1, 'RPC and 3 direct REST inserts racing for one slot: exactly one wins', `${wins.length} won`)
+    check(results.slice(1).every((r) => r.error?.code === '42501'), 'direct REST inserts by a player are refused outright (42501)', results.slice(1).map((r) => r.error?.code).join(','))
     const { data: rows } = await admin.from('bookings').select('id').eq('court_id', court.id).eq('starts_at', t)
     check(rows.length === 1 && (await locksFor(rows.map((r) => r.id))).length === 1, 'one booking and one lock remain')
 

@@ -1,0 +1,23 @@
+{
+  "name": "ShiftGrid — Book sports courts in Tunisia",
+  "short_name": "ShiftGrid",
+  "description": "Reserve padel, tennis and football courts across Tunisia. Live availability, priced in TND.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1e293b",
+  "theme_color": "#50C878",
+  "lang": "en",
+  "categories": ["sports", "lifestyle"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Find a court", "url": "/courts", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "My reservations", "url": "/reservations", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
