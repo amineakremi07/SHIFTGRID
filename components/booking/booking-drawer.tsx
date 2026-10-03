@@ -3,12 +3,10 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { motion, useReducedMotion } from 'framer-motion'
 import { toast } from 'sonner'
 import type { z } from 'zod'
 import {
   Calendar,
-  Check,
   Clock,
   Loader2,
   MapPin,
@@ -22,7 +20,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { SPRING } from '@/components/ui/motion-button'
 import {
   Sheet,
   SheetContent,
@@ -31,7 +28,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { CheckoutConfirmation, PaymentOptions, payNow } from '@/components/booking/checkout'
 import { createBooking, type BookingResult } from '@/lib/actions/booking'
+import { canSplit, formatTND, type OnlineMode, type PaymentChoice } from '@/lib/payments'
 import { formatVenueDate, formatVenueTime, minutesSinceVenueDayStart, timeToMinutes } from '@/lib/court-time'
 import { computePrice } from '@/lib/pricing'
 import { BUFFER_MIN, PLAYER_COUNT_OPTIONS, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
@@ -85,16 +84,14 @@ export interface BookingDrawerProps {
   onBooked?: () => void
   /** The slot turned out to be unavailable: refresh availability. */
   onSlotUnavailable?: () => void
+  /** Whether online / split payment can be taken (decided on the server). */
+  onlineMode?: OnlineMode
 }
 
 const SPORT_META: Record<Sport, { label: string; icon: typeof Zap }> = {
   padel: { label: 'Padel', icon: Zap },
   tennis: { label: 'Tennis', icon: Trophy },
   football: { label: 'Football', icon: Calendar },
-}
-
-function formatTND(amount: number) {
-  return `${Number.isInteger(amount) ? amount : amount.toFixed(2)} TND`
 }
 
 /** Bottom sheet on phones, right-hand sheet from the `md` breakpoint up. */
@@ -160,117 +157,7 @@ export function PriceSummary({ selection }: { selection: BookingDrawerSelection 
           {formatTND(price.total)}
         </span>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Pay at the club. No online payment is taken yet.
-      </p>
     </section>
-  )
-}
-
-/* ------------------------------- confirmation ----------------------------- */
-
-/** The guest's only way to cancel online, so it is shown prominently and copyable. */
-function GuestCancelLink({ path }: { path: string }) {
-  const [copied, setCopied] = React.useState(false)
-  const url = typeof window === 'undefined' ? path : `${window.location.origin}${path}`
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast.error('Could not copy. Select the link and copy it by hand.')
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-border p-4 text-sm">
-      <p className="font-medium">Need to cancel? Save this link.</p>
-      <p className="mt-1 text-muted-foreground">
-        It is the only way to cancel online without an account, free until 24 hours before your slot.
-        Anyone with the link can cancel, so keep it private.
-      </p>
-      <input
-        readOnly
-        value={url}
-        aria-label="Cancellation link"
-        onFocus={(e) => e.currentTarget.select()}
-        className="mt-3 w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
-      />
-      <Button type="button" variant="outline" size="sm" className="mt-2" onClick={copy}>
-        {copied ? 'Copied' : 'Copy link'}
-      </Button>
-    </div>
-  )
-}
-
-function Confirmation({
-  selection,
-  result,
-  orgName,
-  onDone,
-}: {
-  selection: BookingDrawerSelection
-  result: Extract<BookingResult, { ok: true }>
-  orgName: string
-  onDone: () => void
-}) {
-  const reduce = useReducedMotion()
-
-  return (
-    <motion.div
-      role="status"
-      initial={reduce ? false : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={SPRING}
-      className="space-y-5"
-    >
-      <div className="flex flex-col items-center gap-3 pt-2 text-center">
-        <span className="flex size-12 items-center justify-center rounded-full bg-success/10 text-success">
-          <Check className="size-6" aria-hidden />
-        </span>
-        <div>
-          <h3 className="text-xl font-semibold">Your slot is reserved</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Show this code at {orgName}.
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-lg bg-card p-4 text-center">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-          Reference
-        </p>
-        <p className="mt-1 font-mono text-3xl font-bold tracking-widest">
-          {result.reference}
-        </p>
-      </div>
-
-      <dl className="space-y-2 text-sm">
-        <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Court</dt>
-          <dd className="font-medium">{selection.courtName}</dd>
-        </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">When</dt>
-          <dd className="font-medium tabular-nums">
-            {formatVenueDate(selection.date)}, {formatVenueTime(result.startsAt)} –{' '}
-            {formatVenueTime(result.endsAt)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">To pay at the club</dt>
-          <dd className="font-semibold tabular-nums">{formatTND(result.amount)}</dd>
-        </div>
-      </dl>
-
-      {result.cancelPath && <GuestCancelLink path={result.cancelPath} />}
-
-      <Button className="h-11 w-full" onClick={onDone}>
-        Done
-      </Button>
-    </motion.div>
   )
 }
 
@@ -286,6 +173,7 @@ export function DrawerBody({
   onBooked,
   onSlotUnavailable,
   onBusyChange,
+  onlineMode = 'disabled',
 }: Omit<BookingDrawerProps, 'open' | 'onOpenChange' | 'selection'> & {
   selection: BookingDrawerSelection
   onClose: () => void
@@ -294,15 +182,31 @@ export function DrawerBody({
   const [tab, setTab] = React.useState<'member' | 'guest'>(member?.isMember ? 'member' : 'guest')
   const playerOptions = PLAYER_COUNT_OPTIONS[selection.sport] as readonly number[]
   const [playerCount, setPlayerCount] = React.useState<number>(playerOptions[0])
+  const [payment, setPayment] = React.useState<PaymentChoice>('cash')
   const [submitting, setSubmitting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  // Split only: where to email each other player's payment link (all optional).
+  const [inviteEmails, setInviteEmails] = React.useState<string[]>([])
+  const [sentTo, setSentTo] = React.useState<{ email: string | null; invites: number }>({ email: null, invites: 0 })
   const [result, setResult] = React.useState<Extract<BookingResult, { ok: true }> | null>(null)
 
   const form = useForm<GuestFormInput, unknown, GuestFormOutput>({
     resolver: zodResolver(guestDetailsSchema),
-    defaultValues: { fullName: '', phone: '' },
+    defaultValues: { fullName: '', phone: '', email: '' },
     mode: 'onTouched',
   })
+
+  // A split needs 2 to 4 players; if the player count changes under it, fall back to cash.
+  const choice: PaymentChoice = payment === 'split' && !canSplit(playerCount) ? 'cash' : payment
+  const price = computePrice({
+    pricePerHour: selection.pricePerHour,
+    nightSurchargePerHour: selection.nightSurchargePerHour,
+    nightStartsAtMinutes: timeToMinutes(selection.nightStartsAt),
+    startMinutes: minutesSinceVenueDayStart(selection.startsAt, selection.date),
+    durationMinutes: SPORT_DURATION_MIN[selection.sport],
+  })
+  const dueNow = payNow(choice, price.total, playerCount)
+  const reserveLabel = choice === 'cash' ? 'Confirm & Reserve' : `Pay ${formatTND(dueNow)} & Reserve`
 
   const meta = SPORT_META[selection.sport]
   const SportIcon = meta.icon
@@ -311,6 +215,15 @@ export function DrawerBody({
   const submit = async (
     who: { mode: 'member' } | { mode: 'guest'; guest: GuestFormOutput }
   ) => {
+    // Typed-in invite addresses: a typo is caught here, not silently dropped by the server.
+    // One entry per other player (the state array can have holes if a box was skipped).
+    const invites = choice === 'split' ? Array.from({ length: playerCount - 1 }, (_, i) => (inviteEmails[i] ?? '').trim()) : []
+    const bad = invites.find((e) => e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+    if (bad) {
+      setError(`"${bad}" does not look like an email address. Fix it or leave it blank.`)
+      return
+    }
+
     setSubmitting(true)
     onBusyChange(true)
     setError(null)
@@ -321,6 +234,8 @@ export function DrawerBody({
       date: selection.date,
       startsAt: selection.startsAt,
       playerCount,
+      payment: choice,
+      ...(invites.some(Boolean) ? { inviteEmails: invites } : {}),
     }
 
     try {
@@ -329,6 +244,10 @@ export function DrawerBody({
       )
 
       if (outcome.ok) {
+        setSentTo({
+          email: who.mode === 'guest' ? (who.guest.email ?? null) : (member?.email ?? null),
+          invites: invites.filter(Boolean).length,
+        })
         setResult(outcome)
         toast.success('Slot reserved', { description: `Reference ${outcome.reference}` })
         onBooked?.()
@@ -354,7 +273,15 @@ export function DrawerBody({
   if (result) {
     return (
       <div className="px-4 pb-6">
-        <Confirmation selection={selection} result={result} orgName={orgName} onDone={onClose} />
+        <CheckoutConfirmation
+          courtName={selection.courtName}
+          date={selection.date}
+          result={result}
+          orgName={orgName}
+          emailedTo={result.emailsEnabled ? sentTo.email : null}
+          invitesEmailed={result.emailsEnabled ? sentTo.invites : 0}
+          onDone={onClose}
+        />
       </div>
     )
   }
@@ -428,6 +355,42 @@ export function DrawerBody({
 
       <PriceSummary selection={selection} />
 
+      <PaymentOptions
+        value={choice}
+        onChange={setPayment}
+        total={price.total}
+        playerCount={playerCount}
+        onlineMode={onlineMode}
+        disabled={submitting}
+      />
+
+      {choice === 'split' && (
+        <fieldset className="space-y-2" disabled={submitting}>
+          <legend className="text-sm font-medium">Email the invitations (optional)</legend>
+          <p className="text-xs text-muted-foreground">
+            We can email each player their payment link. You also get the links on the next screen.
+          </p>
+          {Array.from({ length: playerCount - 1 }, (_, i) => (
+            <Input
+              key={i}
+              type="email"
+              inputMode="email"
+              autoComplete="off"
+              placeholder={`Player ${i + 2} email`}
+              aria-label={`Email for player ${i + 2}`}
+              value={inviteEmails[i] ?? ''}
+              onChange={(e) =>
+                setInviteEmails((prev) => {
+                  const next = [...prev]
+                  next[i] = e.target.value
+                  return next
+                })
+              }
+            />
+          ))}
+        </fieldset>
+      )}
+
       {/* ---- who is booking ---- */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as 'member' | 'guest')}>
         <TabsList className="w-full">
@@ -470,7 +433,7 @@ export function DrawerBody({
                 onClick={() => submit({ mode: 'member' })}
               >
                 {submitting && <Loader2 className="animate-spin" aria-hidden />}
-                Confirm &amp; Reserve
+                {reserveLabel}
               </Button>
             </>
           ) : member ? (
@@ -554,9 +517,29 @@ export function DrawerBody({
               )}
             </div>
 
+            <div className="space-y-1.5">
+              <Label htmlFor="guest-email">Email (optional)</Label>
+              <Input
+                id="guest-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                aria-invalid={!!form.formState.errors.email}
+                {...form.register('email')}
+              />
+              {form.formState.errors.email ? (
+                <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  For your confirmation, a reminder two hours before, and a cancellation notice. Not shared.
+                </p>
+              )}
+            </div>
+
             <Button type="submit" className="h-11 w-full" disabled={submitting}>
               {submitting && <Loader2 className="animate-spin" aria-hidden />}
-              Confirm &amp; Reserve
+              {reserveLabel}
             </Button>
           </form>
         </TabsContent>

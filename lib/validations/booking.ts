@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { PAYMENT_CHOICES } from '@/lib/payments'
+
 /**
  * Tunisian mobile number -> canonical "+216XXXXXXXX", or null if invalid.
  *
@@ -32,6 +34,21 @@ export const guestPhoneSchema = z
     return normalized
   })
 
+/** An optional address: blank means "none", anything else must be a real email. */
+export const optionalEmailSchema = z
+  .string()
+  .trim()
+  .max(254, 'Email is too long')
+  .optional()
+  .transform((value, ctx) => {
+    if (!value) return undefined
+    if (!z.string().email().safeParse(value).success) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter a valid email address, or leave it blank' })
+      return z.NEVER
+    }
+    return value.toLowerCase()
+  })
+
 export const guestDetailsSchema = z.object({
   fullName: z
     .string()
@@ -39,6 +56,8 @@ export const guestDetailsSchema = z.object({
     .min(2, 'Please enter your full name')
     .max(100, 'Name is too long'),
   phone: guestPhoneSchema,
+  /** Optional: where the confirmation, reminders and cancellation notice are sent. */
+  email: optionalEmailSchema,
 })
 
 const bookingBase = {
@@ -49,6 +68,10 @@ const bookingBase = {
   /** Start of play as an ISO instant. */
   startsAt: z.string().datetime({ offset: true }),
   playerCount: z.number().int(),
+  /** How the booker pays; defaults to cash at the club (the original behaviour). */
+  payment: z.enum(PAYMENT_CHOICES).default('cash'),
+  /** Split only: addresses to email the other players' payment links to, in link order. Blanks are skipped. */
+  inviteEmails: z.array(z.string().trim().max(254)).max(3).optional(),
 }
 
 /**

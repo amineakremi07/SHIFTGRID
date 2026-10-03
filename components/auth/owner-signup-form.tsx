@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { MapPin, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { MapPin, CheckCircle, Loader2 } from 'lucide-react'
 import { documentSchema, ownerSignupSchema, type OwnerSignupData } from '@/lib/validations/owner-signup'
 import { submitOwnerSignup, checkRegistryNumber, geocodeAddress } from '@/lib/actions/owner-signup'
 
@@ -82,13 +81,11 @@ export function OwnerSignupForm() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [mapPosition, setMapPosition] = useState<MarkerPosition>({ latitude: TUNISIA_CENTER[0], longitude: TUNISIA_CENTER[1] })
-  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     trigger,
     formState: { errors },
@@ -127,8 +124,8 @@ export function OwnerSignupForm() {
     mode: 'onChange',
   })
 
-  const watchedCompany = watch('company')
-  const watchedLocation = watch('location')
+  // useWatch (not watch()) is the React Compiler-compatible way to subscribe to a field.
+  const watchedCompany = useWatch({ control, name: 'company' })
 
   useEffect(() => {
     if (watchedCompany.address && watchedCompany.city) {
@@ -151,7 +148,7 @@ export function OwnerSignupForm() {
 
   const handleRegistryCheck = async (value: string) => {
     if (value.length === 14) {
-      const result = await checkRegistryNumber(value)
+      await checkRegistryNumber(value)
     }
   }
 

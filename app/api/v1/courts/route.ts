@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withApiKeyAuth, getOrganizationId } from '@/lib/middleware/api-auth'
+import { withApiKeyAuth } from '@/lib/middleware/api-auth'
 import { createClient } from '@supabase/supabase-js'
 
 // Create service client for database operations

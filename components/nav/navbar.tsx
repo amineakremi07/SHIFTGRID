@@ -21,13 +21,20 @@ import { homeLinkFor, useAuthNav, type AuthNav } from '@/hooks/use-auth-nav'
  *
  * `Facilities` has no page of its own yet, so it anchors to the section that
  * currently explains what clubs offer. Point it at a real route when one exists.
+ * Prefetching: the static targets (Home, Login, Register) are marked `prefetch` so
+ * their chunks load before the click. The signed-in link ("My reservations" or the
+ * dashboard) is deliberately left on the default: it is a dynamic, personal page, and
+ * `prefetch={true}` would cache its data for minutes, so a booking made just before
+ * clicking would be missing from the list. The default prefetches the route down to
+ * its `loading.tsx`, so the click still shows the page skeleton instantly.
+ *
  * There is deliberately no `Pricing` link: prices are per club and per court,
  * shown on each club card.
  */
 export const NAV_LINKS = [
   { label: 'Home', href: '/' },
-  { label: 'Clubs', href: '#discover' },
-  { label: 'Facilities', href: '#how-it-works' },
+  { label: 'Clubs', href: '/#discover' },
+  { label: 'Facilities', href: '/#how-it-works' },
 ] as const
 
 export function Navbar() {
@@ -43,6 +50,7 @@ export function Navbar() {
           <Link
             key={link.label}
             href={link.href}
+            prefetch
             className="text-sm text-bone-linen/75 transition-colors hover:text-bone-linen"
           >
             {link.label}
@@ -83,6 +91,7 @@ export function Navbar() {
               <SheetClose asChild key={link.label}>
                 <Link
                   href={link.href}
+                  prefetch
                   className="rounded-lg px-3 py-2 text-base hover:bg-muted"
                 >
                   {link.label}
@@ -108,12 +117,12 @@ export function Navbar() {
               <>
                 <SheetClose asChild>
                   <Button asChild variant="outline">
-                    <Link href="/login">Login</Link>
+                    <Link href="/login" prefetch>Login</Link>
                   </Button>
                 </SheetClose>
                 <SheetClose asChild>
                   <Button asChild>
-                    <Link href="/register">Register</Link>
+                    <Link href="/register" prefetch>Register</Link>
                   </Button>
                 </SheetClose>
               </>
@@ -154,7 +163,7 @@ function AuthActions({ auth }: { auth: AuthNav }) {
         variant="ghost"
         className="text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
       >
-        <Link href="/login">Login</Link>
+        <Link href="/login" prefetch>Login</Link>
       </Button>
       {/* Outlined, not green: the hero CTA is this view's one Lime Pulse. */}
       <Button
@@ -162,7 +171,7 @@ function AuthActions({ auth }: { auth: AuthNav }) {
         variant="outline"
         className="border-bone-linen/40 bg-transparent text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
       >
-        <Link href="/register">Register</Link>
+        <Link href="/register" prefetch>Register</Link>
       </Button>
     </>
   )

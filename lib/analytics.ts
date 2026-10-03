@@ -103,7 +103,7 @@ export type BookingInput = {
   booker_profile_id: string | null
   booker_anon_id: string | null
   /** payment_records of this booking (one in practice). */
-  payments: { amount: number; status: 'pending' | 'paid' | 'refunded'; provider: 'stripe' | 'cash' | 'clicktopay' }[]
+  payments: { amount: number; status: 'pending' | 'paid' | 'refunded'; provider: 'stripe' | 'cash' | 'clicktopay' | 'test' }[]
 }
 
 export type CourtInput = {

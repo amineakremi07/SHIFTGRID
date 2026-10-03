@@ -9,7 +9,6 @@ import {
   playerSignUpSchema,
   playerRegisterSchema,
   anonymousBookerSchema,
-  type PlayerSignInInput,
   type PlayerSignUpInput,
   type PlayerRegisterInput,
   type AnonymousBookerInput,

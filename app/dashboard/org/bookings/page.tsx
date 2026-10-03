@@ -74,7 +74,7 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
       ? supabase.from('profiles').select('id, display_name, phone').in('id', profileIds)
       : Promise.resolve({ data: [], error: null }),
     bookingIds.length
-      ? supabase.from('payment_records').select('booking_id, amount').in('booking_id', bookingIds)
+      ? supabase.from('payment_records').select('booking_id, amount, status, provider').in('booking_id', bookingIds)
       : Promise.resolve({ data: [], error: null }),
   ])
   if (anonRes.error || profileRes.error || payRes.error) {
@@ -87,7 +87,7 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
 
   const anon = new Map((anonRes.data ?? []).map((a) => [a.id, a]))
   const profiles = new Map((profileRes.data ?? []).map((p) => [p.id, p]))
-  const amounts = new Map((payRes.data ?? []).map((p) => [p.booking_id, Number(p.amount)]))
+  const payments = new Map((payRes.data ?? []).map((p) => [p.booking_id, p]))
 
   const bookings: BoardBooking[] = rows.map((b) => {
     const guest = b.booker_anon_id ? anon.get(b.booker_anon_id) : undefined
@@ -102,7 +102,9 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
       bookerName: guest?.name ?? member?.display_name ?? 'Unknown',
       bookerPhone: guest?.phone ?? member?.phone ?? null,
       isMember: Boolean(member),
-      amount: amounts.get(b.id) ?? null,
+      amount: payments.get(b.id) ? Number(payments.get(b.id)!.amount) : null,
+      paymentStatus: payments.get(b.id)?.status ?? null,
+      paymentProvider: payments.get(b.id)?.provider ?? null,
       reference: b.id.replace(/-/g, '').slice(0, 8).toUpperCase(),
     }
   })

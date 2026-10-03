@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Loader2, Phone, Plus, User, UserRound, X } from 'lucide-react'
+import { Banknote, Loader2, Phone, Plus, User, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { DayPicker } from '@/components/courts/day-picker'
@@ -23,11 +23,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useRealtimeBookings } from '@/hooks/use-realtime-bookings'
 import { cancelBookingAction } from '@/lib/actions/bookings'
 import { createWalkInBooking } from '@/lib/actions/org-bookings'
+import { markCashPaidAction } from '@/lib/actions/payments'
 import { formatVenueTime, minutesSinceVenueDayStart, timeToMinutes } from '@/lib/court-time'
 import { computePrice } from '@/lib/pricing'
 import { PLAYER_COUNT_OPTIONS, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { guestDetailsSchema } from '@/lib/validations/booking'
-import type { BookingStatus } from '@/lib/types/database'
+import type { BookingStatus, PaymentProvider, PaymentStatus } from '@/lib/types/database'
 import { cn } from '@/lib/utils'
 
 export type BoardSlot = { start: string; end: string; past: boolean }
@@ -56,6 +57,9 @@ export type BoardBooking = {
   bookerPhone: string | null
   isMember: boolean
   amount: number | null
+  /** The payment record, when there is one. */
+  paymentStatus: PaymentStatus | null
+  paymentProvider: PaymentProvider | null
   reference: string
 }
 
@@ -283,7 +287,35 @@ function CourtColumn({
   )
 }
 
+function paymentLabel(b: BoardBooking): { text: string; paid: boolean } | null {
+  if (b.paymentStatus === 'paid') return { text: b.paymentProvider === 'cash' ? 'Paid in cash' : 'Paid online', paid: true }
+  if (b.paymentStatus === 'refunded') return { text: 'Refunded', paid: false }
+  if (b.paymentStatus === 'pending') {
+    return { text: b.paymentProvider === 'cash' ? 'Cash due' : 'Awaiting shares', paid: false }
+  }
+  return null
+}
+
 function BookingRow({ booking, onCancel }: { booking: BoardBooking; onCancel: (b: BoardBooking) => void }) {
+  const router = useRouter()
+  const [collecting, setCollecting] = React.useState(false)
+  const payment = paymentLabel(booking)
+  // Only cash is collected here; online and split payments settle themselves.
+  const canCollect = isOpen(booking) && booking.paymentStatus === 'pending' && booking.paymentProvider === 'cash'
+
+  const collect = async () => {
+    setCollecting(true)
+    const result = await markCashPaidAction(booking.id)
+    setCollecting(false)
+    if (!result.ok) {
+      toast.error(result.message)
+      router.refresh()
+      return
+    }
+    toast.success('Payment recorded. The booking is confirmed.')
+    router.refresh()
+  }
+
   return (
     <li className="rounded-lg bg-[#f7f5f2] px-3 py-2.5 text-sm">
       <div className="flex items-center justify-between gap-2">
@@ -298,7 +330,7 @@ function BookingRow({ booking, onCancel }: { booking: BoardBooking; onCancel: (b
         <span className="text-[#645757]">· {booking.playerCount} players</span>
       </p>
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-[#645757]">
-        <span className="inline-flex items-center gap-1.5">
+        <span className="inline-flex flex-wrap items-center gap-1.5">
           {booking.bookerPhone && (
             <>
               <Phone className="size-3" aria-hidden />
@@ -307,10 +339,22 @@ function BookingRow({ booking, onCancel }: { booking: BoardBooking; onCancel: (b
           )}
           <span className="font-mono">{booking.reference}</span>
           {booking.amount !== null && <span>· {tnd(booking.amount)}</span>}
+          {payment && (
+            <span className={cn('rounded-sm px-1 font-medium', payment.paid ? 'bg-success/10 text-success' : 'bg-[#eae6df]')}>
+              {payment.text}
+            </span>
+          )}
         </span>
-        <Button variant="destructive" size="xs" onClick={() => onCancel(booking)}>
-          <X aria-hidden /> Cancel
-        </Button>
+        <span className="inline-flex gap-1.5">
+          {canCollect && (
+            <Button variant="outline" size="xs" onClick={collect} disabled={collecting}>
+              {collecting ? <Loader2 className="animate-spin" aria-hidden /> : <Banknote aria-hidden />} Mark paid
+            </Button>
+          )}
+          <Button variant="destructive" size="xs" onClick={() => onCancel(booking)}>
+            <X aria-hidden /> Cancel
+          </Button>
+        </span>
       </div>
     </li>
   )

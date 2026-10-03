@@ -8,6 +8,7 @@ import { ClubBookingView } from '@/components/courts/club-booking-view'
 import { generateCourtSlots } from '@/lib/court-slots'
 import { addDays, venueDateString, venueInstant } from '@/lib/court-time'
 import { effectiveHours, parseWeeklyHours, weekdayKey, WEEKDAY_LABELS } from '@/lib/operating-hours'
+import { onlinePaymentMode } from '@/lib/payments'
 import { SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { createClient } from '@/lib/supabase/server'
 import { createPublicClient } from '@/lib/supabase/public'
@@ -68,20 +69,24 @@ export default async function ClubPage({
   // Public (anon) reads: RLS exposes only approved clubs, active courts, and lock ranges.
   const supabase = createPublicClient()
 
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('id, name, address, city, weekly_hours')
-    .eq('id', orgId)
-    .eq('status', 'approved')
-    .maybeSingle()
+  // The club, its courts and who is browsing do not depend on each other: one round
+  // trip. Only the slot locks need the court ids, so they follow.
+  const [{ data: org }, { data: courts, error: courtsError }, member] = await Promise.all([
+    supabase
+      .from('organizations')
+      .select('id, name, address, city, weekly_hours')
+      .eq('id', orgId)
+      .eq('status', 'approved')
+      .maybeSingle(),
+    supabase
+      .from('courts')
+      .select('id, name, sport, price_per_hour, open_time, close_time, night_surcharge_per_hour, night_starts_at')
+      .eq('org_id', orgId)
+      .eq('status', 'active')
+      .order('name'),
+    loadMember(orgId),
+  ])
   if (!org) notFound()
-
-  const { data: courts, error: courtsError } = await supabase
-    .from('courts')
-    .select('id, name, sport, price_per_hour, open_time, close_time, night_surcharge_per_hour, night_starts_at')
-    .eq('org_id', orgId)
-    .eq('status', 'active')
-    .order('name')
 
   // Locks overlapping the day (through 24:00 + 24h so late-night slots are covered).
   const courtIds = (courts ?? []).map((c) => c.id)
@@ -141,8 +146,6 @@ export default async function ClubPage({
         ]
       })
 
-  const member = await loadMember(orgId)
-
   return (
     <main className="mx-auto w-full max-w-[1920px] px-4 py-10 sm:px-6 lg:px-8 xl:px-12">
       <Link
@@ -185,6 +188,7 @@ export default async function ClubPage({
           maxDate={maxDate}
           courts={matrixCourts}
           member={member}
+          onlineMode={onlinePaymentMode()}
         />
       )}
     </main>

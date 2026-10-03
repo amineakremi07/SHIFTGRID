@@ -21,16 +21,11 @@ export default async function ReservationsPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/register?role=player&next=/reservations')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, org_id')
-    .eq('id', user.id)
-    .maybeSingle()
-  if (profile?.role === 'org_admin' || profile?.role === 'staff') redirect('/dashboard/org/bookings')
-  if (profile?.role === 'platform_admin') redirect('/admin/verification')
-
-  // RLS: a player sees only their own bookings, their club's courts and their club.
-  const [bookingsRes, courtsRes, orgRes] = await Promise.all([
+  // The profile (with its club's name embedded), the bookings and the courts only need
+  // the user id (RLS scopes the rest), so they go out in ONE round trip.
+  const [profileRes, bookingsRes, courtsRes] = await Promise.all([
+    supabase.from('profiles').select('role, org_id, organizations(name)').eq('id', user.id).maybeSingle(),
+    // RLS: a player sees only their own bookings and their club's courts.
     supabase
       .from('bookings')
       .select('id, court_id, sport, starts_at, ends_at, player_count, status, cancellation_deadline, cancellation_reason')
@@ -38,10 +33,10 @@ export default async function ReservationsPage() {
       .order('starts_at', { ascending: false })
       .limit(100),
     supabase.from('courts').select('id, name'),
-    profile?.org_id
-      ? supabase.from('organizations').select('name').eq('id', profile.org_id).maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
   ])
+  const profile = profileRes.data
+  if (profile?.role === 'org_admin' || profile?.role === 'staff') redirect('/dashboard/org/bookings')
+  if (profile?.role === 'platform_admin') redirect('/admin/verification')
 
   if (bookingsRes.error) {
     console.error('Failed to load reservations:', { code: bookingsRes.error.code, message: bookingsRes.error.message })
@@ -55,7 +50,7 @@ export default async function ReservationsPage() {
   }
 
   const courtName = new Map((courtsRes.data ?? []).map((c) => [c.id, c.name]))
-  const clubName = orgRes.data?.name ?? 'Your club'
+  const clubName = profile?.organizations?.name ?? 'Your club'
   const now = readClock()
 
   const all: Reservation[] = (bookingsRes.data ?? []).map((b) => {

@@ -3,6 +3,7 @@
 import * as React from 'react'
 
 import { addDays, venueInstant } from '@/lib/court-time'
+import { subscribeToBookings } from '@/lib/realtime/bookings-feed'
 import { createClient } from '@/lib/supabase/client'
 
 type Row = Record<string, unknown>
@@ -74,19 +75,33 @@ export function useRealtimeBookings(
       timer = setTimeout(() => onChangeRef.current(), debounceMs)
     }
 
+    // Bookings come through the shared per-club feed (see lib/realtime/bookings-feed.ts):
+    // the staff alert bell listens to the same stream, and two separate channels with the
+    // same subscription would starve one of them.
+    // Declared first: the feed replays its current status synchronously on subscribe.
+    let bookingsEverSubscribed = false
+    const stopBookings = subscribeToBookings(
+      orgId,
+      (payload) => {
+        // UPDATE/DELETE only carry the primary key in `old`, so read the row
+        // from `new` when there is one.
+        const row = Object.keys(payload.new ?? {}).length ? payload.new : payload.old
+        if (onWatchedCourt(row.court_id) && inWindow(row.starts_at)) refresh()
+      },
+      (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Reconnected after a drop: anything in between was missed.
+          if (bookingsEverSubscribed) refresh()
+          bookingsEverSubscribed = true
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('Realtime bookings feed problem:', status)
+        }
+      }
+    )
+    // Slot locks are this hook's own subscription (public data, no org_id to filter on).
     const supabase = createClient()
     const channel = supabase
-      .channel(`bookings-${orgId}-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings', filter: `org_id=eq.${orgId}` },
-        (payload: Change) => {
-          // UPDATE/DELETE only carry the primary key in `old`, so read the row
-          // from `new` when there is one.
-          const row = Object.keys(payload.new ?? {}).length ? payload.new : payload.old
-          if (onWatchedCourt(row.court_id) && inWindow(row.starts_at)) refresh()
-        }
-      )
+      .channel(`slot-locks-${orgId}-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'court_slot_locks' },
@@ -115,6 +130,7 @@ export function useRealtimeBookings(
     return () => {
       clearTimeout(timer)
       document.removeEventListener('visibilitychange', onVisible)
+      stopBookings()
       void supabase.removeChannel(channel)
     }
   }, [orgId, selectedDate, courtKey, enabled, debounceMs])

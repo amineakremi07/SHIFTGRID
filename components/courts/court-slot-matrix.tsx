@@ -110,6 +110,24 @@ function slotPrice(court: MatrixCourt, slot: MatrixSlot, dateStr: string) {
 const formatTime = formatVenueTime
 
 /** TND, the platform currency — never EUR/USD. */
+/**
+ * Peak slots are the ones that carry the night-lighting surcharge, i.e. play at or
+ * after the court's `nightStartsAt`. Off-peak slots are the base rate. A court
+ * with no surcharge has no peak.
+ */
+export function slotIsPeak(court: MatrixCourt, slot: MatrixSlot, dateStr: string) {
+  if ((court.nightSurchargePerHour ?? 0) <= 0) return false
+  return (
+    computePrice({
+      pricePerHour: court.pricePerHour,
+      nightSurchargePerHour: court.nightSurchargePerHour ?? 0,
+      nightStartsAtMinutes: timeToMinutes(court.nightStartsAt ?? '18:00:00'),
+      startMinutes: minutesSinceVenueDayStart(slot.start, dateStr),
+      durationMinutes: slotMinutes(court.sport),
+    }).surcharge > 0
+  )
+}
+
 function formatTND(amount: number) {
   return `${amount.toFixed(amount % 1 === 0 ? 0 : 2)} TND`
 }
@@ -254,10 +272,11 @@ function SlotCell({
   )
   const isAvailable = slot.state === 'available'
   const price = slotPrice(court, slot, selectedDate)
+  const peak = slotIsPeak(court, slot, selectedDate)
 
   const tooltip =
     slot.state === 'available'
-      ? `${formatTND(price)} · ${slotMinutes(court.sport)} min + ${BUFFER_MIN} min buffer`
+      ? `${formatTND(price)} · ${peak ? 'Peak (night lighting)' : 'Off-peak'} · ${slotMinutes(court.sport)} min + ${BUFFER_MIN} min buffer`
       : slot.state === 'occupied'
         ? 'Already booked'
         : slot.state === 'locked_buffer'
@@ -284,13 +303,14 @@ function SlotCell({
       onClick={isAvailable ? onSelect : undefined}
       disabled={!isAvailable}
       aria-pressed={isSelected}
-      aria-label={`${court.name}, ${formatTime(slot.start)} to ${formatTime(slot.end)}, ${STATE_LABEL[slot.state]}${isAvailable ? `, ${formatTND(price)}` : ''}`}
+      aria-label={`${court.name}, ${formatTime(slot.start)} to ${formatTime(slot.end)}, ${STATE_LABEL[slot.state]}${isAvailable ? `, ${formatTND(price)}, ${peak ? 'peak' : 'off-peak'} price` : ''}`}
       className={cn(
         'relative w-full rounded-lg border p-3 text-left transition-colors',
         'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
         isAvailable &&
           !isSelected &&
-          'border-border bg-card hover:border-primary cursor-pointer',
+          // Available = the success (Peacock Teal) tint; Lime Pulse stays for selection.
+          'border-success/40 bg-success/5 hover:border-success cursor-pointer',
         // Selected: Lime Pulse fill — the one place green is a surface.
         isSelected && 'border-primary bg-primary text-primary-foreground',
         slot.state === 'occupied' &&
@@ -325,8 +345,20 @@ function SlotCell({
 
       <div className="mt-2 flex items-center justify-between gap-2">
         {isAvailable || isSelected ? (
-          <span className="text-sm font-semibold tabular-nums">
-            {formatTND(price)}
+          <span className="flex items-center gap-1.5">
+            <span className="text-sm font-semibold tabular-nums">
+              {formatTND(price)}
+            </span>
+            {peak && (
+              <span
+                className={cn(
+                  'rounded-sm px-1 text-[0.65rem] font-medium uppercase tracking-wide',
+                  isSelected ? 'bg-primary-foreground/15' : 'bg-accent text-accent-foreground'
+                )}
+              >
+                Peak
+              </span>
+            )}
           </span>
         ) : (
           <Badge

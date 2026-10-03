@@ -28,7 +28,7 @@ export function BrandMark({
   tone?: 'light' | 'dark'
 }) {
   return (
-    <Link href={href} className={cn('inline-flex items-center', className)}>
+    <Link href={href} prefetch className={cn('inline-flex items-center', className)}>
       <span className={cn('relative block aspect-[2.7/1]', imageClassName)}>
         <Image
           src={tone === 'dark' ? '/logo-dark.svg' : '/logo.svg'}

@@ -56,10 +56,19 @@ function sessionCookie(session) {
   return parts.map((p, i) => `${name}.${i}=${p}`).join('; ')
 }
 
+/**
+ * Status and redirect target. A redirect is either an HTTP 307 (the proxy, a layout)
+ * or, once a route's loading.tsx has started streaming, a 200 whose body carries a
+ * meta refresh (a page's redirect() inside the loading boundary). Both send the
+ * visitor away before any page data is rendered; `soft` tells them apart.
+ */
 async function probe(path, cookie) {
   const res = await fetch(BASE + path, { headers: { cookie }, redirect: 'manual' })
   const loc = res.headers.get('location')
-  return { status: res.status, to: loc ? new globalThis.URL(loc, BASE).pathname : null }
+  if (loc) return { status: res.status, to: new globalThis.URL(loc, BASE).pathname, soft: false }
+  const body = res.status === 200 ? await res.text() : ''
+  const meta = body.match(/http-equiv="refresh"\s+content="\d+;url=([^"]+)"/)
+  return { status: res.status, to: meta ? new globalThis.URL(meta[1], BASE).pathname : null, soft: Boolean(meta) }
 }
 
 // What each role should get from each page: a redirect target, or 200 = page renders.
@@ -78,7 +87,7 @@ const ROUTES = {
     '/dashboard/org/courts': '/dashboard/org/bookings',
     '/admin/verification': '/',
   },
-  player: { '/reservations': 200, '/admin/verification': '/' },
+  player: { '/': 200, '/reservations': 200, '/admin/verification': '/' },
 }
 
 async function main() {
@@ -133,8 +142,8 @@ async function main() {
       const cookie = sessionCookie(s.session)
       for (const [path, expected] of Object.entries(routes)) {
         const r = await probe(path, cookie)
-        const ok = expected === 200 ? r.status === 200 : r.to === expected
-        check(ok, `${role}: ${path} ${expected === 200 ? 'renders' : `-> ${expected}`}`, `${r.status}${r.to ? ` -> ${r.to}` : ''}`)
+        const ok = expected === 200 ? r.status === 200 && !r.soft : r.to === expected
+        check(ok, `${role}: ${path} ${expected === 200 ? 'renders' : `-> ${expected}`}`, `${r.status}${r.to ? ` -> ${r.to}${r.soft ? ' (streamed)' : ''}` : ''}`)
       }
     }
     // Both portals render for a signed-out visitor, with their own branding.
@@ -144,7 +153,7 @@ async function main() {
       check(res.status === 200 && html.includes(text), `signed out: ${path} renders "${text}"`, String(res.status))
     }
     // A signed-in visitor on either login page is sent to their role's landing page.
-    const LANDING = { platform_admin: '/admin/verification', org_admin: '/dashboard/org', staff: '/dashboard/org/bookings', player: '/reservations' }
+    const LANDING = { platform_admin: '/admin/verification', org_admin: '/dashboard/org', staff: '/dashboard/org/bookings', player: '/' }
     for (const [role, s] of Object.entries(sessions)) {
       for (const path of ['/login', '/login-owner']) {
         const r = await probe(path, sessionCookie(s.session))

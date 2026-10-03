@@ -1,10 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { z } from 'zod'
 
 import { GUEST_TOKEN_PATTERN, hashGuestToken } from '@/lib/guest-cancel'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
+import { notifyCancellation } from '@/lib/notifications/service'
 import { createClient } from '@/lib/supabase/server'
 
 export type CancelBookingResult = { ok: true } | { ok: false; message: string }
@@ -105,6 +107,11 @@ export async function cancelBookingAction(input: CancelBookingInput): Promise<Ca
   revalidatePath(`/courts/${booking.org_id}`)
   revalidatePath('/dashboard/org/bookings')
   revalidatePath('/reservations')
+  // Tell the booker, after the response (never throws, never blocks the cancel).
+  const by = isOwner ? 'you' : 'club'
+  after(async () => {
+    await notifyCancellation({ bookingId, by })
+  })
   return { ok: true }
 }
 
@@ -150,5 +157,8 @@ async function cancelAsGuest(bookingId: string, token: string, reason: string | 
   revalidatePath(`/courts/${booking.org_id}`)
   revalidatePath('/dashboard/org/bookings')
   revalidatePath('/reservations/cancel-guest')
+  after(async () => {
+    await notifyCancellation({ bookingId: booking.id, by: 'you' })
+  })
   return { ok: true }
 }

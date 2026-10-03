@@ -64,6 +64,7 @@ export function deleteCache(key: string): void {
  * Delete cache by tag
  */
 export function deleteCacheByTag(tag: string): void {
+  void tag // placeholder until tag-based invalidation exists
   // In a real implementation, you'd maintain a tag index
   // For now, we'll just clear the entire cache
   // TODO: Implement proper tag-based invalidation with Redis
@@ -104,6 +105,7 @@ export function unstableCache<T extends (...args: unknown[]) => Promise<unknown>
   keyParts: (string | number | boolean)[],
   options: { tags?: string[]; revalidate?: number } = {}
 ) {
+  void options // placeholder: not forwarded until the real unstable_cache is used
   // This is a placeholder - in Next.js 15+, use the actual unstable_cache
   // import { unstable_cache } from 'next/cache'
   // return unstable_cache(fn, keyParts, options)

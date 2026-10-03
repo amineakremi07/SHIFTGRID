@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 
+import { Notifications } from '@/components/dashboard/notifications'
 import { OrgNav } from '@/components/dashboard/org-nav'
 import { getOrgAccess } from '@/lib/org-access'
 
@@ -29,11 +30,15 @@ export default async function OrgDashboardLayout({ children }: { children: React
             <h1 className="text-xl font-semibold tracking-tight">{ctx.orgName}</h1>
           </div>
           <OrgNav role={ctx.role} />
-          <form action="/logout" method="post">
-            <button type="submit" className="text-sm text-[#f7f5f2]/80 underline-offset-4 hover:underline">
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            {/* Live booking alerts: only meaningful once the club is approved and taking bookings. */}
+            {ctx.orgStatus === 'approved' && <Notifications orgId={ctx.orgId} />}
+            <form action="/logout" method="post">
+              <button type="submit" className="text-sm text-[#f7f5f2]/80 underline-offset-4 hover:underline">
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 

@@ -5,10 +5,10 @@ import { usePathname, useRouter } from 'next/navigation'
 
 import { BookingDrawer, type BookingDrawerMember, type BookingDrawerSelection } from '@/components/booking/booking-drawer'
 import { PlayerAuthModal } from '@/components/booking/player-auth-modal'
-import { CourtSlotMatrix, type MatrixCourt, type MatrixSelection } from '@/components/courts/court-slot-matrix'
-import { DayPicker } from '@/components/courts/day-picker'
+import { SlotPicker } from '@/components/booking/slot-picker'
+import type { MatrixCourt, MatrixSelection } from '@/components/courts/court-slot-matrix'
+import type { OnlineMode } from '@/lib/payments'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
 
 /**
  * A club's booking experience: pick a day, pick a slot on a court, book it in the
@@ -25,6 +25,7 @@ export function ClubBookingView({
   courts,
   member,
   closedNotice = null,
+  onlineMode = 'disabled',
 }: {
   orgId: string
   orgName: string
@@ -35,6 +36,8 @@ export function ClubBookingView({
   member: BookingDrawerMember | null
   /** Shown above the matrix when the club is closed on the chosen day. */
   closedNotice?: string | null
+  /** Online / split payment availability, decided on the server. */
+  onlineMode?: OnlineMode
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -116,29 +119,19 @@ export function ClubBookingView({
 
   return (
     <div className="space-y-6">
-      <DayPicker
+      <SlotPicker
+        orgId={orgId}
         dateStr={dateStr}
         minDate={minDate}
         maxDate={maxDate}
-        onChange={changeDate}
+        courts={courts}
+        onDateChange={changeDate}
+        onSelect={handleSlotSelect}
+        onRealtimeChange={() => router.refresh()}
         pending={pending}
+        closedNotice={closedNotice}
+        matrixKey={matrixKey}
       />
-
-      {closedNotice && (
-        <p role="status" className="rounded-lg bg-card px-4 py-3 text-sm text-muted-foreground">
-          {closedNotice}
-        </p>
-      )}
-
-      <div className={cn('transition-opacity', pending && 'opacity-60')} aria-busy={pending}>
-        <CourtSlotMatrix
-          key={`${dateStr}-${matrixKey}`}
-          courtData={courts}
-          selectedDate={dateStr}
-          onSlotSelect={handleSlotSelect}
-          realtime={{ orgId, onChange: () => router.refresh() }}
-        />
-      </div>
 
       <BookingDrawer
         open={drawerOpen}
@@ -147,6 +140,7 @@ export function ClubBookingView({
         orgName={orgName}
         selection={selection}
         member={member}
+        onlineMode={onlineMode}
         onRequestSignIn={requestSignIn}
         onBooked={() => {
           setJustBooked(true)

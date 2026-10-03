@@ -10,17 +10,11 @@ export const dynamic = 'force-dynamic'
 export default async function CourtsPage() {
   const supabase = createPublicClient()
 
-  const { data: orgs } = await supabase
-    .from('organizations')
-    .select('id, name, address, city, status')
-    .eq('status', 'approved')
-    .limit(20)
-
-  const { data: courts } = await supabase
-    .from('courts')
-    .select('id, org_id, name, sport, price_per_hour, status')
-    .eq('status', 'active')
-    .limit(50)
+  // Independent reads: one round trip, not two.
+  const [{ data: orgs }, { data: courts }] = await Promise.all([
+    supabase.from('organizations').select('id, name, address, city, status').eq('status', 'approved').limit(20),
+    supabase.from('courts').select('id, org_id, name, sport, price_per_hour, status').eq('status', 'active').limit(50),
+  ])
 
   return (
     <main className="max-w-[1920px] mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">

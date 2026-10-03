@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog'
 import {
@@ -22,16 +21,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Loader2, Mail, Lock, User, Phone, Eye, EyeOff, CheckCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import {
   playerSignInSchema,
   playerSignUpSchema,
@@ -439,17 +430,6 @@ export function PlayerAuthModal({
       </Button>
     </form>
   )
-
-  const renderContent = () => {
-    switch (mode) {
-      case 'signin':
-        return renderSignIn()
-      case 'signup':
-        return renderSignUp()
-      case 'anonymous':
-        return renderAnonymous()
-    }
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>

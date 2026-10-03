@@ -1,10 +1,17 @@
 'use server'
 
+import { after } from 'next/server'
+
 import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { notifyBookingCreated } from '@/lib/notifications/service'
+import { appOrigin } from '@/lib/notifications/origin'
+import { emailEnabled } from '@/lib/notifications/mailer'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { createBookingSchema, type CreateBookingInput } from '@/lib/validations/booking'
 import { checkBookableSlot } from '@/lib/booking-core'
 import { guestCancelPath } from '@/lib/guest-cancel'
+import { canSplit, onlinePaymentMode, onlineProvider, shareInvitePath, type PaymentChoice } from '@/lib/payments'
 
 export type BookingErrorCode =
   | 'invalid_input'
@@ -14,6 +21,8 @@ export type BookingErrorCode =
   | 'invalid_slot'
   | 'slot_taken'
   | 'slot_in_past'
+  | 'payment_unavailable'
+  | 'payment_failed'
   | 'unknown'
 
 export type BookingResult =
@@ -27,6 +36,17 @@ export type BookingResult =
       endsAt: string
       /** Guests only: a secret link to cancel without an account. Shown once. */
       cancelPath: string | null
+      /** Confirmed once fully paid; otherwise held and awaiting payment. */
+      status: 'confirmed' | 'pending_payment'
+      payment: PaymentChoice
+      /** What the booker paid just now (0 for cash). */
+      paidNow: number
+      /** Split only: one secret link per other player, shown once. */
+      invites: { shareNo: number; amount: number; path: string }[]
+      /** The booking's pass page. Guests carry their secret in the link. */
+      passPath: string
+      /** Whether emails are being sent at all (a provider is configured). */
+      emailsEnabled: boolean
     }
   | {
       ok: false
@@ -100,6 +120,16 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
   if (!checked.ok) return fail(checked.code, checked.message)
   const { sport, price } = checked
 
+  // --- payment choice: refuse what cannot be honoured BEFORE holding the slot --
+  const choice = data.payment
+  const provider = onlineProvider(onlinePaymentMode())
+  if (choice !== 'cash' && !provider) {
+    return fail('payment_unavailable', 'Online payment is not available yet. Please choose to pay at the venue.')
+  }
+  if (choice === 'split' && !canSplit(data.playerCount)) {
+    return fail('invalid_input', 'Splitting the payment is available for up to 4 players.')
+  }
+
   // --- who is booking --------------------------------------------------------
   let profileId: string | undefined
   if (data.mode === 'member') {
@@ -135,6 +165,58 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     amount: number
     cancel_token: string | null
   }
+
+  // --- take the payment. The booking exists (and holds the slot) as pending. ----
+  let status: 'confirmed' | 'pending_payment' = 'pending_payment'
+  let paidNow = 0
+  let invites: { shareNo: number; amount: number; path: string }[] = []
+
+  if (choice !== 'cash' && provider) {
+    const paid =
+      choice === 'online_full'
+        ? await admin.rpc('settle_booking_online', { p_booking_id: row.booking_id, p_provider: provider })
+        : await admin.rpc('create_booking_shares', {
+            p_booking_id: row.booking_id,
+            p_provider: provider,
+            p_share_count: data.playerCount,
+          })
+
+    if (paid.error) {
+      // Do not leave a held, unpaid slot behind a failed payment: release it.
+      console.error('payment step failed', { code: paid.error.code, message: paid.error.message })
+      await admin
+        .from('bookings')
+        .update({ status: 'cancelled', cancellation_reason: 'Payment could not be completed' })
+        .eq('id', row.booking_id)
+      return fail('payment_failed', 'The payment could not be completed, so the slot was released. Please try again.')
+    }
+
+    if (choice === 'online_full') {
+      status = 'confirmed'
+      paidNow = Number(row.amount)
+    } else {
+      const split = paid.data as { organizer_amount: number; invites: { share_no: number; amount: number; token: string }[] }
+      paidNow = Number(split.organizer_amount)
+      invites = split.invites.map((i) => ({ shareNo: i.share_no, amount: Number(i.amount), path: shareInvitePath(i.token) }))
+    }
+  }
+
+  // Emails go out after the response: the player never waits for the provider, and a
+  // failed email cannot undo a booking. notifyBookingCreated() never throws.
+  const origin = await appOrigin()
+  const inviteAddresses = (data.inviteEmails ?? []).map((e) => (z.string().email().safeParse(e).success ? e.toLowerCase() : null))
+  const guestEmail = data.mode === 'guest' ? data.guest.email : undefined
+  after(async () => {
+    await notifyBookingCreated({
+      bookingId: row.booking_id,
+      origin,
+      guestToken: row.cancel_token,
+      guestEmail,
+      paidNow,
+      invites: invites.map((invite, i) => ({ ...invite, email: inviteAddresses[i] ?? null })),
+    })
+  })
+
   return {
     ok: true,
     bookingId: row.booking_id,
@@ -143,5 +225,11 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     cancelPath: row.cancel_token ? guestCancelPath(row.cancel_token) : null,
+    status,
+    payment: choice,
+    paidNow,
+    invites,
+    passPath: row.cancel_token ? `/reservations/${row.booking_id}?token=${row.cancel_token}` : `/reservations/${row.booking_id}`,
+    emailsEnabled: emailEnabled(),
   }
 }

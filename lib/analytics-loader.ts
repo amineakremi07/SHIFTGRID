@@ -37,6 +37,12 @@ export async function loadOrgAnalytics(params: { range?: string; from?: string; 
 
   const supabase = await createClient()
 
+  // Started now so they run alongside the (paged) bookings query.
+  const sideReads = Promise.all([
+    supabase.from('courts').select('id, name, sport, status, open_time, close_time').eq('org_id', orgId),
+    supabase.from('organizations').select('weekly_hours').eq('id', orgId).maybeSingle(),
+  ])
+
   const bookings: BookingInput[] = []
   let truncated = false
   for (let page = 0; ; page++) {
@@ -78,10 +84,7 @@ export async function loadOrgAnalytics(params: { range?: string; from?: string; 
     if ((data?.length ?? 0) < PAGE) break
   }
 
-  const [courtsRes, orgRes] = await Promise.all([
-    supabase.from('courts').select('id, name, sport, status, open_time, close_time').eq('org_id', orgId),
-    supabase.from('organizations').select('weekly_hours').eq('id', orgId).maybeSingle(),
-  ])
+  const [courtsRes, orgRes] = await sideReads
   if (courtsRes.error || orgRes.error) {
     console.error('Analytics courts/org query failed:', courtsRes.error?.message, orgRes.error?.message)
     return { ok: false, reason: 'error' }

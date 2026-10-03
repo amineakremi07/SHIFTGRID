@@ -11,7 +11,9 @@ export function landingPathFor(role: UserRole | null | undefined): string {
     case 'staff':
       return '/dashboard/org/bookings'
     default:
-      return '/#home'
+      // Players go to the home page, where they pick a club. "My reservations" is
+      // a header link (hooks/use-auth-nav.ts), not their landing page.
+      return '/'
   }
 }
 

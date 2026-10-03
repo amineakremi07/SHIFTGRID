@@ -52,16 +52,19 @@ export function useAuthNav(): AuthNav {
   return state
 }
 
-/** The one link a signed-in person most wants in the header, by role. */
+/**
+ * The one link a signed-in person most wants in the header, by role. Managers go to
+ * their landing page; a player's is "My reservations" (their post-login landing is
+ * the home page, which is where they already are).
+ */
 export function homeLinkFor(role: UserRole | null): { label: string; href: string } {
-  const href = landingPathFor(role)
   switch (role) {
     case 'org_admin':
     case 'staff':
-      return { label: 'Dashboard', href }
+      return { label: 'Dashboard', href: landingPathFor(role) }
     case 'platform_admin':
-      return { label: 'Admin', href }
+      return { label: 'Admin', href: landingPathFor(role) }
     default:
-      return { label: 'My reservations', href }
+      return { label: 'My reservations', href: '/reservations' }
   }
 }

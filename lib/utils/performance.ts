@@ -3,8 +3,6 @@
  * Track Core Web Vitals, API response times, and database query performance
  */
 
-import { getCache, setCache } from './cache'
-
 // Performance metrics storage (in-memory for dev, use analytics service in prod)
 const performanceMetrics: PerformanceMetric[] = []
 

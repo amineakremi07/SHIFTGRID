@@ -1,8 +1,9 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, Clock, Loader2, Users } from 'lucide-react'
+import { CalendarDays, Clock, Loader2, Ticket, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -41,7 +42,7 @@ export type Reservation = {
 
 const STATUS: Record<BookingStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'secondary' }> = {
   confirmed: { label: 'Confirmed', variant: 'success' },
-  pending_payment: { label: 'Pay at the club', variant: 'warning' },
+  pending_payment: { label: 'Awaiting payment', variant: 'warning' },
   cancelled: { label: 'Cancelled', variant: 'destructive' },
   completed: { label: 'Completed', variant: 'secondary' },
 }
@@ -108,6 +109,12 @@ export function ReservationCard({ reservation: r }: { reservation: Reservation }
         <div>
           <dt className="sr-only">Reference</dt>
           <dd className="font-mono text-xs text-muted-foreground">{r.reference}</dd>
+        </div>
+        <div>
+          <Link href={`/reservations/${r.id}`} className="inline-flex items-center gap-1 text-xs underline underline-offset-4">
+            <Ticket className="size-3.5" aria-hidden />
+            View pass
+          </Link>
         </div>
       </dl>
 

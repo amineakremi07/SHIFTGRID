@@ -27,8 +27,10 @@ export type OrgStatus = 'pending' | 'approved' | 'rejected' | 'suspended'
 export type CourtStatus = 'active' | 'maintenance'
 export type BookingStatus = 'pending_payment' | 'confirmed' | 'cancelled' | 'completed'
 export type PaymentMethod = 'online' | 'cash'
-export type PaymentProvider = 'stripe' | 'cash' | 'clicktopay'
+export type PaymentProvider = 'stripe' | 'cash' | 'clicktopay' | 'test'
 export type PaymentStatus = 'pending' | 'paid' | 'refunded'
+export type NotificationKind = 'booking_confirmation' | 'split_invite' | 'cancellation' | 'reminder_2h'
+export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'skipped'
 export type InviteRole = 'org_admin' | 'staff'
 
 export type Database = {
@@ -137,7 +139,15 @@ export type Database = {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'profiles_org_id_fkey'
+            columns: ['org_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          },
+        ]
       }
 
       anonymous_bookers: {
@@ -146,6 +156,7 @@ export type Database = {
           org_id: string
           name: string
           phone: string
+          email: string | null
           created_at: string
         }
         Insert: {
@@ -153,6 +164,7 @@ export type Database = {
           org_id: string
           name: string
           phone: string
+          email?: string | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['anonymous_bookers']['Insert']>
@@ -233,6 +245,90 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'payment_records_booking_id_fkey'
+            columns: ['booking_id']
+            isOneToOne: false
+            referencedRelation: 'bookings'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+
+      booking_shares: {
+        Row: {
+          id: string
+          booking_id: string
+          share_no: number
+          amount: number
+          status: PaymentStatus
+          is_organizer: boolean
+          invite_token_hash: string | null
+          payer_name: string | null
+          paid_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        /** Written only by the server (service role); clients can read, never write. */
+        Insert: {
+          id?: string
+          booking_id: string
+          share_no: number
+          amount: number
+          status?: PaymentStatus
+          is_organizer?: boolean
+          invite_token_hash?: string | null
+          payer_name?: string | null
+          paid_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['booking_shares']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'booking_shares_booking_id_fkey'
+            columns: ['booking_id']
+            isOneToOne: false
+            referencedRelation: 'bookings'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+
+      notifications: {
+        Row: {
+          id: string
+          kind: NotificationKind
+          booking_id: string | null
+          recipient: string
+          subject: string
+          status: NotificationStatus
+          attempts: number
+          last_error: string | null
+          provider_id: string | null
+          payload: Json | null
+          dedupe_key: string | null
+          created_at: string
+          sent_at: string | null
+        }
+        /** Written only by the server (service role). */
+        Insert: {
+          id?: string
+          kind: NotificationKind
+          booking_id?: string | null
+          recipient: string
+          subject: string
+          status?: NotificationStatus
+          attempts?: number
+          last_error?: string | null
+          provider_id?: string | null
+          payload?: Json | null
+          dedupe_key?: string | null
+          created_at?: string
+          sent_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['notifications']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'notifications_booking_id_fkey'
             columns: ['booking_id']
             isOneToOne: false
             referencedRelation: 'bookings'
@@ -340,6 +436,22 @@ export type Database = {
           p_starts_at: string
           p_status?: 'pending_payment' | 'confirmed'
         }
+        Returns: Json
+      }
+      settle_booking_online: {
+        Args: { p_booking_id: string; p_provider: string }
+        Returns: Json
+      }
+      create_booking_shares: {
+        Args: { p_booking_id: string; p_provider: string; p_share_count: number }
+        Returns: Json
+      }
+      pay_booking_share: {
+        Args: { p_token_hash: string; p_provider: string; p_payer_name?: string }
+        Returns: Json
+      }
+      mark_cash_paid: {
+        Args: { p_booking_id: string; p_org_id: string }
         Returns: Json
       }
       user_org_id: {
