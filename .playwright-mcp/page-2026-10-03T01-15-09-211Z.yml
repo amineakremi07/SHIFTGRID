@@ -1,0 +1,141 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - region [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - link [ref=e6] [cursor=pointer]:
+            - /url: /
+            - img "ShiftGrid" [ref=e8]
+          - navigation "Primary" [ref=e9]:
+            - link "Home" [ref=e10] [cursor=pointer]:
+              - /url: /
+            - link "Clubs" [ref=e11] [cursor=pointer]:
+              - /url: /#discover
+            - link "Facilities" [ref=e12] [cursor=pointer]:
+              - /url: /#how-it-works
+        - generic [ref=e13]:
+          - generic [ref=e16]:
+            - generic [aria-hidden] [ref=e17]:
+              - generic [ref=e18]: YB
+              - generic [ref=e19]: AM
+              - generic [ref=e20]: SK
+              - generic [ref=e21]: +
+            - paragraph [ref=e22]:
+              - text: 25k+ Active Players
+              - generic [ref=e23]: Tunisia
+          - heading "Reserve your ideal court in seconds" [level=1] [ref=e24]
+          - paragraph [ref=e25]: Padel, tennis and football courts across Tunisia. See live availability, pick a slot, and lock it in — priced in TND.
+          - generic [ref=e26]:
+            - link "Find a court" [ref=e27] [cursor=pointer]:
+              - /url: "#discover"
+            - link "How it works" [ref=e28] [cursor=pointer]:
+              - /url: "#how-it-works"
+          - generic [ref=e31]:
+            - generic [ref=e32]: 4 spots left
+            - paragraph [ref=e41]: Featured match
+            - paragraph [ref=e42]: Tunis Padel Open
+            - paragraph [ref=e43]: Sat · 18:30 · Lac 2
+            - paragraph [ref=e44]: 12 / 16 players joined
+    - region [ref=e50]:
+      - paragraph [ref=e51]: Discover
+      - heading "Find a Sports Club Near You" [level=2] [ref=e52]
+      - paragraph [ref=e53]: Search by club or place, choose your sport, then open a venue to see its courts and live availability.
+      - generic [ref=e54]:
+        - searchbox "Search clubs or venues" [ref=e56]
+        - button "Nearest to me" [ref=e57]
+      - group "Filter by sport" [ref=e58]:
+        - button "All" [pressed] [ref=e59]
+        - button "Padel" [ref=e67]
+        - button "Tennis" [ref=e71]
+        - button "Football" [ref=e79]
+      - generic [ref=e83]: 2 clubs
+      - list [ref=e84]:
+        - listitem [ref=e85]:
+          - article [ref=e86]:
+            - generic [ref=e88]:
+              - heading "ShiftGrid Test Club" [level=3] [ref=e89]
+              - paragraph [ref=e90]:
+                - generic [ref=e94]: Tunis
+            - list "Sports offered" [ref=e95]:
+              - listitem [ref=e96]:
+                - generic [ref=e97]: Padel
+              - listitem [ref=e98]:
+                - generic [ref=e99]: Tennis
+            - generic [ref=e100]:
+              - generic [ref=e101]:
+                - term [ref=e102]: Opening hours
+                - definition [ref=e106]: "Open today: 08:00 – 00:00"
+              - generic [ref=e107]:
+                - term [ref=e108]: Courts
+                - definition [ref=e113]: 1 Padel Court • 1 Tennis Court
+            - generic [ref=e114]:
+              - paragraph [ref=e115]:
+                - text: From 30 TND
+                - generic [ref=e116]: / 60 min
+              - link "View Slots & Book" [ref=e117] [cursor=pointer]:
+                - /url: /courts/f350ebab-85d5-4846-8673-c2da58f96193
+        - listitem [ref=e118]:
+          - article [ref=e119]:
+            - generic [ref=e121]:
+              - heading "sport city tunis" [level=3] [ref=e122]
+              - paragraph [ref=e123]:
+                - generic [ref=e127]: Tunis
+            - list "Sports offered" [ref=e128]:
+              - listitem [ref=e129]:
+                - generic [ref=e130]: Padel
+              - listitem [ref=e131]:
+                - generic [ref=e132]: Tennis
+              - listitem [ref=e133]:
+                - generic [ref=e134]: Football
+            - generic [ref=e135]:
+              - generic [ref=e136]:
+                - term [ref=e137]: Opening hours
+                - definition [ref=e141]: "Open today: 08:00 – 22:00"
+              - generic [ref=e142]:
+                - term [ref=e143]: Courts
+                - definition [ref=e148]: 10 Padel Courts • 5 Tennis Courts • 6 Football Courts
+            - generic [ref=e149]:
+              - paragraph [ref=e150]: Price on request
+              - link "View Slots & Book" [ref=e151] [cursor=pointer]:
+                - /url: /courts/f7243ff8-d8a7-4b2f-b324-54f0014cba64
+    - region [ref=e152]:
+      - paragraph [ref=e153]: How it works
+      - heading "From search to game in four steps" [level=2] [ref=e154]
+      - list [ref=e155]:
+        - listitem [ref=e156]:
+          - generic [ref=e157]: "01"
+          - heading "Choose a Court" [level=3] [ref=e163]
+          - paragraph [ref=e164]: Pick your sport and the area you want to play in.
+          - list [ref=e165]:
+            - listitem [ref=e166]: Location
+            - listitem [ref=e167]: Sport
+        - listitem [ref=e168]:
+          - generic [ref=e169]: "02"
+          - heading "Explore Facilities" [level=3] [ref=e176]
+          - paragraph [ref=e177]: Compare what each complex offers before you commit.
+          - list [ref=e178]:
+            - listitem [ref=e179]: Surface type
+            - listitem [ref=e180]: Lighting
+            - listitem [ref=e181]: Amenities
+        - listitem [ref=e182]:
+          - generic [ref=e183]: "03"
+          - heading "Select Time Slot" [level=3] [ref=e190]
+          - paragraph [ref=e191]: Read live availability in the slot matrix. Booked and held slots are clearly marked.
+          - list [ref=e192]:
+            - listitem [ref=e193]: Interactive matrix
+        - listitem [ref=e194]:
+          - generic [ref=e195]: "04"
+          - heading "Confirm & Play" [level=3] [ref=e201]
+          - paragraph [ref=e202]: Your slot is locked the instant you confirm, with the total shown in TND.
+          - list [ref=e203]:
+            - listitem [ref=e204]: Instant lock
+            - listitem [ref=e205]: TND confirmation
+  - contentinfo [ref=e206]:
+    - generic [ref=e207]:
+      - paragraph [ref=e208]: © 2026 ShiftGrid. Sports court booking in Tunisia.
+      - navigation "Footer" [ref=e209]:
+        - link "Clubs" [ref=e210] [cursor=pointer]:
+          - /url: "#discover"
+        - link "List your club" [ref=e211] [cursor=pointer]:
+          - /url: /register?role=owner
+  - region "Notifications alt+T"

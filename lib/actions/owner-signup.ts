@@ -5,12 +5,17 @@ import { createAdminClient, serviceRoleKeyProblem } from '@/lib/supabase/optimiz
 import { ownerSignupSchema, type OwnerSignupData } from '@/lib/validations/owner-signup'
 import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
+import { actionRateLimit } from '@/lib/rate-limit'
+import { consentMetadata } from '@/lib/legal'
 
 // Clients are created inside the action, not here. Constructing them at import
 // time made merely importing this file (and so rendering /register) throw
 // whenever RESEND_API_KEY or the service-role key was missing.
 
 export async function submitOwnerSignup(formData: OwnerSignupData) {
+  const limited = await actionRateLimit('auth')
+  if (limited) return { success: false, error: limited }
+
   const validated = ownerSignupSchema.safeParse(formData)
   if (!validated.success) {
     return { success: false, error: 'Invalid form data', details: validated.error.flatten() }
@@ -51,6 +56,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
       user_metadata: {
         display_name: owner.ownerName,
         phone: owner.ownerPhone,
+        ...consentMetadata(),
       }
     })
 
@@ -211,6 +217,9 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
 }
 
 export async function checkRegistryNumber(registryNumber: string) {
+  const limited = await actionRateLimit('lookup')
+  if (limited) return { valid: false, message: limited }
+
   if (!/^\d{14}$/.test(registryNumber)) {
     return { valid: false, message: 'Registry number must be 14 digits' }
   }
@@ -218,6 +227,9 @@ export async function checkRegistryNumber(registryNumber: string) {
 }
 
 export async function geocodeAddress(address: string) {
+  const limited = await actionRateLimit('lookup')
+  if (limited) return null
+
   try {
     const response = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=tn&limit=1`,

@@ -3,7 +3,8 @@
 import { after } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
-import { z } from 'zod'
+import { reportServerError } from '@/lib/observability'
+import { actionRateLimit } from '@/lib/rate-limit'
 import { notifyBookingCreated } from '@/lib/notifications/service'
 import { appOrigin } from '@/lib/notifications/origin'
 import { emailEnabled } from '@/lib/notifications/mailer'
@@ -23,6 +24,7 @@ export type BookingErrorCode =
   | 'slot_in_past'
   | 'payment_unavailable'
   | 'payment_failed'
+  | 'rate_limited'
   | 'unknown'
 
 export type BookingResult =
@@ -80,6 +82,7 @@ function mapDatabaseError(error: { code?: string; message?: string }): BookingRe
     return fail('invalid_input', 'That number of players is not allowed for this sport.')
   }
   console.error('create_booking failed', { code: error.code, message })
+  reportServerError('booking.create', new Error(`create_booking failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
   return fail('unknown', 'Something went wrong while booking. Please try again.')
 }
 
@@ -106,6 +109,18 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     }
   }
   const data = parsed.data
+
+  // Slot hogging guard: members are counted per account, guests per IP. Runs after
+  // validation (so junk is cheap to refuse) and before any database work.
+  let memberId: string | undefined
+  if (data.mode === 'member') {
+    const {
+      data: { user },
+    } = await (await createClient()).auth.getUser()
+    memberId = user?.id
+  }
+  const limited = await actionRateLimit('booking', memberId)
+  if (limited) return fail('rate_limited', limited)
 
   const admin = getSupabaseAdmin()
 
@@ -184,6 +199,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     if (paid.error) {
       // Do not leave a held, unpaid slot behind a failed payment: release it.
       console.error('payment step failed', { code: paid.error.code, message: paid.error.message })
+      reportServerError('booking.payment', new Error(`payment step failed: ${paid.error.code ?? 'unknown'}`), { code: paid.error.code ?? null, choice })
       await admin
         .from('bookings')
         .update({ status: 'cancelled', cancellation_reason: 'Payment could not be completed' })
@@ -204,7 +220,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
   // Emails go out after the response: the player never waits for the provider, and a
   // failed email cannot undo a booking. notifyBookingCreated() never throws.
   const origin = await appOrigin()
-  const inviteAddresses = (data.inviteEmails ?? []).map((e) => (z.string().email().safeParse(e).success ? e.toLowerCase() : null))
+  const inviteAddresses = (data.inviteEmails ?? []).map((e) => e || null)
   const guestEmail = data.mode === 'guest' ? data.guest.email : undefined
   after(async () => {
     await notifyBookingCreated({

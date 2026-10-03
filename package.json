@@ -10,7 +10,12 @@
     "test:e2e": "playwright test",
     "verify:db": "node scripts/verify-payments.mjs && node scripts/verify-booking-concurrency.mjs && node scripts/test-rls-security.mjs",
     "verify:security": "node scripts/test-rls-security.mjs",
-    "pwa:icons": "node scripts/generate-pwa-icons.mjs"
+    "verify:ratelimit": "node scripts/test-rate-limit.mjs",
+    "pwa:icons": "node scripts/generate-pwa-icons.mjs",
+    "test:load": "k6 run scripts/k6-booking-stress.js",
+    "cleanup:load": "node scripts/cleanup-load-test.mjs",
+    "verify:launch": "node scripts/verify-launch-readiness.mjs",
+    "verify:consent": "node scripts/verify-consent.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -19,8 +24,11 @@
     "@radix-ui/react-select": "^2.3.7",
     "@radix-ui/react-slot": "^1.3.3",
     "@radix-ui/react-tabs": "^1.1.21",
+    "@sentry/nextjs": "^11.4.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "^0.4.0",

@@ -160,7 +160,7 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
               value={link.url}
               aria-label="Invitation link"
               onFocus={(e) => e.currentTarget.select()}
-              className="min-w-64 flex-1 rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
+              className="ph-no-capture min-w-64 flex-1 rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
             />
             <Button type="button" variant="outline" size="sm" onClick={() => copy(link.url)}>
               <Copy aria-hidden /> Copy

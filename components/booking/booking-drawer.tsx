@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import type { z } from 'zod'
@@ -34,7 +34,8 @@ import { canSplit, formatTND, type OnlineMode, type PaymentChoice } from '@/lib/
 import { formatVenueDate, formatVenueTime, minutesSinceVenueDayStart, timeToMinutes } from '@/lib/court-time'
 import { computePrice } from '@/lib/pricing'
 import { BUFFER_MIN, PLAYER_COUNT_OPTIONS, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
-import { guestDetailsSchema } from '@/lib/validations/booking'
+import { guestBookingFormSchema } from '@/lib/validations/booking'
+import { ConsentCheckbox, LegalLinks } from '@/components/legal/consent-checkbox'
 import { cn } from '@/lib/utils'
 
 /* ==========================================================================
@@ -107,8 +108,8 @@ function useIsDesktop() {
   )
 }
 
-type GuestFormInput = z.input<typeof guestDetailsSchema>
-type GuestFormOutput = z.output<typeof guestDetailsSchema>
+type GuestFormInput = z.input<typeof guestBookingFormSchema>
+type GuestFormOutput = z.output<typeof guestBookingFormSchema>
 
 /* ------------------------------ price summary ----------------------------- */
 
@@ -191,8 +192,8 @@ export function DrawerBody({
   const [result, setResult] = React.useState<Extract<BookingResult, { ok: true }> | null>(null)
 
   const form = useForm<GuestFormInput, unknown, GuestFormOutput>({
-    resolver: zodResolver(guestDetailsSchema),
-    defaultValues: { fullName: '', phone: '', email: '' },
+    resolver: zodResolver(guestBookingFormSchema),
+    defaultValues: { fullName: '', phone: '', email: '', consent: false },
     mode: 'onTouched',
   })
 
@@ -240,7 +241,12 @@ export function DrawerBody({
 
     try {
       const outcome = await createBooking(
-        who.mode === 'member' ? { mode: 'member', ...base } : { mode: 'guest', ...base, guest: who.guest }
+        who.mode === 'member' ? { mode: 'member', ...base } : {
+            mode: 'guest',
+            ...base,
+            guest: { fullName: who.guest.fullName, phone: who.guest.phone, email: who.guest.email },
+            consent: who.guest.consent,
+          }
       )
 
       if (outcome.ok) {
@@ -462,7 +468,8 @@ export function DrawerBody({
           )}
         </TabsContent>
 
-        <TabsContent value="guest" className="mt-4">
+        {/* ph-no-capture: guest name/phone/email never appear in session recordings (inputs are masked anyway). */}
+        <TabsContent value="guest" className="ph-no-capture mt-4">
           <form
             noValidate
             onSubmit={form.handleSubmit((guest) => submit({ mode: 'guest', guest }))}
@@ -536,6 +543,23 @@ export function DrawerBody({
                 </p>
               )}
             </div>
+
+            <Controller
+              name="consent"
+              control={form.control}
+              render={({ field }) => (
+                <ConsentCheckbox
+                  id="guest-consent"
+                  checked={!!field.value}
+                  onChange={field.onChange}
+                  error={form.formState.errors.consent?.message}
+                >
+                  I accept the <LegalLinks />. I agree that ShiftGrid and this club may use my name and phone number to manage
+                  this booking and contact me about it, including by email (confirmation, reminder, cancellation notice) if I
+                  gave one, and by SMS or phone call if needed. I can ask to stop at any time.
+                </ConsentCheckbox>
+              )}
+            />
 
             <Button type="submit" className="h-11 w-full" disabled={submitting}>
               {submitting && <Loader2 className="animate-spin" aria-hidden />}

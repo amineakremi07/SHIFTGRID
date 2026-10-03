@@ -160,7 +160,7 @@ export function GuestCancelLink({ path }: { path: string }) {
         value={url}
         aria-label="Cancellation link"
         onFocus={(e) => e.currentTarget.select()}
-        className="mt-3 w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
+        className="ph-no-capture mt-3 w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
       />
       <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => copy('cancel', url)}>
         {copied === 'cancel' ? 'Copied' : 'Copy link'}
@@ -207,7 +207,7 @@ export function InviteLinks({
               value={url}
               aria-label={`Payment link for player ${l.shareNo}`}
               onFocus={(e) => e.currentTarget.select()}
-              className="mt-2 w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
+              className="ph-no-capture mt-2 w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
             />
             <div className="mt-2 flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => copy(`s${l.shareNo}`, url)}>
@@ -309,7 +309,7 @@ export function CheckoutConfirmation({
       </dl>
 
       {(emailedTo || invitesEmailed > 0) && (
-        <p className="rounded-lg bg-card p-3 text-sm text-muted-foreground">
+        <p className="ph-mask rounded-lg bg-card p-3 text-sm text-muted-foreground">
           {emailedTo && (
             <>
               A confirmation is on its way to <strong className="text-foreground">{emailedTo}</strong>.{' '}

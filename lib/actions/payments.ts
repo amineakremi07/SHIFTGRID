@@ -10,6 +10,7 @@ import { hashShareToken, resolveViewer } from '@/lib/pass'
 import { onlinePaymentMode, onlineProvider, shareInvitePath, SHARE_TOKEN_PATTERN } from '@/lib/payments'
 import { GUEST_TOKEN_PATTERN } from '@/lib/guest-cancel'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
+import { actionRateLimit } from '@/lib/rate-limit'
 
 export type PaymentActionResult<T = object> = ({ ok: true } & T) | { ok: false; message: string }
 
@@ -36,6 +37,9 @@ const payShareSchema = z.object({
 export async function payShareAction(
   input: z.input<typeof payShareSchema>
 ): Promise<PaymentActionResult<{ amount: number; confirmed: boolean }>> {
+  const limited = await actionRateLimit('booking')
+  if (limited) return { ok: false, message: limited }
+
   const parsed = payShareSchema.safeParse(input)
   if (!parsed.success) return { ok: false, message: 'This payment link is not valid.' }
 

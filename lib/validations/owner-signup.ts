@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { termsConsentSchema } from '@/lib/validations/player-auth'
+
 export const companyDetailsSchema = z.object({
   companyName: z.string().min(2, 'Company name must be at least 2 characters').max(100),
   registryNumber: z.string()
@@ -45,6 +47,7 @@ export const ownerAccountSchema = z.object({
   ownerPhone: z.string().regex(/^\+216\s?\d{2}\s?\d{3}\s?\d{3}$/, 'Phone must be Tunisian format: +216 XX XXX XXX'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
+  acceptTerms: termsConsentSchema,
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],

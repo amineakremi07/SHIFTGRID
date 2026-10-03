@@ -72,7 +72,7 @@ export function PassShares({
                     value={links[s.shareNo]}
                     aria-label={`Payment link for player ${s.shareNo}`}
                     onFocus={(e) => e.currentTarget.select()}
-                    className="w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
+                    className="ph-no-capture w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
                   />
                   <Button type="button" variant="outline" size="sm" onClick={() => copy(s.shareNo, links[s.shareNo])}>
                     {copied === s.shareNo ? 'Copied' : 'Copy link'}

@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
 import { z } from 'zod'
 
+import { actionRateLimit } from '@/lib/rate-limit'
+
 import { GUEST_TOKEN_PATTERN, hashGuestToken } from '@/lib/guest-cancel'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { notifyCancellation } from '@/lib/notifications/service'
@@ -48,7 +50,12 @@ export async function cancelBookingAction(input: CancelBookingInput): Promise<Ca
   }
   const { bookingId, reason, guestToken } = parsed.data
 
-  if (guestToken) return cancelAsGuest(bookingId, guestToken, reason)
+  if (guestToken) {
+    // Token guessing: count anonymous cancel attempts per IP.
+    const limited = await actionRateLimit('booking')
+    if (limited) return { ok: false, message: limited }
+    return cancelAsGuest(bookingId, guestToken, reason)
+  }
 
   const supabase = await createClient()
   const {

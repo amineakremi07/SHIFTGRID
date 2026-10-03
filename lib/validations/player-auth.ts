@@ -12,6 +12,11 @@ import { guestPhoneSchema } from '@/lib/validations/booking'
 // Tunisian phone number regex: accepts 8 digits (e.g. 98123456) or international (+216 98 123 456 / +21698123456 / 0021698123456)
 export const tunisianPhoneRegex = /^(\+?216\s?|00216\s?)?[234579]\d{1}[\s.-]?\d{3}[\s.-]?\d{3}$/
 
+/** Required consent to the Terms and Privacy Policy. Checked on the server, not just in the form. */
+export const termsConsentSchema = z
+  .boolean()
+  .refine((v) => v === true, 'You must accept the Terms of Service and Privacy Policy to continue')
+
 export const playerSignInSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -25,6 +30,7 @@ export const playerSignUpSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   orgId: z.string().uuid('Invalid organization ID'),
   rememberMe: z.boolean().default(true),
+  acceptTerms: termsConsentSchema,
 })
 
 export const anonymousBookerSchema = z.object({
@@ -47,6 +53,7 @@ export const playerRegisterSchema = z.object({
     .min(8, 'Password must be at least 8 characters')
     .max(72, 'Password must be at most 72 characters'),
   orgId: z.string().uuid('Please choose your club'),
+  acceptTerms: termsConsentSchema,
 })
 
 export type PlayerSignInInput = z.infer<typeof playerSignInSchema>

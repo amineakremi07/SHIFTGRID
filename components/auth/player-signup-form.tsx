@@ -9,6 +9,7 @@ import type { z } from 'zod'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { ConsentCheckbox } from '@/components/legal/consent-checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -57,6 +58,7 @@ export function PlayerSignupForm({
       email: '',
       phone: '',
       password: '',
+      acceptTerms: false,
       orgId: clubs.some((c) => c.id === initialClubId) ? (initialClubId ?? '') : '',
     },
     mode: 'onTouched',
@@ -229,6 +231,19 @@ export function PlayerSignupForm({
             : 'Your account is linked to one club. You can still book at other clubs as a guest.'}
         </p>
       </div>
+
+      <Controller
+        name="acceptTerms"
+        control={form.control}
+        render={({ field }) => (
+          <ConsentCheckbox
+            id="player-terms"
+            checked={!!field.value}
+            onChange={field.onChange}
+            error={errors.acceptTerms?.message}
+          />
+        )}
+      />
 
       {error && (
         <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">

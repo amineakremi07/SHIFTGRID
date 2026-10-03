@@ -1,4 +1,14 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
+import { securityHeaders } from "./lib/security-headers";
+
+/** Source maps are produced only when they will be uploaded to Sentry (and then deleted, never served). */
+const sentryUpload = Boolean(
+  process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
+);
+
+/** Release id shared by the build plugin and every runtime: explicit, else the Vercel commit SHA (else the plugin uses `git rev-parse HEAD`). */
+const sentryRelease = process.env.SENTRY_RELEASE || process.env.VERCEL_GIT_COMMIT_SHA || undefined;
 
 const nextConfig: NextConfig = {
   // Turbopack is the default bundler in Next.js 16. An explicit (empty) config
@@ -52,7 +62,9 @@ const nextConfig: NextConfig = {
 
   // Production optimizations
   compress: true,
-  productionBrowserSourceMaps: false,
+  // Must be set explicitly from `sentryUpload`: a hard-coded `false` stops @sentry/nextjs from
+  // enabling browser maps under Turbopack, so browser stack traces would stay minified.
+  productionBrowserSourceMaps: sentryUpload,
   poweredByHeader: false,
 
   // Output configuration for standalone deployment
@@ -63,39 +75,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/:path*',
-        headers: [
-          {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on'
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block'
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin'
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(self)'
-          },
-          // HSTS - only in production
-          ...(process.env.NODE_ENV === 'production'
-            ? [{
-              key: 'Strict-Transport-Security',
-              value: 'max-age=31536000; includeSubDomains; preload'
-            }]
-            : []),
-        ],
+        headers: securityHeaders(),
       },
       // Cache images
       {
@@ -122,4 +102,25 @@ const nextConfig: NextConfig = {
 
 };
 
-export default nextConfig;
+// Sentry build step: wires instrumentation, injects the release id into every runtime and,
+// when SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT are set, creates the release, links its
+// commits, marks the deploy, uploads source maps and then deletes them from the build, so stack
+// traces are readable in Sentry while no map is ever served publicly (v11's replacement for the
+// old `hideSourceMaps`). Without the token: no maps, no upload, no error.
+// Do NOT set `release.create: false`: the SDK then also stops injecting the release name.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  release: {
+    ...(sentryRelease ? { name: sentryRelease } : {}),
+    finalize: true,
+    // Needs Sentry's GitHub integration; without it this quietly does nothing.
+    setCommits: { auto: true, ignoreMissing: true, ignoreEmpty: true },
+    ...(process.env.VERCEL_ENV ? { deploy: { env: process.env.VERCEL_ENV } } : {}),
+  },
+  telemetry: false,
+});

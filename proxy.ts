@@ -3,6 +3,8 @@ import type { NextRequest } from 'next/server'
 import { landingPathFor } from '@/lib/auth-landing'
 import type { UserRole } from '@/lib/types/database'
 import { createProxyClient } from '@/lib/supabase/middleware'
+import { clientIpFrom, rateLimit, tooManyRequests, type RateRule } from '@/lib/rate-limit'
+import { securityHeaderRecord } from '@/lib/security-headers'
 
 /**
  * Next.js 16 Proxy (formerly `middleware.ts`).
@@ -14,21 +16,8 @@ import { createProxyClient } from '@/lib/supabase/middleware'
  * runtime is not configurable.
  */
 
-// Security headers applied to every proxied response.
-const securityHeaders = {
-  'X-DNS-Prefetch-Control': 'on',
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  'X-Frame-Options': 'SAMEORIGIN',
-  'X-Content-Type-Options': 'nosniff',
-  'X-XSS-Protection': '1; mode=block',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
-}
-
-const RATE_LIMIT = {
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 60,
-}
+// Security headers applied to every proxied response (single list in lib/security-headers.ts).
+const securityHeaders = securityHeaderRecord()
 
 // Session duration configuration (in seconds)
 const SESSION_DURATION = {
@@ -39,45 +28,16 @@ const SESSION_DURATION = {
 
 const STAFF_ROLES = new Set(['org_admin', 'staff', 'platform_admin'])
 
-/**
- * In-memory rate limit store.
- *
- * NOTE: this is per server instance and resets on redeploy — adequate for local
- * development only. Back it with Redis (or Vercel Queues/KV equivalent) before
- * relying on it in production behind more than one instance.
- */
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
-let lastSweep = 0
-
-/** Evict expired records opportunistically (no module-level timer). */
-function sweepExpired(now: number) {
-  if (now - lastSweep < RATE_LIMIT.windowMs) return
-  lastSweep = now
-  for (const [key, record] of rateLimitStore) {
-    if (now > record.resetTime) rateLimitStore.delete(key)
-  }
-}
-
 function getClientIp(request: NextRequest): string {
   // `NextRequest.ip` was removed in Next.js 16 — derive from forwarding headers.
-  const forwarded = request.headers.get('x-forwarded-for')
-  if (forwarded) return forwarded.split(',')[0].trim()
-  return request.headers.get('x-real-ip')?.trim() || 'unknown'
+  return clientIpFrom(request.headers)
 }
 
-function checkRateLimit(key: string): boolean {
-  const now = Date.now()
-  sweepExpired(now)
-
-  const record = rateLimitStore.get(key)
-  if (!record || now > record.resetTime) {
-    rateLimitStore.set(key, { count: 1, resetTime: now + RATE_LIMIT.windowMs })
-    return true
-  }
-  if (record.count >= RATE_LIMIT.maxRequests) return false
-
-  record.count++
-  return true
+/** Which rule guards an /api path. */
+function apiRule(pathname: string): RateRule {
+  if (pathname.startsWith('/api/auth/')) return 'auth'
+  if (pathname.startsWith('/api/cron/')) return 'cron'
+  return 'api'
 }
 
 function withSecurityHeaders(response: NextResponse): NextResponse {
@@ -90,15 +50,11 @@ function withSecurityHeaders(response: NextResponse): NextResponse {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Rate limit API routes.
+  // Rate limit API routes (Upstash when configured, in-memory otherwise).
   if (pathname.startsWith('/api/')) {
-    const rateLimitKey = `${getClientIp(request)}:${pathname}`
-    if (!checkRateLimit(rateLimitKey)) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429, headers: { 'Retry-After': '60', ...securityHeaders } }
-      )
-    }
+    const rule = apiRule(pathname)
+    const result = await rateLimit(rule, `${getClientIp(request)}:${rule === 'api' ? pathname : rule}`)
+    if (!result.ok) return tooManyRequests(result, securityHeaders)
   }
 
   const { supabase, getResponse } = createProxyClient(request)

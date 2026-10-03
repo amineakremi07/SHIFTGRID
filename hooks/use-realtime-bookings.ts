@@ -94,9 +94,11 @@ export function useRealtimeBookings(
           if (bookingsEverSubscribed) refresh()
           bookingsEverSubscribed = true
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('Realtime bookings feed problem:', status)
+          console.warn('Realtime bookings feed problem (polling fallback active):', status)
         }
-      }
+      },
+      // Fallback: reconnects, a fast poll while the socket is down, a slow heartbeat while up.
+      () => refresh()
     )
     // Slot locks are this hook's own subscription (public data, no org_id to filter on).
     const supabase = createClient()
@@ -111,14 +113,22 @@ export function useRealtimeBookings(
         }
       )
 
+    // The public slot-locks channel has no shared feed: while it is not subscribed, refresh
+    // on a short interval (realtime-js keeps retrying the join in the background).
+    let locksDown = false
+    const locksFallback = setInterval(() => {
+      if (locksDown && document.visibilityState === 'visible') refresh()
+    }, 10_000)
+
     let everSubscribed = false
     channel.subscribe((status) => {
+      locksDown = status !== 'SUBSCRIBED'
       if (status === 'SUBSCRIBED') {
         // Reconnected after a drop: anything in between was missed.
         if (everSubscribed) refresh()
         everSubscribed = true
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.error('Realtime bookings channel problem:', status)
+        console.warn('Realtime slot-locks channel problem (polling fallback active):', status)
       }
     })
 
@@ -129,6 +139,7 @@ export function useRealtimeBookings(
 
     return () => {
       clearTimeout(timer)
+      clearInterval(locksFallback)
       document.removeEventListener('visibilitychange', onVisible)
       stopBookings()
       void supabase.removeChannel(channel)

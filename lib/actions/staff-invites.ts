@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { sendStaffInviteEmail } from '@/lib/email/resend'
 import { requireOrgAction } from '@/lib/org-access'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
+import { actionRateLimit } from '@/lib/rate-limit'
 
 /**
  * Staff management for club owners.
@@ -247,6 +248,9 @@ const INVALID = 'This invitation link is not valid.'
 
 /** What the invitation page shows before the invitee picks a password. */
 export async function previewStaffInvite(token: string): Promise<InvitePreview> {
+  const limited = await actionRateLimit('auth')
+  if (limited) return { ok: false, message: limited }
+
   const invite = await loadUsableInvite(token)
   if (!invite) return { ok: false, message: INVALID }
   if (invite.accepted_at) return { ok: false, message: 'This invitation has already been used.' }

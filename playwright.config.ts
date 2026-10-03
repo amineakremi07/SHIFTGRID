@@ -58,6 +58,6 @@ export default defineConfig({
     // Tests never contact the email provider (whatever key .env holds): emails are
     // rendered and recorded in the outbox as "skipped". A server you start yourself and
     // reuse should be started with EMAIL_DRY_RUN=1 too.
-    env: { EMAIL_DRY_RUN: '1' },
+    env: { EMAIL_DRY_RUN: '1', RATE_LIMIT_DISABLED: '1' },
   },
 })

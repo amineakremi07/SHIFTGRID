@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { CookieSettingsButton } from '@/components/consent/consent-banner'
 import { ClubDiscovery } from '@/components/home/club-discovery'
 import { HeroSection } from '@/components/home/hero-section'
 import { HowItWorks } from '@/components/home/how-it-works'
@@ -70,6 +71,13 @@ export default async function Home() {
             <Link href="/register?role=owner" className="hover:text-foreground">
               List your club
             </Link>
+            <Link href="/terms" className="hover:text-foreground">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-foreground">
+              Privacy
+            </Link>
+            <CookieSettingsButton />
           </nav>
         </div>
       </footer>

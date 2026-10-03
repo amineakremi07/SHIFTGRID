@@ -41,6 +41,8 @@ async function fillGuest(page: Page, name: string, phone: string) {
   await drawer(page).getByRole('tab', { name: 'Guest' }).click()
   await drawer(page).locator('#guest-name').fill(name)
   await drawer(page).locator('#guest-phone').fill(phone)
+
+  await drawer(page).locator('#guest-consent').check()
 }
 
 test('slot picker: legend, peak tags, and the duration and price change with the sport', async ({ page }) => {

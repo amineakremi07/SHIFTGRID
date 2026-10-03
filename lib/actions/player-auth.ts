@@ -2,8 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
+import { actionRateLimit } from '@/lib/rate-limit'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
+import { consentMetadata } from '@/lib/legal'
 import {
   playerSignInSchema,
   playerSignUpSchema,
@@ -28,6 +30,9 @@ export async function signInPlayer(
   password: string,
   rememberMe: boolean
 ): Promise<{ success: boolean; userId?: string; error?: string }> {
+  const limited = await actionRateLimit('auth')
+  if (limited) return { success: false, error: limited }
+
   const supabase = await createClient()
 
   // Validate input
@@ -89,6 +94,9 @@ export async function signInPlayer(
 export async function signUpPlayer(
   data: PlayerSignUpInput
 ): Promise<{ success: boolean; userId?: string; error?: string }> {
+  const limited = await actionRateLimit('auth')
+  if (limited) return { success: false, error: limited }
+
   const supabase = await createClient()
   const supabaseAdmin = getSupabaseAdmin()
 
@@ -121,6 +129,7 @@ export async function signUpPlayer(
       data: {
         full_name: data.displayName,
         phone: data.phone,
+        ...consentMetadata(),
       },
       emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
     },
@@ -181,6 +190,9 @@ export type RegisterPlayerResult =
  * callback route) before relying on the address.
  */
 export async function registerPlayer(input: PlayerRegisterInput): Promise<RegisterPlayerResult> {
+  const limited = await actionRateLimit('auth')
+  if (limited) return { success: false, error: limited }
+
   const parsed = playerRegisterSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.errors[0].message }
@@ -202,7 +214,7 @@ export async function registerPlayer(input: PlayerRegisterInput): Promise<Regist
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: fullName, phone },
+    user_metadata: { full_name: fullName, phone, ...consentMetadata() },
   })
 
   if (createError || !created.user) {
@@ -241,6 +253,9 @@ export async function registerPlayer(input: PlayerRegisterInput): Promise<Regist
 export async function createAnonymousBooker(
   data: AnonymousBookerInput
 ): Promise<{ success: boolean; bookerId?: string; error?: string }> {
+  const limited = await actionRateLimit('booking')
+  if (limited) return { success: false, error: limited }
+
   const supabaseAdmin = getSupabaseAdmin()
 
   // Validate input

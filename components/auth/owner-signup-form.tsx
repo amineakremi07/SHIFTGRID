@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { ConsentCheckbox, LegalLinks } from '@/components/legal/consent-checkbox'
 import { MapPin, CheckCircle, Loader2 } from 'lucide-react'
 import { documentSchema, ownerSignupSchema, type OwnerSignupData } from '@/lib/validations/owner-signup'
 import { submitOwnerSignup, checkRegistryNumber, geocodeAddress } from '@/lib/actions/owner-signup'
@@ -119,6 +120,7 @@ export function OwnerSignupForm() {
         ownerPhone: '+216 ',
         password: '',
         confirmPassword: '',
+        acceptTerms: false,
       },
     },
     mode: 'onChange',
@@ -553,7 +555,8 @@ export function OwnerSignupForm() {
 
             <div
               className={cn(
-                'rounded-lg border-2 border-dashed bg-[#f7f5f2] p-8 text-center transition-colors',
+                // ph-no-capture: the registration document never appears in session recordings.
+                'ph-no-capture rounded-lg border-2 border-dashed bg-[#f7f5f2] p-8 text-center transition-colors',
                 docError ? 'border-destructive' : 'border-input'
               )}
               onDragOver={(e) => e.preventDefault()}
@@ -693,6 +696,22 @@ export function OwnerSignupForm() {
                 )}
               </div>
             </div>
+
+            <Controller
+              name="owner.acceptTerms"
+              control={control}
+              render={({ field }) => (
+                <ConsentCheckbox
+                  id="owner-terms"
+                  checked={!!field.value}
+                  onChange={field.onChange}
+                  error={errors.owner?.acceptTerms?.message}
+                >
+                  I accept the <LegalLinks />. I confirm I am authorised to register this club, and I consent to ShiftGrid
+                  processing my details and the uploaded registration document to verify it.
+                </ConsentCheckbox>
+              )}
+            />
 
             <div className="flex justify-between pt-4">
               <Button type="button" variant="outline" onClick={prevStep}>

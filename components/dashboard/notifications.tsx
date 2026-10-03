@@ -87,6 +87,10 @@ export function Notifications({ orgId }: { orgId: string }) {
       return [who, court, when].filter(Boolean).join(' · ')
     }
 
+    // Alerts already raised this session, so the polling fallback and a late realtime
+    // event for the same change never toast twice.
+    const raised = new Set<string>()
+
     const handle = async (eventType: string, row: Row) => {
       const id = String(row.id)
       const status = String(row.status)
@@ -100,10 +104,53 @@ export function Notifications({ orgId }: { orgId: string }) {
         else if (status === 'confirmed' && previous !== 'confirmed') kind = 'paid'
       }
       if (!kind || cancelled) return
+      if (raised.has(`${id}:${kind}`)) return
+      raised.add(`${id}:${kind}`)
 
       const detail = await describe(row)
       if (cancelled) return
       push({ id: `${id}:${kind}`, kind, title: TITLE[kind], detail, at: Date.now(), read: false })
+    }
+
+    // Fallback when events do not arrive (socket down, blocked, or dropped under load):
+    // ask the database for bookings changed since the last look. The cursor is a
+    // server `updated_at` (never the browser clock), starting at the newest row at mount.
+    let cursor: string | null = null
+    let syncing = false
+    const cursorReady = supabase
+      .from('bookings')
+      .select('updated_at')
+      .eq('org_id', orgId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        cursor = data?.updated_at ?? new Date().toISOString()
+      })
+
+    const sync = async () => {
+      if (syncing || cancelled) return
+      syncing = true
+      try {
+        await cursorReady
+        if (!cursor) return
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('id, court_id, starts_at, status, booker_profile_id, booker_anon_id, created_at, updated_at')
+          .eq('org_id', orgId)
+          .gt('updated_at', cursor)
+          .order('updated_at', { ascending: true })
+          .limit(20)
+        if (error || !data?.length) return
+        for (const row of data) {
+          // A booking this session has not seen, created after the cursor, is new; otherwise a change.
+          const isNew = !lastStatus.has(row.id) && row.created_at > cursor
+          await handle(isNew ? 'INSERT' : 'UPDATE', row)
+        }
+        cursor = data[data.length - 1].updated_at
+      } finally {
+        syncing = false
+      }
     }
 
     // The shared per-club feed: the bookings board listens to the same stream, and two
@@ -114,7 +161,8 @@ export function Notifications({ orgId }: { orgId: string }) {
         if (change.eventType === 'DELETE') return
         void handle(change.eventType, change.new)
       },
-      (status) => setLive(status === 'SUBSCRIBED')
+      (status) => setLive(status === 'SUBSCRIBED'),
+      () => void sync()
     )
 
     return () => {
@@ -158,7 +206,7 @@ export function Notifications({ orgId }: { orgId: string }) {
           <p className="text-sm font-semibold">Alerts</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span aria-hidden className={cn('size-2 rounded-full', live ? 'bg-success' : 'bg-muted-foreground/40')} />
-            {live ? 'Live' : 'Reconnecting'}
+            {live ? 'Live' : 'Reconnecting · checking every 10 s'}
           </p>
         </div>
         {alerts.length === 0 ? (

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { ConsentCheckbox } from '@/components/legal/consent-checkbox'
 import { z } from 'zod'
 import {
   Dialog,
@@ -85,6 +86,7 @@ export function PlayerAuthModal({
       password: '',
       orgId,
       rememberMe: true,
+      acceptTerms: false,
     },
   })
 
@@ -340,6 +342,19 @@ export function PlayerAuthModal({
           Remember me for 30 days
         </Label>
       </div>
+
+      <Controller
+        name="acceptTerms"
+        control={signUpForm.control}
+        render={({ field }) => (
+          <ConsentCheckbox
+            id="signup-terms"
+            checked={!!field.value}
+            onChange={field.onChange}
+            error={signUpForm.formState.errors.acceptTerms?.message}
+          />
+        )}
+      />
 
       {error && (
         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">

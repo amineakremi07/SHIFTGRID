@@ -123,13 +123,15 @@ test('a guest booking with an email: confirmation recorded once, address remembe
   await drawer(page).getByRole('tab', { name: 'Guest' }).click()
   await drawer(page).locator('#guest-name').fill('E2E Mail Guest')
   await drawer(page).locator('#guest-phone').fill('98121212')
+
+  await drawer(page).locator('#guest-consent').check()
   await drawer(page).locator('#guest-email').fill('E2E.Mail.Guest@Example.com')
   await drawer(page).getByRole('button', { name: /Pay 90 TND & Reserve/ }).click()
   await expect(drawer(page)).toContainText('Booking confirmed')
   const cancelLink = await drawer(page).getByLabel('Cancellation link').inputValue()
   const bookingId = await bookingIdFromPass(page)
 
-  const rows = await waitForOutbox(bookingId, (r) => r.some((x) => x.kind === 'booking_confirmation') && r)
+  const rows = await waitForOutbox(bookingId, (r) => r.some((x) => x.kind === 'booking_confirmation' && x.status !== 'pending') && r)
   const confirmation = rows.find((r) => r.kind === 'booking_confirmation')!
   expect(confirmation.recipient).toBe('e2e.mail.guest@example.com') // normalised
   expect(DELIVERY_OK).toContain(confirmation.status)
@@ -168,6 +170,8 @@ test('a split booking emails each tagged player their link; a blank box sends no
   await drawer(page).getByRole('tab', { name: 'Guest' }).click()
   await drawer(page).locator('#guest-name').fill('E2E Split Organizer')
   await drawer(page).locator('#guest-phone').fill('98343434')
+
+  await drawer(page).locator('#guest-consent').check()
   await drawer(page).locator('#guest-email').fill('e2e.organizer@example.com')
   await drawer(page).getByRole('button', { name: /Pay 22\.50 TND & Reserve/ }).click()
   await expect(drawer(page)).toContainText('waiting for your players')
@@ -196,6 +200,8 @@ test('a bad invite address is caught before booking, not silently dropped', asyn
   await drawer(page).getByRole('tab', { name: 'Guest' }).click()
   await drawer(page).locator('#guest-name').fill('E2E Typo Organizer')
   await drawer(page).locator('#guest-phone').fill('98454545')
+
+  await drawer(page).locator('#guest-consent').check()
   await drawer(page).getByRole('button', { name: /Pay 22\.50 TND & Reserve/ }).click()
   await expect(drawer(page).getByRole('alert')).toContainText('does not look like an email address')
   await expect(drawer(page)).not.toContainText('waiting for your players')
@@ -350,4 +356,30 @@ test('the bookings board refreshes by itself when a booking arrives, alongside t
   // No reload: the board and the bell both hear about it through the one shared feed.
   await expect(page.getByText('E2E Board Guest').first()).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('[data-sonner-toast]', { hasText: 'New booking' })).toBeVisible({ timeout: 30_000 })
+})
+
+test('with the realtime socket blocked, the bell and the board still catch up by polling', async ({ page }) => {
+  // Every Realtime WebSocket is closed the moment it opens (a proxy that blocks them).
+  await page.routeWebSocket(/\/realtime\/v1\/websocket/, (ws) => void ws.close())
+
+  await page.goto('/login-owner')
+  await page.locator('#email').fill('owner@shiftgrid.local')
+  await page.locator('#password').fill(loadEnv().SEED_PASSWORD || 'ShiftGrid-Dev-1!')
+  await page.locator('button[type=submit]').click()
+  await page.waitForURL(/dashboard/)
+
+  const startsInMinutes = 54 * 60
+  const day = venueDateString(new Date(Date.now() + startsInMinutes * 60_000))
+  await page.goto(`/dashboard/org/bookings?date=${day}`)
+  await expect(page.getByTestId('alerts-bell')).toBeVisible()
+  await page.waitForTimeout(3000) // the socket has been refused by now
+  await page.getByTestId('alerts-bell').click()
+  await expect(page.getByText(/Reconnecting/)).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('E2E Poll Guest')).toHaveCount(0)
+
+  await bookingStartingIn(startsInMinutes, 'E2E Poll Guest', { backdate: false })
+  // No event can arrive; the fast fallback poll (~10 s) finds it.
+  await expect(page.locator('[data-sonner-toast]', { hasText: 'New booking' })).toBeVisible({ timeout: 40_000 })
+  await expect(page.getByText('E2E Poll Guest').first()).toBeVisible({ timeout: 40_000 })
 })

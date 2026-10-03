@@ -1,5 +1,6 @@
 'use client'
 
+import * as Sentry from '@sentry/nextjs'
 import { Component, ErrorInfo, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -56,19 +57,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private reportError(error: Error, errorInfo: ErrorInfo) {
-    fetch('/api/analytics/errors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: Date.now(),
-        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-      }),
-      keepalive: true,
-    }).catch(() => {})
+    // Scrubbed in beforeSend (lib/sentry-scrub.ts); a no-op when no DSN is configured.
+    Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack ?? '' } } })
   }
 
   handleRetry = () => {

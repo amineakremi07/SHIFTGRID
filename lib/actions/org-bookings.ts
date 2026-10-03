@@ -1,25 +1,19 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
 
 import { checkBookableSlot } from '@/lib/booking-core'
 import { requireOrgAction } from '@/lib/org-access'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
-import { guestDetailsSchema } from '@/lib/validations/booking'
+import { walkInBookingSchema, type WalkInBookingInput } from '@/lib/validations/booking'
+import { actionRateLimit } from '@/lib/rate-limit'
 
 export type OrgBookingResult =
   | { ok: true; reference?: string }
   | { ok: false; message: string; fieldErrors?: Record<string, string[] | undefined> }
 
-const walkInSchema = z.object({
-  courtId: z.string().uuid(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  startsAt: z.string().datetime({ offset: true }),
-  playerCount: z.number().int(),
-  guest: guestDetailsSchema,
-})
-export type WalkInInput = z.input<typeof walkInSchema>
+const walkInSchema = walkInBookingSchema
+export type WalkInInput = WalkInBookingInput
 
 /**
  * Record a walk-in or phone booking for a guest. It is 'confirmed' straight away
@@ -30,6 +24,9 @@ export type WalkInInput = z.input<typeof walkInSchema>
 export async function createWalkInBooking(input: WalkInInput): Promise<OrgBookingResult> {
   const auth = await requireOrgAction(['org_admin', 'staff'])
   if (!auth.ok) return auth
+
+  const limited = await actionRateLimit('booking', auth.ctx.userId)
+  if (limited) return { ok: false, message: limited }
 
   const parsed = walkInSchema.safeParse(input)
   if (!parsed.success) {
