@@ -91,8 +91,13 @@ const isLocalUrl = (u) => /^(https?:\/\/)?(localhost|127\.|0\.0\.0\.0|host\.dock
   const app = val('NEXT_PUBLIC_APP_URL')
   check(S, app.startsWith('https://') && !isLocalUrl(app), 'NEXT_PUBLIC_APP_URL is the public https origin', app || 'unset')
 
-  const resend = val('RESEND_API_KEY')
-  check(S, /^re_[A-Za-z0-9_]{20,}$/.test(resend), 'RESEND_API_KEY looks like a real Resend key', resend ? 'wrong shape (placeholder?)' : 'unset')
+  const smtpHost = val('SMTP_HOST')
+  // Test inboxes accept mail but never deliver it (Mailtrap's live sending host is fine).
+  const testInbox = /localhost|127\.0\.0\.1|sandbox\.smtp\.mailtrap|^smtp\.mailtrap\.io$|mailhog|mailpit|ethereal/i
+  check(S, !!smtpHost && !testInbox.test(smtpHost), 'SMTP_HOST is a real mail server', smtpHost ? `${smtpHost} is a local or test inbox` : 'unset: no email is sent')
+  const smtpPort = val('SMTP_PORT')
+  check(S, !smtpPort || /^\d+$/.test(smtpPort), 'SMTP_PORT is a number (default 587)', smtpPort)
+  check(S, !!val('SMTP_USER') && !!val('SMTP_PASS'), 'SMTP_USER and SMTP_PASS are set', 'missing: most providers refuse unauthenticated mail')
   check(S, val('EMAIL_DRY_RUN') !== '1', 'EMAIL_DRY_RUN is off (emails really send)', 'EMAIL_DRY_RUN=1')
   const from = val('EMAIL_FROM')
   check(S, !!from && !/example\.|localhost|\.local\b/i.test(from), 'EMAIL_FROM is set to a verified sender', from || 'unset (default noreply@shiftgrid.tn needs a verified domain)')
@@ -137,7 +142,6 @@ heading('2. Source: secrets and development leftovers')
   const isDevArea = (f) => /^(scripts|tests|supabase|\.playwright-mcp|\.claude)\//.test(f) || /\.(md|example)$/.test(f) || /\.example$/.test(f)
   const SECRET_PATTERNS = [
     ['Supabase secret key', /sb_secret_[A-Za-z0-9_-]{16,}/],
-    ['Resend key', /\bre_[A-Za-z0-9]{24,}\b/],
     ['OpenAI-style key', /\bsk-[A-Za-z0-9_-]{24,}\b/],
     ['GitHub token', /\bgh[pousr]_[A-Za-z0-9]{30,}\b/],
     ['AWS access key', /\bAKIA[0-9A-Z]{16}\b/],
@@ -327,10 +331,10 @@ heading('5. Build')
 /* ------------------------------------------------------------------ 6. manual */
 heading('6. Manual: cannot be checked by a script')
 const MANUAL = [
-  'Declare the processing to the INPDP (and obtain any authorisation needed for transfers abroad: Supabase/Vercel/Resend/Upstash servers) before collecting real personal data',
+  'Declare the processing to the INPDP (and obtain any authorisation needed for transfers abroad: Supabase/Vercel/email provider/Upstash servers) before collecting real personal data',
   'Have a Tunisian lawyer review /terms and /privacy; consider French and Arabic versions (the pages are English only)',
   'Create the privacy mailbox (NEXT_PUBLIC_LEGAL_EMAIL) and agree who answers access/deletion requests within 30 days',
-  'Verify the sending domain in Resend (SPF/DKIM) and send a real test email',
+  'Authorise the SMTP provider to send for the EMAIL_FROM domain (SPF/DKIM/DMARC) and send a real test email',
   'Supabase dashboard: enable leaked-password protection; confirm backups/PITR; align the 20261005000000 migration history row',
   'Connect a real payment gateway (ClickToPay/Stripe) or keep online payment off; pay-at-venue auto-release is NOT implemented (Terms say so)',
   'Schedule /api/cron/notifications every 5-15 min (Authorization: Bearer $CRON_SECRET)',

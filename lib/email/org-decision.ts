@@ -1,12 +1,11 @@
-import { Resend } from 'resend'
+import { deliver } from '@/lib/notifications/mailer'
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 /**
  * Tell a club owner the outcome of their verification. Never throws: a failed
- * email must not undo a decision that is already saved. The client is built here,
- * not at import, so a missing RESEND_API_KEY cannot break unrelated pages.
+ * email must not undo a decision that is already saved (deliver() never throws).
  */
 export async function sendOrgDecisionEmail(input: {
   to: string
@@ -15,11 +14,6 @@ export async function sendOrgDecisionEmail(input: {
   decision: 'approved' | 'rejected'
   reason?: string
 }): Promise<{ sent: boolean }> {
-  if (!process.env.RESEND_API_KEY) {
-    console.error('Decision email skipped: RESEND_API_KEY is not set')
-    return { sent: false }
-  }
-
   const app = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const name = escapeHtml(input.ownerName)
   const club = escapeHtml(input.clubName)
@@ -37,20 +31,10 @@ export async function sendOrgDecisionEmail(input: {
        <p><strong>Reason:</strong> ${escapeHtml(input.reason ?? 'Not specified')}</p>
        <p>Please contact <a href="mailto:support@shiftgrid.tn">support@shiftgrid.tn</a> with the corrected documents and we will review it again.</p>`
 
-  try {
-    const { error } = await new Resend(process.env.RESEND_API_KEY).emails.send({
-      from: 'ShiftGrid <noreply@shiftgrid.tn>',
-      to: input.to,
-      subject,
-      html,
-    })
-    if (error) {
-      console.error('Decision email failed', { message: error.message })
-      return { sent: false }
-    }
-    return { sent: true }
-  } catch (e) {
-    console.error('Decision email failed', { message: e instanceof Error ? e.message : 'unknown' })
+  const result = await deliver({ to: input.to, subject, html })
+  if (result.status !== 'sent') {
+    console.error('Decision email not sent', { status: result.status, error: result.error })
     return { sent: false }
   }
+  return { sent: true }
 }

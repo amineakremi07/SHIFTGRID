@@ -107,7 +107,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Service providers acting on our instructions (processors):</strong> database, authentication, file storage and
-            realtime updates (Supabase); hosting (Vercel); transactional email (Resend); rate limiting (Upstash); error monitoring
+            realtime updates (Supabase); hosting (Vercel); transactional email (our SMTP email provider); rate limiting (Upstash); error monitoring
             (Sentry) and product analytics (PostHog), the last two only when enabled, with personal data filtered out of error
             reports.
           </li>

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 
-import { sendStaffInviteEmail } from '@/lib/email/resend'
+import { sendStaffInviteEmail } from '@/lib/email/staff-invite'
 import { requireOrgAction } from '@/lib/org-access'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { actionRateLimit } from '@/lib/rate-limit'

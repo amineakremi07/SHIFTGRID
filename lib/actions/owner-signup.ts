@@ -4,13 +4,14 @@ import type { Database } from '@/lib/types/database'
 import { createAdminClient, serviceRoleKeyProblem } from '@/lib/supabase/optimized-client'
 import { ownerSignupSchema, type OwnerSignupData } from '@/lib/validations/owner-signup'
 import { revalidatePath } from 'next/cache'
-import { Resend } from 'resend'
+import { deliver } from '@/lib/notifications/mailer'
+import { esc } from '@/lib/notifications/templates'
 import { actionRateLimit } from '@/lib/rate-limit'
 import { consentMetadata } from '@/lib/legal'
 
 // Clients are created inside the action, not here. Constructing them at import
 // time made merely importing this file (and so rendering /register) throw
-// whenever RESEND_API_KEY or the service-role key was missing.
+// whenever an email key or the service-role key was missing.
 
 export async function submitOwnerSignup(formData: OwnerSignupData) {
   const limited = await actionRateLimit('auth')
@@ -160,49 +161,52 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
       }
     }
 
-    try {
-      await new Resend(process.env.RESEND_API_KEY).emails.send({
-        from: 'ShiftGrid <noreply@shiftgrid.tn>',
-        to: process.env.ADMIN_EMAIL!,
+    // deliver() never throws: a failed email must not undo a signup that is already saved.
+    // Everything below was typed by the applicant, so it is escaped before reaching the HTML.
+    const adminUrl = esc(`${process.env.NEXT_PUBLIC_APP_URL ?? ''}/admin/verification`)
+    if (process.env.ADMIN_EMAIL) {
+      const adminEmail = await deliver({
+        to: process.env.ADMIN_EMAIL,
         subject: `New Organization Pending Verification: ${company.companyName}`,
         html: `
           <h2>New Organization Requires Verification</h2>
-          <p><strong>Company:</strong> ${company.companyName}</p>
-          <p><strong>Owner:</strong> ${owner.ownerName} (${owner.ownerEmail})</p>
-          <p><strong>Phone:</strong> ${owner.ownerPhone}</p>
-          <p><strong>Address:</strong> ${fullAddress}</p>
-          <p><strong>Registry Number:</strong> ${company.registryNumber || 'Not provided'}</p>
-          <p><strong>Sports:</strong> ${company.sportTypes.join(', ')}</p>
-          <p><strong>Courts:</strong> ${JSON.stringify(company.courtCounts)}</p>
-          <p><strong>Hours:</strong> ${company.openTime} - ${company.closeTime}</p>
-          <p><strong>Employees:</strong> ${company.employeeCount}</p>
-          <p><strong>Location:</strong> ${location.latitude}, ${location.longitude}</p>
+          <p><strong>Company:</strong> ${esc(company.companyName)}</p>
+          <p><strong>Owner:</strong> ${esc(owner.ownerName)} (${esc(owner.ownerEmail)})</p>
+          <p><strong>Phone:</strong> ${esc(owner.ownerPhone)}</p>
+          <p><strong>Address:</strong> ${esc(fullAddress)}</p>
+          <p><strong>Registry Number:</strong> ${esc(company.registryNumber || 'Not provided')}</p>
+          <p><strong>Sports:</strong> ${esc(company.sportTypes.join(', '))}</p>
+          <p><strong>Courts:</strong> ${esc(JSON.stringify(company.courtCounts))}</p>
+          <p><strong>Hours:</strong> ${esc(company.openTime)} - ${esc(company.closeTime)}</p>
+          <p><strong>Employees:</strong> ${esc(company.employeeCount)}</p>
+          <p><strong>Location:</strong> ${esc(location.latitude)}, ${esc(location.longitude)}</p>
           <p><strong>Document:</strong> ${docPath ? 'Uploaded (open it in the portal)' : 'None provided'}</p>
           <hr>
-          <p>Review and approve/reject at: <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/verification">${process.env.NEXT_PUBLIC_APP_URL}/admin/verification</a></p>
+          <p>Review and approve/reject at: <a href="${adminUrl}">${adminUrl}</a></p>
         `,
       })
-    } catch (emailError) {
-      console.error('Admin notification email failed:', emailError)
+      if (adminEmail.status !== 'sent') {
+        console.error('Admin notification email not sent', { status: adminEmail.status, error: adminEmail.error })
+      }
+    } else {
+      console.error('Admin notification email skipped: ADMIN_EMAIL is not set')
     }
 
-    try {
-      await new Resend(process.env.RESEND_API_KEY).emails.send({
-        from: 'ShiftGrid <noreply@shiftgrid.tn>',
-        to: owner.ownerEmail,
-        subject: 'Your ShiftGrid Organization Registration Received',
-        html: `
-          <h2>Registration Received</h2>
-          <p>Hi ${owner.ownerName},</p>
-          <p>We've received your registration for <strong>${company.companyName}</strong>.</p>
-          <p>Your application is now <strong>pending verification</strong>. Our team will review your details and documents, then contact you to complete the setup.</p>
-          <p>You'll receive another email once your organization is approved and ready to use.</p>
-          <hr>
-          <p>Contact: support@shiftgrid.tn</p>
-        `,
-      })
-    } catch (emailError) {
-      console.error('Owner confirmation email failed:', emailError)
+    const ownerEmail = await deliver({
+      to: owner.ownerEmail,
+      subject: 'Your ShiftGrid Organization Registration Received',
+      html: `
+        <h2>Registration Received</h2>
+        <p>Hi ${esc(owner.ownerName)},</p>
+        <p>We've received your registration for <strong>${esc(company.companyName)}</strong>.</p>
+        <p>Your application is now <strong>pending verification</strong>. Our team will review your details and documents, then contact you to complete the setup.</p>
+        <p>You'll receive another email once your organization is approved and ready to use.</p>
+        <hr>
+        <p>Contact: support@shiftgrid.tn</p>
+      `,
+    })
+    if (ownerEmail.status !== 'sent') {
+      console.error('Owner confirmation email not sent', { status: ownerEmail.status, error: ownerEmail.error })
     }
 
     revalidatePath('/admin/verification')
