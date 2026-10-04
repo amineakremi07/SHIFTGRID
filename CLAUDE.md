@@ -36,6 +36,7 @@ This project runs **Next.js 16.3.4**. Several conventions differ from Next 15 an
 | **Turbopack is the default bundler** | `next build` fails outright if a `webpack` config exists without a `turbopack` config. We ship `turbopack: {}` and have **no** webpack config. Do not reintroduce one. |
 | **`turbopack` is top-level** | Not `experimental.turbopack`. It moved out of `experimental` in 15.3. |
 | **`cookies()` is async** | Always `await cookies()`. |
+| **No `output: 'standalone'` on Vercel** | Vercel builds Next 16 through a deployment adapter (`NEXT_ADAPTER_PATH`), which skips `.next/next-server.js.nft.json`; standalone then fails with `ENOENT ... next-server.js.nft.json`. `next.config.ts` turns standalone off when `VERCEL` or `NEXT_ADAPTER_PATH` is set. `outputFileTracingRoot: undefined` does nothing (it is the default). |
 | **Read the bundled docs** | `node_modules/next/dist/docs/` is the authority for this exact version — not training data. See `AGENTS.md`. |
 
 ---

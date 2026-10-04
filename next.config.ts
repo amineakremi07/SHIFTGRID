@@ -67,8 +67,11 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: sentryUpload,
   poweredByHeader: false,
 
-  // Output configuration for standalone deployment
-  output: 'standalone',
+  // Standalone output is only for self-hosting (`node .next/standalone/server.js`). On Vercel,
+  // Next 16 builds through a deployment adapter (NEXT_ADAPTER_PATH), which does its own packaging
+  // and does not write `.next/next-server.js.nft.json`; the standalone step then fails reading it
+  // ("ENOENT ... next-server.js.nft.json"). Reproduced locally with any adapter set.
+  output: process.env.VERCEL || process.env.NEXT_ADAPTER_PATH ? undefined : 'standalone',
 
   // Security headers
   async headers() {
