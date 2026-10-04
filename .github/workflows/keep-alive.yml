@@ -1,0 +1,15 @@
+name: Supabase Keep Alive Ping
+
+on:
+  schedule:
+    # S'exécute chaque lundi à 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch: # Permet de déclencher le test manuellement depuis GitHub
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send ping request to ShiftGrid API
+        run: |
+          curl -s -f https://shiftgrid.vercel.app/api/cron/notifications || echo "Ping completed"
