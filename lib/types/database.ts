@@ -187,6 +187,19 @@ export type Database = {
         Relationships: []
       }
 
+      /**
+       * Explicit organization memberships. The ONLY way an account gets a second club: there is no
+       * global admin access. Users read their own rows; writes are service-role only (and a trigger
+       * on `profiles` keeps the profile's own organization listed). `profiles.(org_id, role)` is the
+       * ACTIVE context, moved by switch_active_organization().
+       */
+      organization_members: {
+        Row: { user_id: string; org_id: string; role: 'org_admin' | 'staff' | 'platform_admin'; created_at: string }
+        Insert: { user_id: string; org_id: string; role: 'org_admin' | 'staff' | 'platform_admin'; created_at?: string }
+        Update: Partial<{ user_id: string; org_id: string; role: 'org_admin' | 'staff' | 'platform_admin'; created_at: string }>
+        Relationships: []
+      }
+
       /** Staff-only notes on a booking. No client grant: read and written with the service role. */
       booking_notes: {
         Row: { booking_id: string; org_id: string; note: string; created_at: string }
@@ -492,6 +505,10 @@ export type Database = {
       }
       check_in_booking: {
         Args: { p_org_id: string; p_code?: string; p_booking_id?: string }
+        Returns: Json
+      }
+      switch_active_organization: {
+        Args: { p_user_id: string; p_org_id: string }
         Returns: Json
       }
       mark_booking_no_show: {

@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation'
 
 import { Notifications } from '@/components/dashboard/notifications'
 import { OrgNav } from '@/components/dashboard/org-nav'
+import { OrgSwitcher } from '@/components/dashboard/org-switcher'
 import { getOrgAccess } from '@/lib/org-access'
+import { getMemberships, hasMultipleMemberships } from '@/lib/org-memberships'
 
 /**
  * Club owner & staff portal. The proxy already requires a session for
@@ -18,6 +20,9 @@ export default async function OrgDashboardLayout({ children }: { children: React
   if (access.kind === 'not_staff') redirect('/register?role=owner')
 
   const { ctx } = access
+  // Only an account explicitly added to several organizations gets a switcher; a normal owner never sees one.
+  const memberships = await getMemberships()
+  const canSwitch = hasMultipleMemberships(memberships.items)
 
   return (
     <div className="min-h-screen bg-[#f7f5f2] text-[#2a1a1d]">
@@ -31,6 +36,7 @@ export default async function OrgDashboardLayout({ children }: { children: React
           </div>
           <OrgNav role={ctx.role} />
           <div className="flex items-center gap-3">
+            {canSwitch && <OrgSwitcher items={memberships.items} activeOrgId={ctx.orgId} />}
             {/* Live booking alerts: only meaningful once the club is approved and taking bookings. */}
             {ctx.orgStatus === 'approved' && <Notifications orgId={ctx.orgId} />}
             <form action="/logout" method="post">
