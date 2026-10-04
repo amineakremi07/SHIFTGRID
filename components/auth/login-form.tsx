@@ -43,6 +43,7 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
   // postLoginPath() only follows same-site paths the signed-in role can open.
   const requested = searchParams.get('redirect') ?? searchParams.get('callbackUrl') ?? searchParams.get('next')
   const copy = COPY[portal]
+  const passwordWasReset = searchParams.get('reset') === '1'
 
   const [error, setError] = useState<React.ReactNode>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -118,6 +119,11 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
 
         <div className="bg-background border rounded-lg p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            {passwordWasReset && !error && (
+              <div role="status" className="rounded-md border border-[#0e634f]/30 bg-[#0e634f]/10 p-3 text-sm text-[#0e634f]">
+                Your password was updated. Please sign in with your new password.
+              </div>
+            )}
             {error && (
               <div role="alert" className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
                 {error}
@@ -139,12 +145,7 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -155,6 +156,11 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
                 disabled={isLoading}
               />
               {errors.password && <p className="text-sm text-destructive mt-1">{errors.password.message}</p>}
+              <p className="mt-2 text-right">
+                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </p>
             </div>
 
             <div className="flex items-center">

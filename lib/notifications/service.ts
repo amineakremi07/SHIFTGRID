@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import { checkInQrPayload } from '@/lib/check-in-input'
 import { formatVenueDate, formatVenueTime, venueDateString } from '@/lib/court-time'
 import { deliver, emailEnabled, type DeliverResult } from '@/lib/notifications/mailer'
+import { bookingPassUrl, guestCancelUrl } from '@/lib/notifications/urls'
 import {
   CHECK_IN_QR_CID,
   cancellationEmail,
@@ -223,9 +224,7 @@ export async function notifyBookingCreated(input: BookingCreatedInput): Promise<
 
     let confirmation: DeliverResult | null = null
     if (ctx.booker.email) {
-      const passUrl = input.guestToken
-        ? `${input.origin}/reservations/${ctx.bookingId}?token=${input.guestToken}`
-        : `${input.origin}/reservations/${ctx.bookingId}`
+      const passUrl = bookingPassUrl(input.origin, ctx.bookingId, input.guestToken)
       // The arrival code and its QR (an inline image) go in the confirmation of every open booking.
       const checkInCode = ctx.status === 'cancelled' ? null : ctx.checkInCode
       const rendered = confirmationEmail({
@@ -234,7 +233,7 @@ export async function notifyBookingCreated(input: BookingCreatedInput): Promise<
         state: ctx.state,
         paidNow: input.paidNow,
         passUrl,
-        cancelUrl: input.guestToken ? `${input.origin}/reservations/cancel-guest?token=${input.guestToken}` : null,
+        cancelUrl: input.guestToken ? guestCancelUrl(input.origin, input.guestToken) : null,
         invitesEmailed: invites.filter((r) => r.status === 'sent').length,
         checkInCode,
       })
@@ -330,7 +329,7 @@ export async function sendDueReminders(now: Date, origin: string): Promise<Batch
         dueAtClub: ctx.paymentStatus === 'pending' && ctx.paymentProvider === 'cash' ? ctx.facts.amount : 0,
         unpaidShares: ctx.shares.pending,
         // A guest's pass link needs their secret, which is not stored. Members sign in.
-        passUrl: ctx.booker.isMember ? `${origin}/reservations/${ctx.bookingId}` : null,
+        passUrl: ctx.booker.isMember ? bookingPassUrl(origin, ctx.bookingId) : null,
       }
       tally(
         batch,
