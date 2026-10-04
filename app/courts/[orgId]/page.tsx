@@ -5,6 +5,9 @@ import { ArrowLeft, MapPin } from 'lucide-react'
 import type { BookingDrawerMember } from '@/components/booking/booking-drawer'
 import type { MatrixCourt } from '@/components/courts/court-slot-matrix'
 import { ClubBookingView } from '@/components/courts/club-booking-view'
+import { ClubGallery } from '@/components/club/club-gallery'
+import { ClubLocation } from '@/components/club/club-location'
+import { ownGalleryUrls } from '@/lib/club-profile'
 import { generateCourtSlots } from '@/lib/court-slots'
 import { addDays, venueDateString, venueInstant } from '@/lib/court-time'
 import { effectiveHours, parseWeeklyHours, weekdayKey, WEEKDAY_LABELS } from '@/lib/operating-hours'
@@ -74,7 +77,7 @@ export default async function ClubPage({
   const [{ data: org }, { data: courts, error: courtsError }, member] = await Promise.all([
     supabase
       .from('organizations')
-      .select('id, name, address, city, weekly_hours')
+      .select('id, name, address, city, weekly_hours, description, latitude, longitude, gallery_urls')
       .eq('id', orgId)
       .eq('status', 'approved')
       .maybeSingle(),
@@ -110,6 +113,10 @@ export default async function ClubPage({
       locksDetails: locksError?.details,
     })
   }
+
+  const photos = ownGalleryUrls(org.gallery_urls, org.id, process.env.NEXT_PUBLIC_SUPABASE_URL ?? '')
+  const hasPin = org.latitude !== null && org.longitude !== null
+  const hasProfile = photos.length > 0 || hasPin || Boolean(org.description)
 
   const now = new Date()
   const weekly = parseWeeklyHours(org.weekly_hours)
@@ -163,6 +170,27 @@ export default async function ClubPage({
           {[org.address, org.city].filter(Boolean).join(' · ') || 'Tunisia'}
         </p>
       </header>
+
+      {hasProfile && (
+        <div className="mb-10 grid gap-8 lg:grid-cols-2" data-testid="club-profile">
+          {photos.length > 0 && <ClubGallery urls={photos} name={org.name} />}
+          <div className={photos.length > 0 ? 'space-y-6' : 'space-y-6 lg:col-span-2'}>
+            {org.description && (
+              <section aria-labelledby="club-about-heading" className="space-y-2">
+                <h2 id="club-about-heading" className="text-lg font-semibold">
+                  About
+                </h2>
+                <p className="max-w-[68ch] whitespace-pre-line leading-relaxed text-muted-foreground" data-testid="club-bio">
+                  {org.description}
+                </p>
+              </section>
+            )}
+            {hasPin && (
+              <ClubLocation name={org.name} address={org.address} latitude={org.latitude as number} longitude={org.longitude as number} />
+            )}
+          </div>
+        </div>
+      )}
 
       {loadFailed ? (
         <div role="alert" className="rounded-xl bg-card px-6 py-12 text-center">

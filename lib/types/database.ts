@@ -47,6 +47,10 @@ export type Database = {
           city: string | null
           latitude: number | null
           longitude: number | null
+          /** The club's bio, shown on its public page (max 1000 characters). */
+          description: string | null
+          /** Public URLs of the club's photos in the `club-assets` bucket, in display order (max 12). */
+          gallery_urls: string[]
           /** Per-weekday hours (lib/operating-hours.ts). Null = use each court's own hours. */
           weekly_hours: Json | null
           sport_types: Sport[]
@@ -68,6 +72,8 @@ export type Database = {
           city?: string | null
           latitude?: number | null
           longitude?: number | null
+          description?: string | null
+          gallery_urls?: string[]
           weekly_hours?: Json | null
           sport_types?: Sport[]
           timezone?: string

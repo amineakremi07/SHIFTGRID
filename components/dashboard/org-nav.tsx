@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, CalendarDays, Clock, LayoutGrid, Users } from 'lucide-react'
+import { BarChart3, CalendarDays, LayoutGrid, Settings, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -10,7 +10,7 @@ const ITEMS = [
   { href: '/dashboard/org/bookings', label: 'Bookings', icon: CalendarDays, ownerOnly: false },
   { href: '/dashboard/org/analytics', label: 'Analytics', icon: BarChart3, ownerOnly: true },
   { href: '/dashboard/org/courts', label: 'Courts', icon: LayoutGrid, ownerOnly: true },
-  { href: '/dashboard/org/settings', label: 'Hours', icon: Clock, ownerOnly: true },
+  { href: '/dashboard/org/settings', label: 'Settings', icon: Settings, ownerOnly: true },
   { href: '/dashboard/org/staff', label: 'Team', icon: Users, ownerOnly: true },
 ]
 
