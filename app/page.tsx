@@ -1,7 +1,6 @@
 import Link from 'next/link'
 
 import { CookieSettingsButton } from '@/components/consent/consent-banner'
-import { SentryTestButton } from '@/components/dev/sentry-test-button' // TEMPORARY: remove after the Sentry check
 import { ClubDiscovery } from '@/components/home/club-discovery'
 import { HeroSection } from '@/components/home/hero-section'
 import { HowItWorks } from '@/components/home/how-it-works'
@@ -61,9 +60,6 @@ export default async function Home() {
         <ClubDiscovery clubs={clubs} loadFailed={failed} />
         <HowItWorks />
       </main>
-
-      {/* TEMPORARY: remove after the Sentry production check */}
-      <SentryTestButton />
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-[1920px] flex-wrap items-center justify-between gap-4 px-4 py-8 sm:px-6 lg:px-8 xl:px-12 text-sm text-muted-foreground">
