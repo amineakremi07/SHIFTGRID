@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 
 import { emailEnabled } from '@/lib/notifications/mailer'
 import { appOrigin } from '@/lib/notifications/origin'
+import { reportServerError } from '@/lib/observability'
 import { retryFailedNotifications, sendDueReminders } from '@/lib/notifications/service'
 
 /**
@@ -38,11 +39,17 @@ async function run(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const now = new Date()
-  const origin = await appOrigin()
-  const reminders = await sendDueReminders(now, origin)
-  const retried = await retryFailedNotifications(now)
-  return NextResponse.json({ ok: true, at: now.toISOString(), emailEnabled: emailEnabled(), reminders, retried })
+  try {
+    const now = new Date()
+    const origin = await appOrigin()
+    const reminders = await sendDueReminders(now, origin)
+    const retried = await retryFailedNotifications(now)
+    return NextResponse.json({ ok: true, at: now.toISOString(), emailEnabled: emailEnabled(), reminders, retried })
+  } catch (error) {
+    console.error('Notification cron error:', error instanceof Error ? error.message : error)
+    reportServerError('api.cron.notifications', error)
+    return NextResponse.json({ error: 'Notification run failed' }, { status: 500 })
+  }
 }
 
 export const GET = run

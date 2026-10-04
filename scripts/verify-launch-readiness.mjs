@@ -261,7 +261,7 @@ if (flag('--skip-live')) {
     check(S, h('x-content-type-options').toLowerCase() === 'nosniff', 'X-Content-Type-Options: nosniff')
     check(S, !!h('referrer-policy'), 'Referrer-Policy set', h('referrer-policy') || 'missing')
     const pp = h('permissions-policy')
-    check(S, /camera=\(\)/.test(pp) && /microphone=\(\)/.test(pp), 'Permissions-Policy turns camera and microphone off', pp || 'missing')
+    check(S, /camera=\(self\)/.test(pp) && /microphone=\(\)/.test(pp), 'Permissions-Policy: camera same-origin only (check-in QR scanner), microphone off', pp || 'missing')
     check(S, !h('x-powered-by'), 'no X-Powered-By header')
     if (remote) check(S, base.startsWith('https://'), 'public origin is https', base)
 

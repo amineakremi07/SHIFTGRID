@@ -49,7 +49,7 @@ try {
   check(h('x-content-type-options') === 'nosniff', 'X-Content-Type-Options: nosniff')
   check(h('referrer-policy') === 'strict-origin-when-cross-origin', 'Referrer-Policy: strict-origin-when-cross-origin')
   const pp = h('permissions-policy')
-  check(pp.includes('camera=()') && pp.includes('microphone=()') && pp.includes('geolocation=(self)'), 'Permissions-Policy blocks camera/microphone, geolocation self only', pp)
+  check(pp.includes('camera=(self)') && pp.includes('microphone=()') && pp.includes('geolocation=(self)'), 'Permissions-Policy camera + geolocation self only, microphone blocked', pp)
 }
 
 // ---- /api/auth/*: 5 per minute per IP -------------------------------------------------

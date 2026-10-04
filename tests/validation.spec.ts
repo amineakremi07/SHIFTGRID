@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { createBookingSchema, guestBookingFormSchema, guestDetailsSchema, walkInBookingSchema } from '../lib/validations/booking'
+import { createBookingSchema, guestBookingFormSchema, guestDetailsSchema, manualBookingSchema } from '../lib/validations/booking'
 import { ownerAccountSchema } from '../lib/validations/owner-signup'
 import { playerRegisterSchema, playerSignUpSchema } from '../lib/validations/player-auth'
 
@@ -92,11 +92,60 @@ test.describe('guest details', () => {
   })
 })
 
-test('walk-in schema is strict and shares the slot rules', () => {
-  const valid = { courtId: base.courtId, date: inDays(2).slice(0, 10), startsAt: inDays(2), playerCount: 4, guest }
-  expect(walkInBookingSchema.safeParse(valid).success).toBe(true)
-  expect(walkInBookingSchema.safeParse({ ...valid, amount: 0 }).success).toBe(false)
-  expect(walkInBookingSchema.safeParse({ ...valid, date: '2026-13-01' }).success).toBe(false)
+test.describe('manual booking schema', () => {
+  const valid = {
+    court_id: base.courtId,
+    date: inDays(2).slice(0, 10),
+    starts_at: inDays(2),
+    full_name: 'Desk Customer',
+    payment_status: 'pay_at_venue' as const,
+  }
+
+  test('accepts a name-only booking and defaults the source', () => {
+    const r = manualBookingSchema.safeParse(valid)
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.source).toBe('manual')
+      expect(r.data.phone).toBeUndefined()
+      expect(r.data.email).toBeUndefined()
+    }
+  })
+
+  test('blank optional boxes mean "not given"; a filled phone is canonicalised', () => {
+    const blank = manualBookingSchema.safeParse({ ...valid, phone: '', email: '  ', notes: '' })
+    expect(blank.success).toBe(true)
+    const full = manualBookingSchema.safeParse({ ...valid, phone: '98 123 456', email: 'A@Example.com', notes: ' Phone booking ' })
+    expect(full.success).toBe(true)
+    if (full.success) {
+      expect(full.data.phone).toBe('+21698123456')
+      expect(full.data.email).toBe('a@example.com')
+      expect(full.data.notes).toBe('Phone booking')
+    }
+  })
+
+  test('rejects bad phone, email, name, payment status and over-long notes', () => {
+    expect(manualBookingSchema.safeParse({ ...valid, phone: '12345' }).success).toBe(false)
+    expect(manualBookingSchema.safeParse({ ...valid, email: 'nope' }).success).toBe(false)
+    expect(manualBookingSchema.safeParse({ ...valid, full_name: 'A' }).success).toBe(false)
+    expect(manualBookingSchema.safeParse({ ...valid, payment_status: 'completed' }).success).toBe(false)
+    expect(manualBookingSchema.safeParse({ ...valid, notes: 'x'.repeat(301) }).success).toBe(false)
+  })
+
+  test('is strict: forged price, status, club or end time are refused', () => {
+    for (const forged of [{ amount: 0 }, { status: 'completed' }, { org_id: base.orgId }, { ends_at: inDays(2) }, { sport: 'padel' }]) {
+      expect(manualBookingSchema.safeParse({ ...valid, ...forged }).success).toBe(false)
+    }
+  })
+
+  test('needs exactly one of starts_at / start_time, and a real date', () => {
+    const { starts_at: _ignored, ...noStart } = valid
+    void _ignored
+    expect(manualBookingSchema.safeParse(noStart).success).toBe(false)
+    expect(manualBookingSchema.safeParse({ ...noStart, start_time: '18:00' }).success).toBe(true)
+    expect(manualBookingSchema.safeParse({ ...valid, start_time: '18:00' }).success).toBe(false)
+    expect(manualBookingSchema.safeParse({ ...noStart, start_time: '25:00' }).success).toBe(false)
+    expect(manualBookingSchema.safeParse({ ...valid, date: '2026-13-01' }).success).toBe(false)
+  })
 })
 
 test.describe('consent is mandatory on every sign-up path', () => {
@@ -123,10 +172,10 @@ test.describe('consent is mandatory on every sign-up path', () => {
     expect(ownerAccountSchema.safeParse(owner).success).toBe(false)
   })
 
-  test('the guest booking form needs consent but staff walk-ins do not', () => {
+  test('the guest booking form needs consent but staff manual bookings do not', () => {
     expect(guestBookingFormSchema.safeParse({ ...guest, consent: true }).success).toBe(true)
     expect(guestBookingFormSchema.safeParse({ ...guest, consent: false }).success).toBe(false)
     expect(guestBookingFormSchema.safeParse(guest).success).toBe(false)
-    expect(walkInBookingSchema.safeParse({ courtId: base.courtId, date: inDays(2).slice(0, 10), startsAt: inDays(2), playerCount: 4, guest }).success).toBe(true)
+    expect(manualBookingSchema.safeParse({ court_id: base.courtId, date: inDays(2).slice(0, 10), starts_at: inDays(2), full_name: guest.fullName, payment_status: 'pay_at_venue' }).success).toBe(true)
   })
 })

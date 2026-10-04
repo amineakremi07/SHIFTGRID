@@ -45,6 +45,7 @@ const STATUS: Record<BookingStatus, { label: string; variant: 'success' | 'warni
   pending_payment: { label: 'Awaiting payment', variant: 'warning' },
   cancelled: { label: 'Cancelled', variant: 'destructive' },
   completed: { label: 'Completed', variant: 'secondary' },
+  no_show: { label: 'No-show', variant: 'destructive' },
 }
 
 function deadlineText(iso: string) {

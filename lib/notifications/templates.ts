@@ -1,4 +1,5 @@
 import { formatTND } from '@/lib/payments'
+import type { EmailAttachment } from '@/lib/notifications/mailer'
 
 /**
  * Transactional email templates. Pure: data in, `{ subject, html, text }` out, so they
@@ -11,7 +12,10 @@ import { formatTND } from '@/lib/payments'
  * app (Forest Depths / Bone Linen / Peacock Teal).
  */
 
-export type Rendered = { subject: string; html: string; text: string }
+export type Rendered = { subject: string; html: string; text: string; attachments?: EmailAttachment[] }
+
+/** The content id the check-in QR image is attached under (`<img src="cid:...">`). */
+export const CHECK_IN_QR_CID = 'checkin-qr'
 
 /** What every booking email says about the booking. All strings are display-ready (venue time). */
 export type BookingFacts = {
@@ -115,6 +119,19 @@ export type ConfirmationProps = BookingFacts & {
   cancelUrl: string | null
   /** Split only: how many other players were emailed their payment link. */
   invitesEmailed: number
+  /** The 6-digit arrival code. The QR image itself is attached by the sender (CHECK_IN_QR_CID). */
+  checkInCode?: string | null
+}
+
+const CHECK_IN_INSTRUCTION = 'Show this code/QR code at the club reception to validate your arrival.'
+
+function checkInBlock(code: string): string {
+  return `<div style="margin:20px 0 0;padding:18px 16px;background:#ffffff;border:1px solid ${OAT};border-radius:10px;text-align:center">
+<p style="margin:0 0 4px;font-size:13px;color:${ASH}">Your check-in code</p>
+<p style="margin:0;font-size:34px;letter-spacing:8px;color:${INK}"><strong>${esc(code)}</strong></p>
+<img src="cid:${CHECK_IN_QR_CID}" width="160" height="160" alt="Check-in QR code ${esc(code)}" style="display:block;margin:14px auto 0;border:0">
+<p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:${INK}">${esc(CHECK_IN_INSTRUCTION)}</p>
+</div>`
 }
 
 export function confirmationEmail(p: ConfirmationProps): Rendered {
@@ -138,6 +155,7 @@ export function confirmationEmail(p: ConfirmationProps): Rendered {
     `Hi ${esc(p.recipientName)}, here are your booking details.`,
     `${factsTable(p, [['Total', formatTND(p.amount)], ['Players', String(p.playerCount)]])}
 <p style="margin:0;line-height:1.6">${esc(payment)}</p>
+${p.checkInCode ? checkInBlock(p.checkInCode) : ''}
 ${button('View your booking pass', p.passUrl)}${cancel}`
   )
 
@@ -150,6 +168,9 @@ ${button('View your booking pass', p.passUrl)}${cancel}`
     '',
     payment,
     '',
+    p.checkInCode && `Check-in code: ${p.checkInCode}`,
+    p.checkInCode && CHECK_IN_INSTRUCTION,
+    p.checkInCode && '',
     `Your pass: ${p.passUrl}`,
     p.cancelUrl && `Cancel (private link): ${p.cancelUrl}`,
   ])

@@ -11,6 +11,7 @@ import { emailEnabled } from '@/lib/notifications/mailer'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { createBookingSchema, type CreateBookingInput } from '@/lib/validations/booking'
 import { checkBookableSlot } from '@/lib/booking-core'
+import { formatVenueDate, venueDateString } from '@/lib/court-time'
 import { guestCancelPath } from '@/lib/guest-cancel'
 import { canSplit, onlinePaymentMode, onlineProvider, shareInvitePath, type PaymentChoice } from '@/lib/payments'
 
@@ -18,6 +19,7 @@ export type BookingErrorCode =
   | 'invalid_input'
   | 'not_signed_in'
   | 'not_a_member'
+  | 'account_suspended'
   | 'unavailable'
   | 'invalid_slot'
   | 'slot_taken'
@@ -170,7 +172,18 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     p_guest_phone: data.mode === 'guest' ? data.guest.phone : undefined,
   })
 
-  if (error) return mapDatabaseError(error)
+  if (error) {
+    // Three no-shows suspend a member for 30 days: say until when.
+    if (error.message?.includes('account_suspended') && profileId) {
+      const { data: suspended } = await admin.from('profiles').select('suspended_until').eq('id', profileId).maybeSingle()
+      const until = suspended?.suspended_until ? formatVenueDate(venueDateString(new Date(suspended.suspended_until))) : null
+      return fail(
+        'account_suspended',
+        `Your account is suspended from booking${until ? ` until ${until}` : ''} because of repeated no-shows. Please contact the club if you think this is a mistake.`
+      )
+    }
+    return mapDatabaseError(error)
+  }
 
   const row = booked as {
     booking_id: string

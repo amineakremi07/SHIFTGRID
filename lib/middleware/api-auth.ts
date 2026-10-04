@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { reportServerError } from '@/lib/observability'
 
 // Create a service client for server-side operations
 function getSupabaseAdmin() {
@@ -61,6 +62,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
     }
   } catch (error) {
     console.error('API key validation error:', error)
+    reportServerError('api.key-validation', error)
     return { valid: false, error: 'Validation failed' }
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { reportServerError } from '@/lib/observability'
 import { recordMetric, getAggregatedMetrics } from '@/lib/utils/performance'
 
 /**
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Web Vitals error:', error)
+    reportServerError('api.web-vitals.post', error)
     return NextResponse.json(
       { success: false, error: 'Failed to record metric' },
       { status: 500 }
@@ -77,6 +79,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Get Web Vitals error:', error)
+    reportServerError('api.web-vitals.get', error)
     return NextResponse.json(
       { success: false, error: 'Failed to fetch metrics' },
       { status: 500 }

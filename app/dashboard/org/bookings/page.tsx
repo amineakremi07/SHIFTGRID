@@ -7,6 +7,7 @@ import { effectiveHours, parseWeeklyHours } from '@/lib/operating-hours'
 import { getOrgAccess } from '@/lib/org-access'
 import { MAX_DAYS_AHEAD } from '@/lib/booking-core'
 import { SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
+import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -41,7 +42,7 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
       .order('name'),
     supabase
       .from('bookings')
-      .select('id, court_id, sport, booker_profile_id, booker_anon_id, starts_at, ends_at, player_count, status')
+      .select('id, court_id, sport, booker_profile_id, booker_anon_id, starts_at, ends_at, player_count, status, checked_in_at, source')
       .eq('org_id', ctx.orgId)
       .gte('starts_at', dayStart)
       .lt('starts_at', dayEnd)
@@ -66,28 +67,35 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
   const profileIds = [...new Set(rows.map((b) => b.booker_profile_id).filter((v): v is string => Boolean(v)))]
   const bookingIds = rows.map((b) => b.id)
 
-  const [anonRes, profileRes, payRes] = await Promise.all([
+  // Staff notes are not readable by clients at all (a player must never see them): this club's
+  // notes are read with the service role, after getOrgAccess() proved the caller belongs to it.
+  const [anonRes, profileRes, payRes, notesRes] = await Promise.all([
     anonIds.length
       ? supabase.from('anonymous_bookers').select('id, name, phone').in('id', anonIds)
       : Promise.resolve({ data: [], error: null }),
     profileIds.length
-      ? supabase.from('profiles').select('id, display_name, phone').in('id', profileIds)
+      ? supabase.from('profiles').select('id, display_name, phone, trust_score, no_show_count').in('id', profileIds)
       : Promise.resolve({ data: [], error: null }),
     bookingIds.length
       ? supabase.from('payment_records').select('booking_id, amount, status, provider').in('booking_id', bookingIds)
       : Promise.resolve({ data: [], error: null }),
+    bookingIds.length
+      ? getSupabaseAdmin().from('booking_notes').select('booking_id, note').eq('org_id', ctx.orgId).in('booking_id', bookingIds)
+      : Promise.resolve({ data: [], error: null }),
   ])
-  if (anonRes.error || profileRes.error || payRes.error) {
+  if (anonRes.error || profileRes.error || payRes.error || notesRes.error) {
     console.error('Failed to load booking details:', {
       anon: anonRes.error?.message,
       profiles: profileRes.error?.message,
       payments: payRes.error?.message,
+      notes: notesRes.error?.message,
     })
   }
 
   const anon = new Map((anonRes.data ?? []).map((a) => [a.id, a]))
   const profiles = new Map((profileRes.data ?? []).map((p) => [p.id, p]))
   const payments = new Map((payRes.data ?? []).map((p) => [p.booking_id, p]))
+  const notes = new Map((notesRes.data ?? []).map((n) => [n.booking_id, n.note]))
 
   const bookings: BoardBooking[] = rows.map((b) => {
     const guest = b.booker_anon_id ? anon.get(b.booker_anon_id) : undefined
@@ -106,6 +114,11 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
       paymentStatus: payments.get(b.id)?.status ?? null,
       paymentProvider: payments.get(b.id)?.provider ?? null,
       reference: b.id.replace(/-/g, '').slice(0, 8).toUpperCase(),
+      checkedInAt: b.checked_in_at,
+      source: b.source,
+      note: notes.get(b.id) ?? null,
+      noShowCount: member ? member.no_show_count : null,
+      trustScore: member ? member.trust_score : null,
     }
   })
 

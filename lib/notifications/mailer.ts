@@ -19,6 +19,8 @@ import nodemailer from 'nodemailer'
  *                    provider does not slow the user's request
  */
 
+export type EmailAttachment = { filename: string; content: Buffer; cid: string; contentType: string }
+
 export type DeliverResult = { status: 'sent' | 'skipped' | 'failed'; id?: string; error?: string }
 
 const SEND_TIMEOUT_MS = 10_000
@@ -43,7 +45,7 @@ function createTransporter() {
   })
 }
 
-export async function deliver(message: { to: string; subject: string; html: string; text?: string }): Promise<DeliverResult> {
+export async function deliver(message: { to: string; subject: string; html: string; text?: string; attachments?: EmailAttachment[] }): Promise<DeliverResult> {
   if (!emailEnabled()) {
     const delay = Number(process.env.EMAIL_DRY_RUN_DELAY_MS ?? 0)
     if (delay > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 30_000)))
@@ -63,6 +65,8 @@ export async function deliver(message: { to: string; subject: string; html: stri
         subject: message.subject,
         html: message.html,
         text: message.text,
+        // Inline images (cid:) are the only QR delivery most mail clients render; data: URIs are blocked.
+        attachments: message.attachments,
       }),
       timeout,
     ])

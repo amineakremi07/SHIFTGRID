@@ -2,9 +2,11 @@
 
 import * as React from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Banknote, Loader2, Phone, Plus, User, UserRound, X } from 'lucide-react'
+import { Banknote, CheckCircle2, Loader2, Phone, PhoneCall, Plus, ScanLine, User, UserRound, UserX, X } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { CheckInDialog, postCheckIn } from '@/components/dashboard/check-in-dialog'
+import { ManualBookingDialog, type ManualBookingPreset } from '@/components/dashboard/manual-booking-dialog'
 import { DayPicker } from '@/components/courts/day-picker'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,19 +18,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useRealtimeBookings } from '@/hooks/use-realtime-bookings'
 import { cancelBookingAction } from '@/lib/actions/bookings'
-import { createWalkInBooking } from '@/lib/actions/org-bookings'
+import { markNoShowAction } from '@/lib/actions/org-bookings'
 import { markCashPaidAction } from '@/lib/actions/payments'
-import { formatVenueTime, minutesSinceVenueDayStart, timeToMinutes } from '@/lib/court-time'
-import { computePrice } from '@/lib/pricing'
-import { PLAYER_COUNT_OPTIONS, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
-import { guestDetailsSchema } from '@/lib/validations/booking'
-import type { BookingStatus, PaymentProvider, PaymentStatus } from '@/lib/types/database'
+import { formatVenueTime } from '@/lib/court-time'
+import { SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
+import type { BookingSource, BookingStatus, PaymentProvider, PaymentStatus } from '@/lib/types/database'
 import { cn } from '@/lib/utils'
 
 export type BoardSlot = { start: string; end: string; past: boolean }
@@ -61,25 +59,38 @@ export type BoardBooking = {
   paymentStatus: PaymentStatus | null
   paymentProvider: PaymentProvider | null
   reference: string
+  /** When the player was checked in at reception (status completed). */
+  checkedInAt: string | null
+  /** Made online by the player, or by staff at the desk / on the phone. */
+  source: BookingSource
+  /** Staff-only note from a manual booking (never sent to the player). */
+  note: string | null
+  /** Members only: their no-show history, so staff see who is risky. */
+  noShowCount: number | null
+  trustScore: number | null
 }
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
   confirmed: 'Confirmed',
   pending_payment: 'Pending',
   cancelled: 'Cancelled',
-  completed: 'Completed',
+  completed: 'Checked in',
+  no_show: 'No-show',
 }
 const STATUS_VARIANT: Record<BookingStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
   confirmed: 'success',
   pending_payment: 'warning',
   cancelled: 'destructive',
   completed: 'secondary',
+  no_show: 'destructive',
 }
 
 const tnd = (n: number) => `${n.toFixed(2)} TND`
 const isOpen = (b: BoardBooking) => b.status === 'pending_payment' || b.status === 'confirmed'
 
-type WalkInTarget = { court: BoardCourt; slot: BoardSlot }
+/** Players may check in from an hour before the slot until it ends; a no-show can be recorded 15 min after it starts. */
+const CHECK_IN_LEAD_MS = 60 * 60_000
+const NO_SHOW_AFTER_MS = 15 * 60_000
 
 export function BookingsBoard({
   orgId,
@@ -101,8 +112,17 @@ export function BookingsBoard({
   const router = useRouter()
   const pathname = usePathname()
   const [pending, startTransition] = React.useTransition()
-  const [walkIn, setWalkIn] = React.useState<WalkInTarget | null>(null)
+  const [manualOpen, setManualOpen] = React.useState(false)
+  const [manualPreset, setManualPreset] = React.useState<ManualBookingPreset>(null)
   const [toCancel, setToCancel] = React.useState<BoardBooking | null>(null)
+  const [toNoShow, setToNoShow] = React.useState<BoardBooking | null>(null)
+  const [checkInOpen, setCheckInOpen] = React.useState(false)
+  // The buttons that depend on "now" are re-evaluated every 30 s (the render itself stays pure).
+  const [now, setNow] = React.useState(() => Date.now())
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
 
   // Live: online bookings, other staff's walk-ins and cancellations refresh the day.
   useRealtimeBookings(orgId, dateStr, () => router.refresh())
@@ -120,6 +140,8 @@ export function BookingsBoard({
 
   const open = bookings.filter(isOpen)
   const cancelled = bookings.filter((b) => b.status === 'cancelled')
+  // Checked-in and no-show bookings stay on the schedule (they still occupy their slot).
+  const onSchedule = bookings.filter((b) => b.status !== 'cancelled')
   const revenue = open.reduce((sum, b) => sum + (b.amount ?? 0), 0)
   const courtName = (id: string | null) => courts.find((c) => c.id === id)?.name ?? 'Removed court'
 
@@ -128,9 +150,23 @@ export function BookingsBoard({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Daily schedule</h2>
-          <p className="text-sm text-[#645757]">Tap a free slot to record a walk-in or phone booking.</p>
+          <p className="text-sm text-[#645757]">Tap a free slot, or use Add Manual Booking, for a desk or phone customer.</p>
         </div>
-        <DayPicker dateStr={dateStr} minDate={minDate} maxDate={maxDate} onChange={changeDate} pending={pending} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={() => {
+              setManualPreset(null)
+              setManualOpen(true)
+            }}
+            className="bg-[#1d3023] text-[#f7f5f2] hover:bg-[#1d3023]/90"
+          >
+            <PhoneCall aria-hidden /> Add Manual Booking
+          </Button>
+          <Button variant="outline" onClick={() => setCheckInOpen(true)}>
+            <ScanLine aria-hidden /> Check-in player
+          </Button>
+          <DayPicker dateStr={dateStr} minDate={minDate} maxDate={maxDate} onChange={changeDate} pending={pending} />
+        </div>
       </div>
 
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -152,9 +188,14 @@ export function BookingsBoard({
               <CourtColumn
                 key={court.id}
                 court={court}
-                bookings={open.filter((b) => b.courtId === court.id)}
-                onWalkIn={(slot) => setWalkIn({ court, slot })}
+                bookings={onSchedule.filter((b) => b.courtId === court.id)}
+                now={now}
+                onWalkIn={(slot) => {
+                  setManualPreset({ courtId: court.id, startsAt: slot.start })
+                  setManualOpen(true)
+                }}
                 onCancel={setToCancel}
+                onNoShow={setToNoShow}
               />
             ))}
           </div>
@@ -181,15 +222,18 @@ export function BookingsBoard({
         )}
       </div>
 
-      <WalkInDialog
-        key={walkIn ? walkIn.slot.start + walkIn.court.id : 'closed'}
-        target={walkIn}
+      <ManualBookingDialog
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        preset={manualPreset}
+        courts={courts}
+        bookings={bookings}
         dateStr={dateStr}
-        onClose={() => setWalkIn(null)}
-        onDone={() => {
-          setWalkIn(null)
-          router.refresh()
-        }}
+        today={today}
+        maxDate={maxDate}
+        onDateChange={changeDate}
+        datePending={pending}
+        onBooked={() => router.refresh()}
       />
 
       <CancelDialog
@@ -200,6 +244,17 @@ export function BookingsBoard({
           router.refresh()
         }}
       />
+
+      <NoShowDialog
+        booking={toNoShow}
+        onClose={() => setToNoShow(null)}
+        onDone={() => {
+          setToNoShow(null)
+          router.refresh()
+        }}
+      />
+
+      <CheckInDialog open={checkInOpen} onOpenChange={setCheckInOpen} />
 
       <span className="sr-only" aria-live="polite">
         {today === dateStr ? 'Showing today' : `Showing ${dateStr}`}
@@ -220,13 +275,17 @@ function Stat({ label, value }: { label: string; value: string }) {
 function CourtColumn({
   court,
   bookings,
+  now,
   onWalkIn,
   onCancel,
+  onNoShow,
 }: {
   court: BoardCourt
   bookings: BoardBooking[]
+  now: number
   onWalkIn: (slot: BoardSlot) => void
   onCancel: (b: BoardBooking) => void
+  onNoShow: (b: BoardBooking) => void
 }) {
   const byStart = new Map(bookings.map((b) => [Date.parse(b.startsAt), b]))
   const slotStarts = new Set(court.slots.map((s) => Date.parse(s.start)))
@@ -250,11 +309,11 @@ function CourtColumn({
       ) : (
         <ul className="space-y-2">
           {offGrid.map((b) => (
-            <BookingRow key={b.id} booking={b} onCancel={onCancel} />
+            <BookingRow key={b.id} booking={b} now={now} onCancel={onCancel} onNoShow={onNoShow} />
           ))}
           {court.slots.map((slot) => {
             const booking = byStart.get(Date.parse(slot.start))
-            if (booking) return <BookingRow key={slot.start} booking={booking} onCancel={onCancel} />
+            if (booking) return <BookingRow key={slot.start} booking={booking} now={now} onCancel={onCancel} onNoShow={onNoShow} />
             const blocked = slot.past || court.status !== 'active'
             return (
               <li key={slot.start}>
@@ -296,12 +355,37 @@ function paymentLabel(b: BoardBooking): { text: string; paid: boolean } | null {
   return null
 }
 
-function BookingRow({ booking, onCancel }: { booking: BoardBooking; onCancel: (b: BoardBooking) => void }) {
+function BookingRow({
+  booking,
+  now,
+  onCancel,
+  onNoShow,
+}: {
+  booking: BoardBooking
+  now: number
+  onCancel: (b: BoardBooking) => void
+  onNoShow: (b: BoardBooking) => void
+}) {
   const router = useRouter()
   const [collecting, setCollecting] = React.useState(false)
+  const [checkingIn, setCheckingIn] = React.useState(false)
+  const start = Date.parse(booking.startsAt)
+  const end = Date.parse(booking.endsAt)
+  const canCheckIn = isOpen(booking) && now >= start - CHECK_IN_LEAD_MS && now <= end
+  const canNoShow = isOpen(booking) && now >= start + NO_SHOW_AFTER_MS
+
+  const checkIn = async () => {
+    setCheckingIn(true)
+    const result = await postCheckIn(booking.id)
+    setCheckingIn(false)
+    if (!result.ok) toast.error(result.message)
+    else toast.success(`${result.booker} is checked in.${result.cashDue > 0 ? ` Collect ${result.cashDue.toFixed(2)} TND.` : ''}`)
+    router.refresh()
+  }
   const payment = paymentLabel(booking)
   // Only cash is collected here; online and split payments settle themselves.
-  const canCollect = isOpen(booking) && booking.paymentStatus === 'pending' && booking.paymentProvider === 'cash'
+  // Cash can still be collected after check-in (the booking is then 'completed').
+  const canCollect = (isOpen(booking) || booking.status === 'completed') && booking.paymentStatus === 'pending' && booking.paymentProvider === 'cash'
 
   const collect = async () => {
     setCollecting(true)
@@ -329,6 +413,7 @@ function BookingRow({ booking, onCancel }: { booking: BoardBooking; onCancel: (b
         <span className="truncate">{booking.bookerName}</span>
         <span className="text-[#645757]">· {booking.playerCount} players</span>
       </p>
+      {booking.note && <p className="mt-1 truncate text-xs italic text-[#645757]" title={booking.note}>“{booking.note}”</p>}
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-[#645757]">
         <span className="inline-flex flex-wrap items-center gap-1.5">
           {booking.bookerPhone && (
@@ -338,6 +423,15 @@ function BookingRow({ booking, onCancel }: { booking: BoardBooking; onCancel: (b
             </>
           )}
           <span className="font-mono">{booking.reference}</span>
+          {booking.source !== 'online' && (
+            <span className="rounded-sm bg-[#1d3023]/10 px-1 font-medium text-[#1d3023]">{booking.source === 'phone' ? 'Phone' : 'Desk'}</span>
+          )}
+          {booking.checkedInAt && <span className="font-medium text-[#0e634f]">· in at {formatVenueTime(booking.checkedInAt)}</span>}
+          {booking.noShowCount !== null && booking.noShowCount > 0 && (
+            <span className="rounded-sm bg-destructive/10 px-1 font-medium text-destructive" title="Member trust score and no-shows">
+              Trust {booking.trustScore} · {booking.noShowCount} no-show{booking.noShowCount === 1 ? '' : 's'}
+            </span>
+          )}
           {booking.amount !== null && <span>· {tnd(booking.amount)}</span>}
           {payment && (
             <span className={cn('rounded-sm px-1 font-medium', payment.paid ? 'bg-success/10 text-success' : 'bg-[#eae6df]')}>
@@ -351,151 +445,24 @@ function BookingRow({ booking, onCancel }: { booking: BoardBooking; onCancel: (b
               {collecting ? <Loader2 className="animate-spin" aria-hidden /> : <Banknote aria-hidden />} Mark paid
             </Button>
           )}
-          <Button variant="destructive" size="xs" onClick={() => onCancel(booking)}>
-            <X aria-hidden /> Cancel
-          </Button>
+          {canCheckIn && (
+            <Button variant="outline" size="xs" onClick={checkIn} disabled={checkingIn}>
+              {checkingIn ? <Loader2 className="animate-spin" aria-hidden /> : <CheckCircle2 aria-hidden />} Check in
+            </Button>
+          )}
+          {canNoShow && (
+            <Button variant="outline" size="xs" onClick={() => onNoShow(booking)}>
+              <UserX aria-hidden /> No-show
+            </Button>
+          )}
+          {isOpen(booking) && (
+            <Button variant="destructive" size="xs" onClick={() => onCancel(booking)}>
+              <X aria-hidden /> Cancel
+            </Button>
+          )}
         </span>
       </div>
     </li>
-  )
-}
-
-function WalkInDialog({
-  target,
-  dateStr,
-  onClose,
-  onDone,
-}: {
-  target: WalkInTarget | null
-  dateStr: string
-  onClose: () => void
-  onDone: () => void
-}) {
-  const sport = target?.court.sport ?? 'padel'
-  const counts = PLAYER_COUNT_OPTIONS[sport]
-  const [name, setName] = React.useState('')
-  const [phone, setPhone] = React.useState('')
-  const [players, setPlayers] = React.useState<string>(String(counts[0]))
-  const [errors, setErrors] = React.useState<Record<string, string[] | undefined>>({})
-  const [saving, setSaving] = React.useState(false)
-
-  const price = target
-    ? computePrice({
-        pricePerHour: target.court.pricePerHour,
-        nightSurchargePerHour: target.court.nightSurchargePerHour,
-        nightStartsAtMinutes: timeToMinutes(target.court.nightStartsAt),
-        startMinutes: minutesSinceVenueDayStart(target.slot.start, dateStr),
-        durationMinutes: SPORT_DURATION_MIN[target.court.sport],
-      })
-    : null
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!target) return
-    const guest = guestDetailsSchema.safeParse({ fullName: name, phone })
-    if (!guest.success) {
-      setErrors(guest.error.flatten().fieldErrors)
-      return
-    }
-    setErrors({})
-    setSaving(true)
-    const result = await createWalkInBooking({
-      courtId: target.court.id,
-      date: dateStr,
-      startsAt: target.slot.start,
-      playerCount: Number(players),
-      guest: { fullName: name, phone },
-    })
-    setSaving(false)
-    if (!result.ok) {
-      if (result.fieldErrors) setErrors(result.fieldErrors)
-      toast.error(result.message)
-      // The slot may have just been taken; show the real state.
-      if (result.message.includes('taken')) onDone()
-      return
-    }
-    toast.success(`Booked. Reference ${result.reference}`)
-    onDone()
-  }
-
-  return (
-    <Dialog open={target !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="bg-[#eae6df] sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Walk-in booking</DialogTitle>
-          <DialogDescription>
-            {target &&
-              `${target.court.name} · ${formatVenueTime(target.slot.start)}–${formatVenueTime(target.slot.end)}`}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={submit} className="grid gap-4" noValidate>
-          <div className="grid gap-1.5">
-            <Label htmlFor="wi-name">Customer name</Label>
-            <Input
-              id="wi-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              error={Boolean(errors.fullName)}
-              maxLength={100}
-              autoComplete="off"
-            />
-            {errors.fullName?.[0] && <p role="alert" className="text-xs text-destructive">{errors.fullName[0]}</p>}
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="wi-phone">Mobile number</Label>
-            <Input
-              id="wi-phone"
-              inputMode="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="98 123 456"
-              error={Boolean(errors.phone)}
-              autoComplete="off"
-            />
-            {errors.phone?.[0] && <p role="alert" className="text-xs text-destructive">{errors.phone[0]}</p>}
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="wi-players">Players</Label>
-            <Select value={players} onValueChange={setPlayers}>
-              <SelectTrigger id="wi-players" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {counts.map((n) => (
-                  <SelectItem key={n} value={String(n)}>
-                    {n} players
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {price && (
-            <p className="rounded-lg bg-[#f7f5f2] px-3 py-2.5 text-sm">
-              <span className="font-semibold">{tnd(price.total)}</span>
-              <span className="text-[#645757]">
-                {' '}
-                cash at the club
-                {price.surcharge > 0 && ` (incl. ${tnd(price.surcharge)} night lighting)`}
-              </span>
-            </p>
-          )}
-
-          <DialogFooter className="gap-2 sm:justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving} className="bg-[#1d3023] text-[#f7f5f2] hover:bg-[#1d3023]/90">
-              {saving && <Loader2 className="animate-spin" aria-hidden />}
-              Confirm booking
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   )
 }
 
@@ -554,6 +521,54 @@ function CancelDialog({
           <Button variant="destructive" disabled={busy} onClick={confirm}>
             {busy && <Loader2 className="animate-spin" aria-hidden />}
             Cancel booking
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function NoShowDialog({
+  booking,
+  onClose,
+  onDone,
+}: {
+  booking: BoardBooking | null
+  onClose: () => void
+  onDone: () => void
+}) {
+  const [busy, setBusy] = React.useState(false)
+
+  const confirm = async () => {
+    if (!booking) return
+    setBusy(true)
+    const result = await markNoShowAction(booking.id)
+    setBusy(false)
+    if (!result.ok) toast.error(result.message)
+    else toast.success(result.message)
+    onDone()
+  }
+
+  return (
+    <Dialog open={booking !== null} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="bg-[#eae6df] sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Mark as no-show?</DialogTitle>
+          <DialogDescription>
+            {booking &&
+              `${booking.bookerName} · ${formatVenueTime(booking.startsAt)}–${formatVenueTime(booking.endsAt)} · ${booking.reference}. `}
+            {booking?.isMember
+              ? 'The player loses 30 trust points and gets a no-show on their record. A third no-show suspends their bookings for 30 days. This cannot be undone here.'
+              : 'This guest has no account, so only the booking is marked.'}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:justify-end">
+          <Button variant="outline" onClick={onClose}>
+            Keep booking
+          </Button>
+          <Button variant="destructive" disabled={busy} onClick={confirm}>
+            {busy && <Loader2 className="animate-spin" aria-hidden />}
+            Mark as no-show
           </Button>
         </DialogFooter>
       </DialogContent>

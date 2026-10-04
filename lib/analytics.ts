@@ -99,7 +99,7 @@ export type BookingInput = {
   court_id: string | null
   starts_at: string
   ends_at: string
-  status: 'pending_payment' | 'confirmed' | 'cancelled' | 'completed'
+  status: 'pending_payment' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
   booker_profile_id: string | null
   booker_anon_id: string | null
   /** payment_records of this booking (one in practice). */
@@ -278,7 +278,9 @@ export function computeAnalytics(input: {
     const amount = payment ? Number(payment.amount) : 0
     const cancelled = b.status === 'cancelled'
     const refunded = payment?.status === 'refunded'
-    const earns = !cancelled && !refunded
+    // A no-show whose cash was never collected earned nothing (and is not "still to collect").
+    const forgone = b.status === 'no_show' && payment?.status === 'pending'
+    const earns = !cancelled && !refunded && !forgone
 
     // The fixed headline periods (independent of the chosen range).
     if (earns) {
@@ -301,7 +303,7 @@ export function computeAnalytics(input: {
       if (bucket) bucket.cancelled += 1
     }
 
-    if (payment && (refunded || !cancelled)) {
+    if (payment && (refunded || !cancelled) && !forgone) {
       const kind = refunded
         ? 'refunded'
         : `${payment.status === 'paid' ? 'paid' : 'pending'}_${payment.provider === 'cash' ? 'cash' : 'online'}`

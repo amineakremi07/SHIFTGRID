@@ -47,6 +47,9 @@ export type Pass = {
   viewer: Viewer
   /** Present for guests: the secret that proves it, needed to act on the booking. */
   guestToken: string | null
+  /** 6-digit arrival code the club asks for at reception. */
+  checkInCode: string | null
+  checkedInAt: string | null
 }
 
 export const hashShareToken = (token: string) => createHash('sha256').update(token).digest('hex')
@@ -91,7 +94,7 @@ export async function loadPass(bookingId: string, guestToken?: string | null): P
   const admin = getSupabaseAdmin()
   const { data: b } = await admin
     .from('bookings')
-    .select('id, org_id, court_id, sport, starts_at, ends_at, status, player_count, cancellation_deadline, cancellation_reason')
+    .select('id, org_id, court_id, sport, starts_at, ends_at, status, player_count, cancellation_deadline, cancellation_reason, check_in_code, checked_in_at')
     .eq('id', bookingId)
     .maybeSingle()
   if (!b) return null
@@ -132,6 +135,8 @@ export async function loadPass(bookingId: string, guestToken?: string | null): P
     })),
     viewer: access.viewer,
     guestToken: access.viewer === 'guest' ? (guestToken ?? null) : null,
+    checkInCode: b.check_in_code,
+    checkedInAt: b.checked_in_at,
   }
 }
 

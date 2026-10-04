@@ -144,8 +144,41 @@ export const createBookingSchema = z
 /** The guest booking form: details + the consent box (consent is not part of the stored details). */
 export const guestBookingFormSchema = guestDetailsSchema.extend({ consent: guestConsentSchema })
 
-export const walkInBookingSchema = z.object({ ...slotFields, guest: guestDetailsSchema }).strict()
+/** "" from a blank form box means "not given". */
+const blankToUndefined = (value: unknown) => (typeof value === 'string' && value.trim() === '' ? undefined : value)
+
+export const MANUAL_PAYMENT_STATUSES = ['paid_on_site', 'pay_at_venue'] as const
+export const MANUAL_SOURCES = ['manual', 'phone'] as const
+
+/**
+ * A booking made by club staff for someone at the desk or on the phone
+ * (POST /api/v1/bookings/manual). snake_case because it is a public API body.
+ * Like every booking schema it is `.strict()` and has no price, sport, end time or club:
+ * those come from the court row and the caller's verified session. The start is either
+ * an exact instant (`starts_at`, what the dashboard sends) or `start_time` "HH:MM" on
+ * `date` in venue time; the slot must be on the court's grid and its length is fixed by the sport.
+ */
+export const manualBookingSchema = z
+  .object({
+    court_id: z.string().uuid(),
+    date: calendarDaySchema,
+    starts_at: bookingInstantSchema.optional(),
+    start_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM').optional(),
+    /** Defaults to the sport's first allowed size (padel 4, tennis 2, football 12). */
+    player_count: z.number().int().min(1).max(MAX_PLAYERS).optional(),
+    full_name: z.string().trim().min(2, 'Please enter the customer name').max(100, 'Name is too long'),
+    phone: z.preprocess(blankToUndefined, guestPhoneSchema.optional()),
+    email: z.preprocess(blankToUndefined, optionalEmailSchema),
+    payment_status: z.enum(MANUAL_PAYMENT_STATUSES),
+    notes: z.preprocess(blankToUndefined, z.string().trim().max(300, 'Notes are limited to 300 characters').optional()),
+    source: z.enum(MANUAL_SOURCES).default('manual'),
+  })
+  .strict()
+  .refine((v) => (v.starts_at === undefined) !== (v.start_time === undefined), {
+    path: ['start_time'],
+    message: 'Provide exactly one of starts_at or start_time',
+  })
 
 export type GuestDetailsInput = z.input<typeof guestDetailsSchema>
-export type WalkInBookingInput = z.input<typeof walkInBookingSchema>
+export type ManualBookingInput = z.input<typeof manualBookingSchema>
 export type CreateBookingInput = z.input<typeof createBookingSchema>

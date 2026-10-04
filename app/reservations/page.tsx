@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 
 import { ReservationCard, type Reservation } from '@/components/booking/reservation-card'
+import { TrustBanner } from '@/components/booking/trust-banner'
 import { createClient } from '@/lib/supabase/server'
 import type { Sport } from '@/lib/types/database'
 
@@ -24,7 +25,7 @@ export default async function ReservationsPage() {
   // The profile (with its club's name embedded), the bookings and the courts only need
   // the user id (RLS scopes the rest), so they go out in ONE round trip.
   const [profileRes, bookingsRes, courtsRes] = await Promise.all([
-    supabase.from('profiles').select('role, org_id, organizations(name)').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('role, org_id, no_show_count, trust_score, is_suspended, suspended_until, organizations(name)').eq('id', user.id).maybeSingle(),
     // RLS: a player sees only their own bookings and their club's courts.
     supabase
       .from('bookings')
@@ -78,6 +79,12 @@ export default async function ReservationsPage() {
 
   return (
     <Shell>
+      <TrustBanner
+        noShowCount={profile?.no_show_count ?? 0}
+        trustScore={profile?.trust_score ?? 100}
+        suspendedUntil={profile?.is_suspended ? (profile.suspended_until ?? null) : null}
+        now={now}
+      />
       <section aria-labelledby="upcoming-heading" className="space-y-3">
         <h2 id="upcoming-heading" className="text-lg font-semibold">
           Upcoming

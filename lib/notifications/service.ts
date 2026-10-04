@@ -1,6 +1,10 @@
+import QRCode from 'qrcode'
+
+import { checkInQrPayload } from '@/lib/check-in-input'
 import { formatVenueDate, formatVenueTime, venueDateString } from '@/lib/court-time'
 import { deliver, emailEnabled, type DeliverResult } from '@/lib/notifications/mailer'
 import {
+  CHECK_IN_QR_CID,
   cancellationEmail,
   confirmationEmail,
   reminderEmail,
@@ -41,6 +45,8 @@ export type BookingContext = {
   status: string
   startsAt: string
   cancellationReason: string | null
+  /** 6-digit arrival code (never stored in the outbox: read at send time). */
+  checkInCode: string | null
   facts: BookingFacts
   state: PaymentState
   paymentStatus: string | null
@@ -53,7 +59,7 @@ export type BookingContext = {
 export async function loadBookingContext(admin: Admin, bookingId: string): Promise<BookingContext | null> {
   const { data: b } = await admin
     .from('bookings')
-    .select('id, org_id, court_id, sport, starts_at, ends_at, status, player_count, booker_profile_id, booker_anon_id, cancellation_reason')
+    .select('id, org_id, court_id, sport, starts_at, ends_at, status, player_count, booker_profile_id, booker_anon_id, cancellation_reason, check_in_code')
     .eq('id', bookingId)
     .maybeSingle()
   if (!b) return null
@@ -81,6 +87,7 @@ export async function loadBookingContext(admin: Admin, bookingId: string): Promi
     status: b.status,
     startsAt: b.starts_at,
     cancellationReason: b.cancellation_reason,
+    checkInCode: b.check_in_code,
     facts: {
       clubName: org.data?.name ?? 'the club',
       courtName: court.data?.name ?? 'Court',
@@ -219,20 +226,28 @@ export async function notifyBookingCreated(input: BookingCreatedInput): Promise<
       const passUrl = input.guestToken
         ? `${input.origin}/reservations/${ctx.bookingId}?token=${input.guestToken}`
         : `${input.origin}/reservations/${ctx.bookingId}`
+      // The arrival code and its QR (an inline image) go in the confirmation of every open booking.
+      const checkInCode = ctx.status === 'cancelled' ? null : ctx.checkInCode
+      const rendered = confirmationEmail({
+        ...ctx.facts,
+        recipientName: ctx.booker.name,
+        state: ctx.state,
+        paidNow: input.paidNow,
+        passUrl,
+        cancelUrl: input.guestToken ? `${input.origin}/reservations/cancel-guest?token=${input.guestToken}` : null,
+        invitesEmailed: invites.filter((r) => r.status === 'sent').length,
+        checkInCode,
+      })
+      if (checkInCode) {
+        const png = await QRCode.toBuffer(checkInQrPayload(checkInCode), { type: 'png', margin: 1, width: 320 })
+        rendered.attachments = [{ filename: 'check-in-qr.png', content: png, cid: CHECK_IN_QR_CID, contentType: 'image/png' }]
+      }
       confirmation = await sendRecorded(admin, {
         kind: 'booking_confirmation',
         bookingId: ctx.bookingId,
         to: ctx.booker.email,
         dedupeKey: `booking_confirmation:${ctx.bookingId}`,
-        rendered: confirmationEmail({
-          ...ctx.facts,
-          recipientName: ctx.booker.name,
-          state: ctx.state,
-          paidNow: input.paidNow,
-          passUrl,
-          cancelUrl: input.guestToken ? `${input.origin}/reservations/cancel-guest?token=${input.guestToken}` : null,
-          invitesEmailed: invites.filter((r) => r.status === 'sent').length,
-        }),
+        rendered,
       })
     }
     return { confirmation, invites }

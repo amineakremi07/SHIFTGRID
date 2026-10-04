@@ -25,7 +25,10 @@ export type Sport = 'padel' | 'tennis' | 'football'
 export type UserRole = 'platform_admin' | 'org_admin' | 'staff' | 'player'
 export type OrgStatus = 'pending' | 'approved' | 'rejected' | 'suspended'
 export type CourtStatus = 'active' | 'maintenance'
-export type BookingStatus = 'pending_payment' | 'confirmed' | 'cancelled' | 'completed'
+/** Where a booking came from: the public flow, or staff at the desk / on the phone. */
+export type BookingSource = 'online' | 'manual' | 'phone'
+
+export type BookingStatus = 'pending_payment' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
 export type PaymentMethod = 'online' | 'cash'
 export type PaymentProvider = 'stripe' | 'cash' | 'clicktopay' | 'test'
 export type PaymentStatus = 'pending' | 'paid' | 'refunded'
@@ -125,6 +128,12 @@ export type Database = {
           display_name: string
           phone: string | null
           avatar_url: string | null
+          /** Starts at 100; -30 per no-show (floor 0). Written only by mark_booking_no_show(). */
+          trust_score: number
+          no_show_count: number
+          /** Three no-shows suspend the account for 30 days; create_booking() refuses it meanwhile. */
+          is_suspended: boolean
+          suspended_until: string | null
           created_at: string
           updated_at: string
         }
@@ -155,7 +164,8 @@ export type Database = {
           id: string
           org_id: string
           name: string
-          phone: string
+          /** Null for a desk customer who gave a name only (staff bookings). */
+          phone: string | null
           email: string | null
           created_at: string
         }
@@ -163,11 +173,19 @@ export type Database = {
           id?: string
           org_id: string
           name: string
-          phone: string
+          phone?: string | null
           email?: string | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['anonymous_bookers']['Insert']>
+        Relationships: []
+      }
+
+      /** Staff-only notes on a booking. No client grant: read and written with the service role. */
+      booking_notes: {
+        Row: { booking_id: string; org_id: string; note: string; created_at: string }
+        Insert: { booking_id: string; org_id: string; note: string; created_at?: string }
+        Update: Partial<{ booking_id: string; org_id: string; note: string; created_at: string }>
         Relationships: []
       }
 
@@ -189,6 +207,10 @@ export type Database = {
           cancellation_reason: string | null
           /** SHA-256 of the guest's cancel token (never the token itself). Guests only. */
           guest_cancel_token_hash: string | null
+          /** 6 digits shown to the player; staff type it (or scan its QR) at reception. */
+          check_in_code: string | null
+          checked_in_at: string | null
+          source: BookingSource
           created_at: string
           updated_at: string
         }
@@ -209,6 +231,9 @@ export type Database = {
           cancellation_deadline?: string
           cancellation_reason?: string | null
           guest_cancel_token_hash?: string | null
+          check_in_code?: string | null
+          checked_in_at?: string | null
+          source?: BookingSource
           created_at?: string
           updated_at?: string
         }
@@ -435,6 +460,11 @@ export type Database = {
           p_sport: string
           p_starts_at: string
           p_status?: 'pending_payment' | 'confirmed'
+          p_source?: BookingSource
+          /** Staff-only note, stored in booking_notes (never readable by the player). */
+          p_notes?: string
+          /** Cash already taken at the desk: the payment record is created as paid. */
+          p_paid?: boolean
         }
         Returns: Json
       }
@@ -452,6 +482,14 @@ export type Database = {
       }
       mark_cash_paid: {
         Args: { p_booking_id: string; p_org_id: string }
+        Returns: Json
+      }
+      check_in_booking: {
+        Args: { p_org_id: string; p_code?: string; p_booking_id?: string }
+        Returns: Json
+      }
+      mark_booking_no_show: {
+        Args: { p_org_id: string; p_booking_id: string }
         Returns: Json
       }
       user_org_id: {
