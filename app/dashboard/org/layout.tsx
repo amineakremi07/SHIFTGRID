@@ -52,12 +52,18 @@ export default async function OrgDashboardLayout({ children }: { children: React
         {ctx.orgStatus !== 'approved' ? (
           <div role="status" className="rounded-xl bg-[#eae6df] px-6 py-10 text-center">
             <p className="text-lg font-semibold">
-              {ctx.orgStatus === 'pending' ? 'Your club is awaiting verification' : `Your club is ${ctx.orgStatus}`}
+              {ctx.archived
+                ? 'This club has been closed'
+                : ctx.orgStatus === 'pending'
+                  ? 'Your club is awaiting verification'
+                  : `Your club is ${ctx.orgStatus}`}
             </p>
             <p className="mx-auto mt-1 max-w-[52ch] text-sm text-[#645757]">
-              {ctx.orgStatus === 'pending'
-                ? 'A platform admin is reviewing your registration. Courts and bookings unlock once it is approved.'
-                : 'Bookings and court management are unavailable. Please contact support.'}
+              {ctx.archived
+                ? 'The club was archived, so it is no longer listed and cannot take bookings. Its booking history is kept. Contact support to have it reopened.'
+                : ctx.orgStatus === 'pending'
+                  ? 'A platform admin is reviewing your registration. Courts and bookings unlock once it is approved.'
+                  : 'Bookings and court management are unavailable. Please contact support.'}
             </p>
             {ctx.orgStatus === 'rejected' && ctx.rejectionReason && (
               <p className="mx-auto mt-3 max-w-[52ch] rounded-lg bg-[#f7f5f2] px-4 py-3 text-sm">

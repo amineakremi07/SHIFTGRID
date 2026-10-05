@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 
 import { ReservationCard, type Reservation } from '@/components/booking/reservation-card'
+import { DeleteAccount } from '@/components/booking/delete-account'
 import { TrustBanner } from '@/components/booking/trust-banner'
 import { createClient } from '@/lib/supabase/server'
 import type { Sport } from '@/lib/types/database'
@@ -24,8 +25,10 @@ export default async function ReservationsPage() {
 
   // The profile (with its club's name embedded), the bookings and the courts only need
   // the user id (RLS scopes the rest), so they go out in ONE round trip.
+  // `organizations!profiles_org_id_fkey`: since organization_members there is more than one path from
+  // profiles to organizations, and an unhinted embed fails as ambiguous (PGRST201).
   const [profileRes, bookingsRes, courtsRes] = await Promise.all([
-    supabase.from('profiles').select('role, org_id, no_show_count, trust_score, is_suspended, suspended_until, organizations(name)').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('role, org_id, no_show_count, trust_score, is_suspended, suspended_until, organizations!profiles_org_id_fkey(name)').eq('id', user.id).maybeSingle(),
     // RLS: a player sees only their own bookings and their club's courts.
     supabase
       .from('bookings')
@@ -117,6 +120,8 @@ export default async function ReservationsPage() {
           </ul>
         </section>
       )}
+
+      <DeleteAccount upcomingCount={upcoming.length} />
     </Shell>
   )
 }

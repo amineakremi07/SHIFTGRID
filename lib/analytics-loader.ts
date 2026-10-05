@@ -39,7 +39,7 @@ export async function loadOrgAnalytics(params: { range?: string; from?: string; 
 
   // Started now so they run alongside the (paged) bookings query.
   const sideReads = Promise.all([
-    supabase.from('courts').select('id, name, sport, status, open_time, close_time').eq('org_id', orgId),
+    supabase.from('courts').select('id, name, sport, status, deleted_at, open_time, close_time').eq('org_id', orgId),
     supabase.from('organizations').select('weekly_hours').eq('id', orgId).maybeSingle(),
   ])
 
@@ -95,7 +95,8 @@ export async function loadOrgAnalytics(params: { range?: string; from?: string; 
     range,
     today,
     bookings,
-    courts: courtsRes.data ?? [],
+    // An archived court keeps its past revenue but counts for no capacity: it reads as 'archived', not 'active'.
+    courts: (courtsRes.data ?? []).map((c) => ({ ...c, status: c.deleted_at ? 'archived' : c.status })),
     hoursFor: (date, court) => effectiveHours(weekly, date, court),
   })
   return { ok: true, orgName, data, truncated }

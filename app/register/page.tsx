@@ -41,6 +41,7 @@ export default async function RegisterPage({
     .from('organizations')
     .select('id, name, city')
     .eq('status', 'approved')
+    .is('deleted_at', null)
     .order('name')
     .limit(200)
   if (error) console.error('Failed to load clubs for registration:', error.message, error.details)

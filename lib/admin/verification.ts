@@ -2,8 +2,8 @@ import { requireAdmin } from '@/lib/admin/access'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import type { OrgStatus, Sport } from '@/lib/types/database'
 
-/** The three queues. `pending` is what the brief calls pending_verification. */
-export const QUEUE_STATUSES = ['pending', 'approved', 'rejected'] as const
+/** The queues. `pending` is what the brief calls pending_verification; `archived` is every soft-deleted club, whatever its status. */
+export const QUEUE_STATUSES = ['pending', 'approved', 'rejected', 'archived'] as const
 export type QueueStatus = (typeof QUEUE_STATUSES)[number]
 
 export function parseQueueStatus(value: string | undefined): QueueStatus {
@@ -24,6 +24,8 @@ export type VerificationRow = {
   reviewedAt: string | null
   rejectionReason: string | null
   hasDocument: boolean
+  /** Soft-deleted club: closed and hidden, history kept. */
+  archived: boolean
   ownerName: string | null
   ownerEmail: string | null
   ownerPhone: string | null
@@ -58,13 +60,18 @@ export async function loadQueue(
     admin
       .from('organizations')
       .select(
-        'id, name, status, city, address, latitude, longitude, sport_types, registry_number, created_at, verified_at, rejection_reason, verification_documents'
+        'id, name, status, city, address, latitude, longitude, sport_types, registry_number, created_at, verified_at, rejection_reason, verification_documents, deleted_at'
       )
-      .eq('status', status)
-      .order(status === 'pending' ? 'created_at' : 'verified_at', { ascending: status === 'pending' })
+      .match(status === 'archived' ? {} : { status })
+      .filter('deleted_at', status === 'archived' ? 'not.is' : 'is', null)
+      .order(status === 'archived' ? 'deleted_at' : status === 'pending' ? 'created_at' : 'verified_at', { ascending: status === 'pending' })
       .limit(PAGE_LIMIT),
     ...QUEUE_STATUSES.map((s) =>
-      admin.from('organizations').select('id', { count: 'exact', head: true }).eq('status', s)
+      admin
+        .from('organizations')
+        .select('id', { count: 'exact', head: true })
+        .match(s === 'archived' ? {} : { status: s })
+        .filter('deleted_at', s === 'archived' ? 'not.is' : 'is', null)
     ),
   ])
 
@@ -116,6 +123,7 @@ export async function loadQueue(
       reviewedAt: o.verified_at,
       rejectionReason: o.rejection_reason,
       hasDocument: Boolean(doc.path || doc.legacyUrl),
+      archived: o.deleted_at !== null,
       ownerName: owner?.display_name ?? null,
       ownerEmail: owner ? (emails.get(owner.id) ?? null) : null,
       ownerPhone: owner?.phone ?? null,

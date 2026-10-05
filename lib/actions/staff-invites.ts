@@ -6,6 +6,8 @@ import { z } from 'zod'
 
 import { sendStaffInviteEmail } from '@/lib/email/staff-invite'
 import { requireOrgAction } from '@/lib/org-access'
+import { findPendingInviteForEmail } from '@/lib/staff-invite-core'
+import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { actionRateLimit } from '@/lib/rate-limit'
 
@@ -334,4 +336,77 @@ export async function acceptStaffInvite(input: {
 
   revalidatePath('/dashboard/org/staff')
   return { ok: true, email: invite.email }
+}
+
+/* --------------- the invitee's side when the link came from Supabase Auth ------------------ */
+
+const completeSchema = z.object({
+  displayName: z.string().trim().min(2, 'Please enter your name').max(100),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(72),
+})
+
+/**
+ * Finish an invitation whose link came from Supabase Auth (`/auth/callback?type=invite` signed the
+ * invitee in, but their account has no password, name or club yet). The caller is the verified session
+ * user. The club comes ONLY from the pending `staff_invites` row for that user's email (the owner's own
+ * record): claim it atomically, set the password and name, create the `staff` profile (a trigger
+ * records the membership in `organization_members`). An account that already belongs to a club is
+ * refused: nobody is silently moved between clubs.
+ */
+export async function completeInvitationAction(input: {
+  displayName: string
+  password: string
+}): Promise<{ ok: true } | { ok: false; message: string }> {
+  const parsed = completeSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? 'Please check your details.' }
+
+  const {
+    data: { user },
+  } = await (await createClient()).auth.getUser()
+  if (!user?.email) return { ok: false, message: 'Your invitation link has expired. Please open it again from your email.' }
+
+  const limited = await actionRateLimit('auth', user.id)
+  if (limited) return { ok: false, message: limited }
+
+  const admin = getSupabaseAdmin()
+  const { data: existing } = await admin.from('profiles').select('id').eq('id', user.id).maybeSingle()
+  if (existing) return { ok: false, message: 'This account already belongs to a club. Ask the club owner to invite a different address.' }
+
+  const pending = await findPendingInviteForEmail(user.email)
+  if (!pending) return { ok: false, message: 'There is no open invitation for this email address. Ask the club owner to send a new one.' }
+
+  const { data: claimed } = await admin
+    .from('staff_invites')
+    .update({ accepted_at: new Date().toISOString() })
+    .eq('id', pending.id)
+    .is('accepted_at', null)
+    .select('id')
+  if (!claimed?.length) return { ok: false, message: 'This invitation has already been used.' }
+  const release = () => admin.from('staff_invites').update({ accepted_at: null }).eq('id', pending.id)
+
+  const { error: updateError } = await admin.auth.admin.updateUserById(user.id, {
+    password: parsed.data.password,
+    email_confirm: true,
+    user_metadata: { display_name: parsed.data.displayName },
+  })
+  if (updateError) {
+    await release()
+    const weak = (updateError as { code?: string }).code === 'weak_password'
+    return { ok: false, message: weak ? 'That password is too weak or has appeared in a data breach. Please choose another.' : 'Could not set your password. Please try again.' }
+  }
+
+  const { error: profileError } = await admin.from('profiles').insert({
+    id: user.id,
+    org_id: pending.orgId,
+    role: 'staff',
+    display_name: parsed.data.displayName,
+  })
+  if (profileError) {
+    console.error('completeInvitation profile failed', { code: profileError.code, message: profileError.message })
+    await release()
+    return { ok: false, message: 'Could not finish setting up your account. Please try again.' }
+  }
+
+  revalidatePath('/dashboard/org/staff')
+  return { ok: true }
 }

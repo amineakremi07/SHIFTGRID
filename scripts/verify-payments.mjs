@@ -167,7 +167,7 @@ try {
   console.error('Verify crashed:', e.message ?? e)
   failures++
 } finally {
-  if (created.length) await admin.from('bookings').delete().in('id', created)
+  if (created.length) await admin.rpc('purge_bookings', { p_ids: created }) // bookings are never hard-deleted; this is the maintenance door
   console.log(`\ncleaned up ${created.length} test bookings`)
 }
 console.log(failures ? `${failures} check(s) FAILED` : 'All checks passed')

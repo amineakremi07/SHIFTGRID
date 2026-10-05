@@ -8,14 +8,16 @@
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "playwright test",
-    "verify:db": "node scripts/verify-payments.mjs && node scripts/verify-booking-concurrency.mjs && node scripts/test-rls-security.mjs",
+    "verify:db": "node scripts/verify-payments.mjs && node scripts/verify-booking-concurrency.mjs && node scripts/test-rls-security.mjs && node scripts/verify-data-retention.mjs",
     "verify:security": "node scripts/test-rls-security.mjs",
     "verify:ratelimit": "node scripts/test-rate-limit.mjs",
     "pwa:icons": "node scripts/generate-pwa-icons.mjs",
     "test:load": "k6 run scripts/k6-booking-stress.js",
     "cleanup:load": "node scripts/cleanup-load-test.mjs",
     "verify:launch": "node scripts/verify-launch-readiness.mjs",
-    "verify:consent": "node scripts/verify-consent.mjs"
+    "verify:consent": "node scripts/verify-consent.mjs",
+    "verify:retention": "node scripts/verify-data-retention.mjs",
+    "verify:auth-urls": "node scripts/verify-auth-redirects.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

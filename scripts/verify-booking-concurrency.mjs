@@ -174,7 +174,7 @@ try {
   console.error('Verify crashed:', e.message ?? e)
   failures++
 } finally {
-  if (tracked.size) await admin.from('bookings').delete().in('id', [...tracked])
+  if (tracked.size) await admin.rpc('purge_bookings', { p_ids: [...tracked] }) // bookings are never hard-deleted; this is the maintenance door
   // guests created by the races
   await admin.from('anonymous_bookers').delete().like('name', 'Race %')
   console.log(`\ncleaned up ${tracked.size} test bookings`)

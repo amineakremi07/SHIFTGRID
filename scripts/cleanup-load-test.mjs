@@ -41,7 +41,8 @@ if (dry || !bookerIds.length) process.exit(0)
 for (let i = 0; i < bookingIds.length; i += 100) {
   const ids = bookingIds.slice(i, i + 100)
   for (const [table, col] of [['booking_shares', 'booking_id'], ['payment_records', 'booking_id'], ['notifications', 'booking_id'], ['court_slot_locks', 'booking_id'], ['bookings', 'id']]) {
-    const { error } = await db.from(table).delete().in(col, ids)
+    // Bookings are never hard-deleted: load-test rows go through the maintenance function.
+    const { error } = table === 'bookings' ? await db.rpc('purge_bookings', { p_ids: ids }) : await db.from(table).delete().in(col, ids)
     // A table without that column (or already cascaded) is fine; anything else is not.
     if (error && !/column|relation|does not exist/i.test(error.message)) fail(table, error)
   }

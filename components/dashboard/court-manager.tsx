@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Pencil, Plus } from 'lucide-react'
+import { Archive, ArchiveRestore, Loader2, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { saveCourt, setCourtStatus } from '@/lib/actions/org-courts'
+import { archiveCourtAction, restoreCourtAction, saveCourt, setCourtStatus } from '@/lib/actions/org-courts'
 import { BUFFER_MIN, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { courtFormSchema, type CourtFormInput } from '@/lib/validations/court'
 
@@ -34,6 +34,8 @@ export type ManagedCourt = {
   nightStartsAt: string
 }
 
+export type ArchivedCourt = { id: string; name: string; sport: Sport; archivedAt: string }
+
 const SPORT_LABEL: Record<Sport, string> = { padel: 'Padel', tennis: 'Tennis', football: 'Football' }
 
 const EMPTY_FORM: CourtFormInput = {
@@ -47,10 +49,35 @@ const EMPTY_FORM: CourtFormInput = {
 
 const tnd = (n: number) => `${n.toFixed(2)} TND`
 
-export function CourtManager({ courts }: { courts: ManagedCourt[] }) {
+export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]; archived?: ArchivedCourt[] }) {
   const router = useRouter()
   const [editing, setEditing] = React.useState<ManagedCourt | 'new' | null>(null)
   const [busyId, setBusyId] = React.useState<string | null>(null)
+  const [toArchive, setToArchive] = React.useState<ManagedCourt | null>(null)
+
+  const archive = async () => {
+    if (!toArchive) return
+    setBusyId(toArchive.id)
+    const result = await archiveCourtAction(toArchive.id)
+    setBusyId(null)
+    if (!result.ok) {
+      toast.error(result.message)
+      setToArchive(null) // the message says why (e.g. upcoming bookings); nothing more to confirm
+      return
+    }
+    toast.success(`${toArchive.name} archived. Its booking history is kept.`)
+    setToArchive(null)
+    router.refresh()
+  }
+
+  const restore = async (court: ArchivedCourt) => {
+    setBusyId(court.id)
+    const result = await restoreCourtAction(court.id)
+    setBusyId(null)
+    if (!result.ok) return void toast.error(result.message)
+    toast.success(`${court.name} is back`)
+    router.refresh()
+  }
 
   const toggleStatus = async (court: ManagedCourt, active: boolean) => {
     setBusyId(court.id)
@@ -132,14 +159,60 @@ export function CourtManager({ courts }: { courts: ManagedCourt[] }) {
                   </div>
                 </dl>
 
-                <Button variant="outline" size="sm" className="mt-4" onClick={() => setEditing(court)}>
-                  <Pencil aria-hidden /> Edit
-                </Button>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditing(court)}>
+                    <Pencil aria-hidden /> Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setToArchive(court)} disabled={busyId === court.id}>
+                    <Archive aria-hidden /> Archive
+                  </Button>
+                </div>
               </li>
             )
           })}
         </ul>
       )}
+
+      {archived.length > 0 && (
+        <section aria-labelledby="archived-courts-heading" className="space-y-2" data-testid="archived-courts">
+          <h3 id="archived-courts-heading" className="text-sm font-semibold">
+            Archived courts ({archived.length})
+          </h3>
+          <p className="text-xs text-[#645757]">Hidden from players and the calendar. Their bookings stay in your history.</p>
+          <ul className="divide-y divide-[#d7d2cc] rounded-xl bg-[#eae6df] px-4 text-sm">
+            {archived.map((court) => (
+              <li key={court.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="min-w-0 truncate">
+                  <span className="font-medium">{court.name}</span> <span className="text-[#645757]">· {SPORT_LABEL[court.sport]}</span>
+                </span>
+                <Button variant="outline" size="sm" onClick={() => restore(court)} disabled={busyId === court.id}>
+                  {busyId === court.id ? <Loader2 className="animate-spin" aria-hidden /> : <ArchiveRestore aria-hidden />} Restore
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <Dialog open={toArchive !== null} onOpenChange={(o) => !o && busyId === null && setToArchive(null)}>
+        <DialogContent className="bg-[#eae6df] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Archive {toArchive?.name}?</DialogTitle>
+            <DialogDescription>
+              It disappears from your public page and the booking calendar. Past bookings and revenue stay in your history, and you can restore the court later. A court with upcoming bookings cannot be archived.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setToArchive(null)} disabled={busyId !== null}>
+              Keep it
+            </Button>
+            <Button variant="destructive" onClick={archive} disabled={busyId !== null}>
+              {busyId !== null && <Loader2 className="animate-spin" aria-hidden />}
+              Archive court
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CourtDialog
         key={editing === null ? 'closed' : editing === 'new' ? 'new' : editing.id}

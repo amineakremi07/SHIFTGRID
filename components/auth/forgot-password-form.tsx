@@ -8,6 +8,7 @@ import { AuthCard } from '@/components/auth/auth-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { AUTH_PATHS } from '@/lib/auth-urls'
 import { createClient } from '@/lib/supabase/client'
 import { forgotPasswordSchema } from '@/lib/validations/password-reset'
 
@@ -45,7 +46,7 @@ export function ForgotPasswordForm() {
     setError(null)
     setBusy(true)
     const { error: authError } = await createClient().auth.resetPasswordForEmail(parsed.data.email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}${AUTH_PATHS.resetPassword}`, // must be on the Supabase Redirect URLs list (lib/auth-urls.ts)
     })
     setBusy(false)
 

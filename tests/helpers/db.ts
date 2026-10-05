@@ -37,7 +37,10 @@ export async function cleanupE2E(): Promise<number> {
   const { data: guests } = await admin.from('anonymous_bookers').select('id').like('name', 'E2E %')
   const ids = (guests ?? []).map((g) => g.id)
   if (!ids.length) return 0
-  await admin.from('bookings').delete().in('booker_anon_id', ids)
+  // Bookings cannot be hard-deleted (a database guard); test data goes through the maintenance function.
+  const { data: bookings } = await admin.from('bookings').select('id').in('booker_anon_id', ids)
+  const bookingIds = (bookings ?? []).map((b) => b.id)
+  if (bookingIds.length) await admin.rpc('purge_bookings', { p_ids: bookingIds })
   await admin.from('anonymous_bookers').delete().in('id', ids)
   return ids.length
 }

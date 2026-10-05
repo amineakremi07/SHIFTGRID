@@ -27,12 +27,14 @@ async function loadClubs(): Promise<{ clubs: Club[]; failed: boolean }> {
       .from('organizations')
       .select('id, name, address, city, latitude, longitude')
       .eq('status', 'approved')
+      .is('deleted_at', null)
       .order('name')
       .limit(MAX_CLUBS),
     supabase
       .from('courts')
       .select('id, org_id, name, sport, price_per_hour, open_time, close_time')
       .eq('status', 'active')
+      .is('deleted_at', null)
       .limit(MAX_COURTS),
   ])
 

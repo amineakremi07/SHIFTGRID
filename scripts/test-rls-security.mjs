@@ -249,7 +249,7 @@ try {
   console.error('Security test crashed:', e.message ?? e)
   failures++
 } finally {
-  if (ids.booking) await admin.from('bookings').delete().eq('id', ids.booking)
+  if (ids.booking) await admin.rpc('purge_bookings', { p_ids: [ids.booking] }) // bookings are never hard-deleted; this is the maintenance door
   await admin.from('anonymous_bookers').delete().eq('name', 'RLS Probe Guest')
   if (ids.court) await admin.from('courts').delete().eq('id', ids.court)
   if (ids.org) await admin.from('organizations').delete().eq('id', ids.org)

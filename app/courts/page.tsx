@@ -12,8 +12,8 @@ export default async function CourtsPage() {
 
   // Independent reads: one round trip, not two.
   const [{ data: orgs }, { data: courts }] = await Promise.all([
-    supabase.from('organizations').select('id, name, address, city, status').eq('status', 'approved').limit(20),
-    supabase.from('courts').select('id, org_id, name, sport, price_per_hour, status').eq('status', 'active').limit(50),
+    supabase.from('organizations').select('id, name, address, city, status').eq('status', 'approved').is('deleted_at', null).limit(20),
+    supabase.from('courts').select('id, org_id, name, sport, price_per_hour, status').eq('status', 'active').is('deleted_at', null).limit(50),
   ])
 
   return (

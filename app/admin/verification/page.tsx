@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 
+import { ArchiveDialog } from '@/components/admin/archive-dialog'
 import { ReviewDialog } from '@/components/admin/review-dialog'
 import { Badge } from '@/components/ui/badge'
 import { formatVenueDate, formatVenueTime, venueDateString } from '@/lib/court-time'
@@ -15,11 +16,12 @@ import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
-const TAB_LABEL: Record<QueueStatus, string> = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected' }
+const TAB_LABEL: Record<QueueStatus, string> = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected', archived: 'Archived' }
 const EMPTY: Record<QueueStatus, string> = {
   pending: 'No clubs are waiting for review.',
   approved: 'No clubs have been approved yet.',
   rejected: 'No clubs have been rejected.',
+  archived: 'No clubs have been archived.',
 }
 
 function stamp(iso: string) {
@@ -89,8 +91,8 @@ function OrgCard({ row }: { row: VerificationRow }) {
     <li className="flex flex-col rounded-xl bg-[#eae6df] p-5">
       <div className="flex items-start justify-between gap-3">
         <h2 className="min-w-0 text-base font-semibold leading-snug">{row.name}</h2>
-        <Badge variant={row.status === 'approved' ? 'success' : row.status === 'rejected' ? 'destructive' : 'warning'}>
-          {row.status === 'approved' ? 'Approved' : row.status === 'rejected' ? 'Rejected' : 'Pending'}
+        <Badge variant={row.archived ? 'secondary' : row.status === 'approved' ? 'success' : row.status === 'rejected' ? 'destructive' : 'warning'}>
+          {row.archived ? 'Archived' : row.status === 'approved' ? 'Approved' : row.status === 'rejected' ? 'Rejected' : 'Pending'}
         </Badge>
       </div>
 
@@ -140,14 +142,17 @@ function OrgCard({ row }: { row: VerificationRow }) {
         </p>
       )}
 
-      <div className="mt-auto pt-4">
-        <ReviewDialog
-          orgId={row.id}
-          orgName={row.name}
-          hasDocument={row.hasDocument}
-          canApprove={row.status !== 'approved'}
-          canReject={row.status === 'pending'}
-        />
+      <div className="mt-auto space-y-2 pt-4">
+        {!row.archived && (
+          <ReviewDialog
+            orgId={row.id}
+            orgName={row.name}
+            hasDocument={row.hasDocument}
+            canApprove={row.status !== 'approved'}
+            canReject={row.status === 'pending'}
+          />
+        )}
+        <ArchiveDialog orgId={row.id} orgName={row.name} archived={row.archived} />
       </div>
     </li>
   )

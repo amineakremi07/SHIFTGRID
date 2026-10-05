@@ -9,6 +9,8 @@ export type OrgContext = {
   orgId: string
   orgName: string
   orgStatus: OrgStatus
+  /** The club was archived (soft deleted): the dashboard is closed, its history is kept. */
+  archived: boolean
   /** Why the club was rejected, when it was. */
   rejectionReason: string | null
   displayName: string
@@ -46,7 +48,7 @@ export const getOrgAccess = cache(async (): Promise<OrgAccess> => {
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('id, name, status, rejection_reason')
+    .select('id, name, status, rejection_reason, deleted_at')
     .eq('id', profile.org_id)
     .maybeSingle()
   if (!org) return { kind: 'not_staff', role: profile.role }
@@ -58,7 +60,9 @@ export const getOrgAccess = cache(async (): Promise<OrgAccess> => {
       role: profile.role,
       orgId: org.id,
       orgName: org.name,
-      orgStatus: org.status,
+      // An archived club counts as suspended everywhere an approved club is required.
+      orgStatus: org.deleted_at ? 'suspended' : org.status,
+      archived: Boolean(org.deleted_at),
       rejectionReason: org.rejection_reason,
       displayName: profile.display_name,
     },

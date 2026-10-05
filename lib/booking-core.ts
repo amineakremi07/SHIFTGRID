@@ -34,21 +34,21 @@ export async function checkBookableSlot(
 ): Promise<SlotCheckOk | SlotCheckError> {
   const { data: court } = await admin
     .from('courts')
-    .select('id, org_id, sport, status, open_time, close_time, price_per_hour, night_surcharge_per_hour, night_starts_at')
+    .select('id, org_id, sport, status, deleted_at, open_time, close_time, price_per_hour, night_surcharge_per_hour, night_starts_at')
     .eq('id', input.courtId)
     .maybeSingle()
 
-  if (!court || court.org_id !== input.orgId || court.status !== 'active' || !isSport(court.sport)) {
+  if (!court || court.org_id !== input.orgId || court.status !== 'active' || court.deleted_at !== null || !isSport(court.sport)) {
     return { ok: false, code: 'unavailable', message: 'This court is no longer available for booking.' }
   }
   const sport = court.sport
 
   const { data: org } = await admin
     .from('organizations')
-    .select('status, weekly_hours')
+    .select('status, deleted_at, weekly_hours')
     .eq('id', input.orgId)
     .maybeSingle()
-  if (org?.status !== 'approved') {
+  if (org?.status !== 'approved' || org.deleted_at !== null) {
     return { ok: false, code: 'unavailable', message: 'This club is not accepting bookings right now.' }
   }
 

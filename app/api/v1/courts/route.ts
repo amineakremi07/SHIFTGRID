@@ -58,6 +58,7 @@ export const GET = withApiKeyAuth(async (request: NextRequest, context) => {
       .from('courts')
       .select('*', { count: 'exact' })
       .eq('org_id', organizationId)
+      .is('deleted_at', null) // archived courts are not listed
       .order('created_at', { ascending: false })
 
     if (sport) query = query.eq('sport', sport)

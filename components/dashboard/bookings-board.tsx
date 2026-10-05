@@ -39,6 +39,8 @@ export type BoardCourt = {
   pricePerHour: number
   nightSurchargePerHour: number
   nightStartsAt: string
+  /** Archived (soft deleted): shown only on days that still have bookings, read-only. */
+  archived: boolean
   /** The club is closed that day. */
   closed: boolean
   slots: BoardSlot[]
@@ -184,7 +186,9 @@ export function BookingsBoard({
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5">
-            {courts.map((court) => (
+            {courts
+              .filter((c) => !c.archived || onSchedule.some((b) => b.courtId === c.id))
+              .map((court) => (
               <CourtColumn
                 key={court.id}
                 court={court}
@@ -301,7 +305,8 @@ function CourtColumn({
             {court.sport} · {SPORT_DURATION_MIN[court.sport]} min
           </p>
         </div>
-        {court.status === 'maintenance' && <Badge variant="warning">Maintenance</Badge>}
+        {court.archived && <Badge variant="secondary">Archived</Badge>}
+        {!court.archived && court.status === 'maintenance' && <Badge variant="warning">Maintenance</Badge>}
       </header>
 
       {court.closed ? (
@@ -314,7 +319,7 @@ function CourtColumn({
           {court.slots.map((slot) => {
             const booking = byStart.get(Date.parse(slot.start))
             if (booking) return <BookingRow key={slot.start} booking={booking} now={now} onCancel={onCancel} onNoShow={onNoShow} />
-            const blocked = slot.past || court.status !== 'active'
+            const blocked = slot.past || court.status !== 'active' || court.archived
             return (
               <li key={slot.start}>
                 <button

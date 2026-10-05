@@ -37,7 +37,7 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
     supabase.from('organizations').select('weekly_hours').eq('id', ctx.orgId).maybeSingle(),
     supabase
       .from('courts')
-      .select('id, name, sport, status, open_time, close_time, price_per_hour, night_surcharge_per_hour, night_starts_at')
+      .select('id, name, sport, status, deleted_at, open_time, close_time, price_per_hour, night_surcharge_per_hour, night_starts_at')
       .eq('org_id', ctx.orgId)
       .order('name'),
     supabase
@@ -136,8 +136,10 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
         pricePerHour: Number(c.price_per_hour),
         nightSurchargePerHour: Number(c.night_surcharge_per_hour),
         nightStartsAt: c.night_starts_at,
+        archived: c.deleted_at !== null,
         closed: !hours,
-        slots: hours
+        // An archived court takes no new bookings: only the bookings it already has are shown.
+        slots: hours && c.deleted_at === null
           ? generateCourtSlots({
               sport: c.sport as Sport,
               openTime: hours.openTime,

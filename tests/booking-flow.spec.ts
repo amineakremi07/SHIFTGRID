@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { daysFromNow, getTestClubId } from './helpers/db'
+import { adminClient, daysFromNow, getTestClubId } from './helpers/db'
 
 /**
  * Milestone 9 end to end: the slot picker, a full booking through to its pass,
@@ -76,7 +76,9 @@ test('slot picker: legend, peak tags, and the duration and price change with the
   await page.getByRole('tab', { name: 'Tennis' }).click()
   await pickSlot(page, 'Tennis Court 1')
   await expect(drawer(page)).toContainText('60 min')
-  await expect(priceSummary(page)).toContainText('30 TND')
+  // The price comes from the court row (a club may have its own "Tennis Court 1"), not a number baked into the test.
+  const { data: tennis } = await adminClient().from('courts').select('price_per_hour').eq('org_id', clubId).eq('name', 'Tennis Court 1').is('deleted_at', null).single()
+  await expect(priceSummary(page)).toContainText(`${Number(tennis!.price_per_hour)} TND`)
   await expect(priceSummary(page)).not.toContainText('90 TND')
 })
 
@@ -113,7 +115,7 @@ test('full booking: pay online, land on the pass at /reservations/[id]', async (
   await expect(page.getByTestId('reference')).toHaveText(/^[0-9A-F]{8}$/)
   await expect(page.getByTestId('payment-summary')).toContainText('Paid in full')
   await expect(page.getByText('Confirmed', { exact: true })).toBeVisible()
-  await expect(page.getByRole('img', { name: /^QR code for booking/ }).locator('svg')).toHaveCount(1)
+  await expect(page.getByRole('img', { name: /^Check-in QR code for booking/ }).locator('svg')).toHaveCount(1)
 
   // The pass is private: without the secret link or a session it does not exist.
   // (The route has a loading.tsx, so Next streams its "not found" with HTTP 200; what

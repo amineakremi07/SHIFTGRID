@@ -44,6 +44,8 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
   const requested = searchParams.get('redirect') ?? searchParams.get('callbackUrl') ?? searchParams.get('next')
   const copy = COPY[portal]
   const passwordWasReset = searchParams.get('reset') === '1'
+  // /auth/callback sends a bad, expired or already used email link here.
+  const linkProblem = searchParams.get('error') === 'link_invalid'
 
   const [error, setError] = useState<React.ReactNode>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -83,7 +85,8 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
 
     // Club managers need an approved club; a pending or rejected one has nothing to manage yet.
     if (profile.role === 'org_admin' || profile.role === 'staff') {
-      const { data: org } = await supabase.from('organizations').select('status').eq('id', profile.org_id).maybeSingle()
+      const { data: org } = await supabase.from('organizations').select('status, deleted_at').eq('id', profile.org_id).maybeSingle()
+      if (org?.deleted_at) return fail('This club has been closed. Please contact support.')
       if (org?.status === 'pending') return fail('Your organization is still pending verification. Please wait for approval.')
       if (org?.status === 'rejected') return fail('Your organization registration was rejected. Please contact support.')
       if (org?.status !== 'approved') return fail('Your organization is not active. Please contact support.')
@@ -119,6 +122,15 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
 
         <div className="bg-background border rounded-lg p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            {linkProblem && !error && (
+              <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive" data-testid="link-invalid">
+                That email link is invalid, has expired or was already used. Sign in below, or ask for a new link (a new invitation from the club owner, or{' '}
+                <Link href="/forgot-password" className="font-medium underline underline-offset-2">
+                  a password reset
+                </Link>
+                ).
+              </div>
+            )}
             {passwordWasReset && !error && (
               <div role="status" className="rounded-md border border-[#0e634f]/30 bg-[#0e634f]/10 p-3 text-sm text-[#0e634f]">
                 Your password was updated. Please sign in with your new password.

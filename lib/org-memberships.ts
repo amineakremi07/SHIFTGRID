@@ -11,6 +11,8 @@ export type Membership = {
   name: string
   role: MembershipRole
   status: OrgStatus
+  /** Soft-deleted: listed so the account can still see it, but closed. */
+  archived: boolean
 }
 
 /** Shown in the switcher next to a club's name. */
@@ -47,14 +49,14 @@ export const getMemberships = cache(async (): Promise<{ activeOrgId: string | nu
 
   const { data: orgs } = await getSupabaseAdmin()
     .from('organizations')
-    .select('id, name, status')
+    .select('id, name, status, deleted_at')
     .in('id', members.map((m) => m.org_id))
   const byId = new Map((orgs ?? []).map((o) => [o.id, o]))
 
   const items: Membership[] = members
     .flatMap((m) => {
       const org = byId.get(m.org_id)
-      return org ? [{ orgId: org.id, name: org.name, role: m.role as MembershipRole, status: org.status as OrgStatus }] : []
+      return org ? [{ orgId: org.id, name: org.name, role: m.role as MembershipRole, status: org.status as OrgStatus, archived: Boolean(org.deleted_at) }] : []
     })
     // The platform context first, then clubs by name.
     .sort((a, b) => (a.role === 'platform_admin' ? -1 : b.role === 'platform_admin' ? 1 : a.name.localeCompare(b.name)))

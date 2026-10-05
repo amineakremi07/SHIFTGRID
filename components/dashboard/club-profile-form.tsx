@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { saveClubProfile } from '@/lib/actions/club-profile'
 import { geocodeAddress } from '@/lib/actions/owner-signup'
+import { reverseGeocodeAction } from '@/lib/actions/reverse-geocode'
 import { BIO_MAX, clubProfileSchema, DEFAULT_MAP_CENTER } from '@/lib/club-profile'
 
 // Leaflet needs `window`: the picker is loaded in the browser only.
@@ -64,11 +65,43 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
   )
   const [query, setQuery] = React.useState([initial.address, initial.city].filter(Boolean).join(', '))
   const [searching, setSearching] = React.useState(false)
+  // Reverse geocoding: the address under the pin fills the address field when the pin is clicked or dragged.
+  const [lookingUp, setLookingUp] = React.useState(false)
+  const [addressNote, setAddressNote] = React.useState('')
+  const lookupId = React.useRef(0)
+  const typedWhileLookingUp = React.useRef(false)
   const [searchNote, setSearchNote] = React.useState('')
   const [errors, setErrors] = React.useState<Errors>({})
   const [saving, setSaving] = React.useState(false)
 
   const center = pin ?? DEFAULT_MAP_CENTER
+
+  /**
+   * The owner moved the pin by hand: ask OpenStreetMap what is there and fill the address (and city).
+   * A newer move supersedes an older lookup, and anything the owner typed while it ran is never
+   * overwritten. If the lookup fails the fields stay as they were and the pin still saves.
+   */
+  const fillAddressFromPin = async (p: MarkerPosition) => {
+    const id = ++lookupId.current
+    typedWhileLookingUp.current = false
+    setLookingUp(true)
+    setAddressNote('')
+    const result = await reverseGeocodeAction(p.latitude, p.longitude)
+    if (id !== lookupId.current) return // a later pin move owns the field now
+    setLookingUp(false)
+    if (!result.ok) {
+      setAddressNote(`${result.message} Type the address yourself: the pin is still saved with your changes.`)
+      return
+    }
+    if (typedWhileLookingUp.current) {
+      setAddressNote('You edited the address while it was being looked up, so it was left as you typed it.')
+      return
+    }
+    setAddress(result.address.slice(0, 200))
+    if (result.city) setCity(result.city.slice(0, 80))
+    setErrors((e) => ({ ...e, address: undefined, city: undefined }))
+    setAddressNote('Address filled in from the map. Check it and edit it if needed.')
+  }
 
   const search = async () => {
     const text = (query.trim() || [address, city].filter(Boolean).join(', ')).trim()
@@ -170,7 +203,33 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="grid gap-1.5 sm:col-span-2">
               <Label htmlFor="cp-address">Physical address</Label>
-              <Input id="cp-address" value={address} onChange={(e) => setAddress(e.target.value)} maxLength={200} error={Boolean(errors.address)} placeholder="12 Avenue Habib Bourguiba" autoComplete="off" />
+              <div className="relative">
+                <Input
+                  id="cp-address"
+                  value={address}
+                  onChange={(e) => {
+                    if (lookingUp) typedWhileLookingUp.current = true
+                    setAddress(e.target.value)
+                  }}
+                  maxLength={200}
+                  error={Boolean(errors.address)}
+                  placeholder="12 Avenue Habib Bourguiba"
+                  autoComplete="off"
+                  aria-busy={lookingUp}
+                  aria-describedby="cp-address-note"
+                  className={lookingUp ? 'pr-9' : undefined}
+                />
+                {lookingUp && (
+                  <Loader2
+                    className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-[#645757]"
+                    aria-label="Looking up the address"
+                    data-testid="address-loading"
+                  />
+                )}
+              </div>
+              <p id="cp-address-note" role="status" aria-live="polite" className="min-h-4 text-xs text-[#645757]" data-testid="address-note">
+                {lookingUp ? 'Looking up the address…' : addressNote}
+              </p>
               {errors.address && <p role="alert" className="text-xs text-destructive">{errors.address}</p>}
             </div>
             <div className="grid gap-1.5">
@@ -213,6 +272,7 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
               longitude={center.longitude}
               onPositionChange={(p) => {
                 setPin(p)
+                void fillAddressFromPin(p) // a click or a drag-end on the map (search results do not trigger it)
                 setErrors((e) => ({ ...e, location: undefined }))
               }}
               draggable

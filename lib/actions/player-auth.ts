@@ -1,5 +1,7 @@
 'use server'
 
+import { AUTH_PATHS } from '@/lib/auth-urls'
+import { requestOrigin } from '@/lib/notifications/origin'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { actionRateLimit } from '@/lib/rate-limit'
@@ -109,7 +111,7 @@ export async function signUpPlayer(
   // Check if organization exists and is approved
   const { data: org, error: orgError } = await supabase
     .from('organizations')
-    .select('id, status')
+    .select('id, status, deleted_at')
     .eq('id', data.orgId)
     .single()
 
@@ -117,7 +119,7 @@ export async function signUpPlayer(
     return { success: false, error: 'Invalid sports complex' }
   }
 
-  if (org.status !== 'approved') {
+  if (org.status !== 'approved' || org.deleted_at !== null) {
     return { success: false, error: 'This sports complex is not yet available for bookings' }
   }
 
@@ -131,7 +133,7 @@ export async function signUpPlayer(
         phone: data.phone,
         ...consentMetadata(),
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      emailRedirectTo: `${await requestOrigin()}${AUTH_PATHS.callback}`, // must be on the Supabase Redirect URLs list (lib/auth-urls.ts)
     },
   })
 
@@ -203,10 +205,10 @@ export async function registerPlayer(input: PlayerRegisterInput): Promise<Regist
 
   const { data: org } = await admin
     .from('organizations')
-    .select('status')
+    .select('status, deleted_at')
     .eq('id', orgId)
     .maybeSingle()
-  if (org?.status !== 'approved') {
+  if (org?.status !== 'approved' || org.deleted_at !== null) {
     return { success: false, error: 'That club is not available for registration.' }
   }
 
@@ -267,7 +269,7 @@ export async function createAnonymousBooker(
   // Check if organization exists and is approved
   const { data: org, error: orgError } = await supabaseAdmin
     .from('organizations')
-    .select('id, status')
+    .select('id, status, deleted_at')
     .eq('id', data.orgId)
     .single()
 
@@ -275,7 +277,7 @@ export async function createAnonymousBooker(
     return { success: false, error: 'Invalid sports complex' }
   }
 
-  if (org.status !== 'approved') {
+  if (org.status !== 'approved' || org.deleted_at !== null) {
     return { success: false, error: 'This sports complex is not yet available for bookings' }
   }
 

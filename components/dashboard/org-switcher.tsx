@@ -13,6 +13,7 @@ export type SwitcherItem = {
   name: string
   role: 'org_admin' | 'staff' | 'platform_admin'
   status: string
+  archived?: boolean
 }
 
 const ROLE_LABEL = { org_admin: 'Owner', staff: 'Staff', platform_admin: 'Platform admin' } as const
@@ -70,7 +71,9 @@ export function OrgSwitcher({ items, activeOrgId }: { items: SwitcherItem[]; act
                 {item.role === 'platform_admin' && <ShieldCheck className="size-3.5" aria-hidden />}
                 {item.role === 'platform_admin' ? 'Platform admin' : item.name}
                 {item.role !== 'platform_admin' && <span className="text-xs text-muted-foreground">· {ROLE_LABEL[item.role]}</span>}
-                {item.role !== 'platform_admin' && item.status !== 'approved' && <span className="text-xs text-muted-foreground">· {item.status}</span>}
+                {item.role !== 'platform_admin' && (item.archived || item.status !== 'approved') && (
+                  <span className="text-xs text-muted-foreground">· {item.archived ? 'closed' : item.status}</span>
+                )}
               </span>
             </SelectItem>
           ))}

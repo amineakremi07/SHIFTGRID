@@ -1,11 +1,14 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { z } from 'zod'
 
 import { requireAdmin } from '@/lib/admin/access'
 import { documentRef } from '@/lib/admin/verification'
 import { sendOrgDecisionEmail } from '@/lib/email/org-decision'
+import { notifyCancellation } from '@/lib/notifications/service'
+import { reportServerError } from '@/lib/observability'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import type { OrgStatus } from '@/lib/types/database'
 
@@ -148,4 +151,72 @@ export async function getVerificationDocument(orgId: string): Promise<DocumentRe
   const ext = (ref.path ?? ref.legacyUrl ?? '').split('?')[0].split('.').pop()?.toLowerCase()
   const kind = ext === 'pdf' ? 'pdf' : ext && ['jpg', 'jpeg', 'png'].includes(ext) ? 'image' : 'other'
   return { ok: true, url: url!, kind, name }
+}
+
+/* -------------------------------------------------------------------------------------------
+   Archiving a club (soft delete). The platform admin's only way to take a club down: a flag,
+   never a DELETE (the database blocks hard deletes of anything with booking history anyway).
+   ---------------------------------------------------------------------------------------- */
+
+export type ArchiveResult =
+  | { ok: true }
+  | { ok: false; message: string; /** The club still has this many upcoming bookings: ask before cancelling them. */ upcoming?: number }
+
+/**
+ * Hide a club everywhere and close its dashboard and API keys, keeping every booking, payment and court.
+ * With upcoming open bookings it refuses until the admin confirms (`cancelUpcoming`), then cancels them
+ * (the slot locks are freed, refunds recorded) and emails each player.
+ */
+export async function archiveOrganizationAction(orgId: string, cancelUpcoming = false): Promise<ArchiveResult> {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth
+  if (!uuid.safeParse(orgId).success) return { ok: false, message: 'Invalid organization.' }
+
+  const { data, error } = await getSupabaseAdmin().rpc('archive_organization', {
+    p_org_id: orgId,
+    p_cancel_upcoming: cancelUpcoming,
+  })
+  if (error) {
+    const upcoming = error.message.match(/has_upcoming_bookings:(\d+)/)
+    if (upcoming) return { ok: false, message: 'This club has upcoming bookings.', upcoming: Number(upcoming[1]) }
+    if (error.message.includes('org_not_found')) {
+      refreshPages()
+      return { ok: false, message: 'This club is already archived or no longer exists.' }
+    }
+    console.error('archiveOrganization failed', { code: error.code, message: error.message })
+    reportServerError('admin.archive-org', new Error(`archive_organization failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
+    return { ok: false, message: 'Could not archive the club. Please try again.' }
+  }
+
+  // The players whose bookings were cancelled hear about it after the response.
+  const ids = ((data as { cancelled_booking_ids?: string[] } | null)?.cancelled_booking_ids ?? []).filter((id) => uuid.safeParse(id).success)
+  if (ids.length) {
+    after(async () => {
+      for (const bookingId of ids) await notifyCancellation({ bookingId, by: 'club' })
+    })
+  }
+
+  refreshPages()
+  revalidatePath(`/courts/${orgId}`)
+  return { ok: true }
+}
+
+export async function restoreOrganizationAction(orgId: string): Promise<ArchiveResult> {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth
+  if (!uuid.safeParse(orgId).success) return { ok: false, message: 'Invalid organization.' }
+
+  const { error } = await getSupabaseAdmin().rpc('restore_organization', { p_org_id: orgId })
+  if (error) {
+    if (error.message.includes('org_not_found')) {
+      refreshPages()
+      return { ok: false, message: 'This club is not archived.' }
+    }
+    console.error('restoreOrganization failed', { code: error.code, message: error.message })
+    return { ok: false, message: 'Could not restore the club. Please try again.' }
+  }
+
+  refreshPages()
+  revalidatePath(`/courts/${orgId}`)
+  return { ok: true }
 }

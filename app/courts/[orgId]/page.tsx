@@ -8,6 +8,7 @@ import { ClubBookingView } from '@/components/courts/club-booking-view'
 import { ClubGallery } from '@/components/club/club-gallery'
 import { ClubLocation } from '@/components/club/club-location'
 import { ownGalleryUrls } from '@/lib/club-profile'
+import { displayAddress } from '@/lib/geocode'
 import { generateCourtSlots } from '@/lib/court-slots'
 import { addDays, venueDateString, venueInstant } from '@/lib/court-time'
 import { effectiveHours, parseWeeklyHours, weekdayKey, WEEKDAY_LABELS } from '@/lib/operating-hours'
@@ -80,12 +81,14 @@ export default async function ClubPage({
       .select('id, name, address, city, weekly_hours, description, latitude, longitude, gallery_urls')
       .eq('id', orgId)
       .eq('status', 'approved')
+      .is('deleted_at', null)
       .maybeSingle(),
     supabase
       .from('courts')
       .select('id, name, sport, price_per_hour, open_time, close_time, night_surcharge_per_hour, night_starts_at')
       .eq('org_id', orgId)
       .eq('status', 'active')
+      .is('deleted_at', null)
       .order('name'),
     loadMember(orgId),
   ])
@@ -167,7 +170,7 @@ export default async function ClubPage({
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{org.name}</h1>
         <p className="mt-2 flex items-center gap-1.5 text-muted-foreground">
           <MapPin className="size-4 shrink-0" aria-hidden />
-          {[org.address, org.city].filter(Boolean).join(' · ') || 'Tunisia'}
+          {displayAddress(org.address, org.city) || 'Tunisia'}
         </p>
       </header>
 

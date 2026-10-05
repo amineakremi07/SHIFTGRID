@@ -125,12 +125,18 @@ export default function PrivacyPage() {
 
       <Section id="retention" title="6. How long we keep it">
         <UL>
-          <li>Account data: while your account is open, then deleted or anonymised on request, except what we must keep by law.</li>
+          <li>
+            Account data: while your account is open. When you delete your account (&ldquo;Delete my account&rdquo; on the My reservations page, or on
+            request) your name, phone number, email, login and password are erased and your profile becomes anonymous (&ldquo;Joueur Anonyme&rdquo;).
+            What we keep, without any personal data: your past bookings (for the clubs&apos; accounting), the number of bookings, and your no-show
+            count and trust score as anonymous statistics. Upcoming bookings are cancelled.
+          </li>
           <li>
             Booking and payment records: as long as needed for accounting, tax and dispute purposes, for the periods Tunisian law
             requires; after that they are deleted or anonymised.
           </li>
-          <li>Guest bookers: kept with the bookings they relate to, for the same periods.</li>
+          <li>Guest bookers: kept with the bookings they relate to, for the same periods; on request the name, phone number and email are erased and the booking stays anonymous.</li>
+          <li>Clubs and courts that are closed are archived, not deleted: their booking history stays for the clubs&apos; accounting, but they are no longer listed or bookable.</li>
           <li>Club verification documents: while the club is active, then for the period needed to answer disputes or legal requests.</li>
           <li>Technical logs and rate-limit counters: short-lived (minutes to weeks).</li>
         </UL>

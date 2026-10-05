@@ -47,6 +47,8 @@ export type Database = {
           city: string | null
           latitude: number | null
           longitude: number | null
+          /** Soft delete: an archived club is hidden everywhere public and closed to its owner; history stays. */
+          deleted_at: string | null
           /** The club's bio, shown on its public page (max 1000 characters). */
           description: string | null
           /** Public URLs of the club's photos in the `club-assets` bucket, in display order (max 12). */
@@ -73,6 +75,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           description?: string | null
+          deleted_at?: string | null
           gallery_urls?: string[]
           weekly_hours?: Json | null
           sport_types?: Sport[]
@@ -103,6 +106,8 @@ export type Database = {
           price_per_hour: number
           night_surcharge_per_hour: number
           night_starts_at: string
+          /** Soft delete: an archived court is hidden from players and the calendar but keeps its bookings. */
+          deleted_at: string | null
           created_at: string
           updated_at: string
         }
@@ -115,6 +120,7 @@ export type Database = {
           price_per_hour?: number
           night_surcharge_per_hour?: number
           night_starts_at?: string
+          deleted_at?: string | null
           open_time?: string
           close_time?: string
           created_at?: string
@@ -134,6 +140,8 @@ export type Database = {
           display_name: string
           phone: string | null
           avatar_url: string | null
+          /** Set when the player's personal data was erased (anonymize_player). The row and its counters stay. */
+          anonymized_at: string | null
           /** Starts at 100; -30 per no-show (floor 0). Written only by mark_booking_no_show(). */
           trust_score: number
           no_show_count: number
@@ -510,6 +518,26 @@ export type Database = {
       switch_active_organization: {
         Args: { p_user_id: string; p_org_id: string }
         Returns: Json
+      }
+      archive_organization: {
+        Args: { p_org_id: string; p_cancel_upcoming?: boolean }
+        Returns: Json
+      }
+      restore_organization: {
+        Args: { p_org_id: string }
+        Returns: Json
+      }
+      anonymize_player: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      anonymize_guest: {
+        Args: { p_guest_id: string }
+        Returns: Json
+      }
+      purge_bookings: {
+        Args: { p_ids: string[] }
+        Returns: number
       }
       mark_booking_no_show: {
         Args: { p_org_id: string; p_booking_id: string }
