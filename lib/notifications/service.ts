@@ -183,6 +183,8 @@ export type BookingCreatedInput = {
   origin: string
   /** A guest's secret (their cancel token); null for members. */
   guestToken: string | null
+  /** The token in the pass link: a member's read-only pass token, or the guest's own token. */
+  passToken?: string | null
   /** An address the guest typed in this booking, if any. */
   guestEmail?: string | null
   paidNow: number
@@ -224,7 +226,8 @@ export async function notifyBookingCreated(input: BookingCreatedInput): Promise<
 
     let confirmation: DeliverResult | null = null
     if (ctx.booker.email) {
-      const passUrl = bookingPassUrl(input.origin, ctx.bookingId, input.guestToken)
+      // The button always carries a token, so the pass opens without signing in (a member's is read-only).
+      const passUrl = bookingPassUrl(input.origin, ctx.bookingId, input.passToken ?? input.guestToken)
       // The arrival code and its QR (an inline image) go in the confirmation of every open booking.
       const checkInCode = ctx.status === 'cancelled' ? null : ctx.checkInCode
       const rendered = confirmationEmail({

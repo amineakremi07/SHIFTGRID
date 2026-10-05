@@ -59,7 +59,8 @@ export default async function PassPage({
   const status = statusOf(pass)
   const active = pass.status === 'confirmed' || pass.status === 'pending_payment'
   const day = formatVenueDate(venueDateString(new Date(pass.startsAt)))
-  const organizer = pass.viewer !== 'staff'
+  // Only the booker (signed in, or holding the guest link) manages split shares; a read-only pass link does not.
+  const organizer = pass.viewer === 'owner' || pass.viewer === 'guest'
   const backHref = pass.viewer === 'staff' ? '/dashboard/org/bookings' : pass.viewer === 'owner' ? '/reservations' : '/'
 
   // What the QR carries: the check-in code (the club's scanner reads it at reception); older
@@ -177,6 +178,10 @@ export default async function PassPage({
                 {pass.viewer === 'guest' && pass.guestToken ? (
                   <Link href={`/reservations/cancel-guest?token=${pass.guestToken}`} className="underline underline-offset-4">
                     Cancel this booking
+                  </Link>
+                ) : pass.viewer === 'pass' ? (
+                  <Link href="/reservations" className="underline underline-offset-4">
+                    Sign in to manage or cancel your booking
                   </Link>
                 ) : pass.viewer === 'owner' ? (
                   <Link href="/reservations" className="underline underline-offset-4">

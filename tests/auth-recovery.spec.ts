@@ -6,7 +6,7 @@ import { forgotPasswordSchema, newPasswordSchema } from '../lib/validations/pass
 
 /** Pure checks for password recovery and the booking-pass link in emails (no browser, no database). */
 
-const ORIGIN = 'https://shiftgrid-eight.vercel.app'
+const ORIGIN = 'https://shiftgridtn.vercel.app'
 const ID = '3922dd5f-1d3f-4a6b-8c9d-1e2f3a4b5c6d'
 const TOKEN = 'a'.repeat(48)
 const facts: BookingFacts = {

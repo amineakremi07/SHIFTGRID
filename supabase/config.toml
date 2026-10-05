@@ -167,15 +167,15 @@ max_catalogs = 2
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "https://shiftgrid-eight.vercel.app"
+site_url = "https://shiftgridtn.vercel.app"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
   # production
-  "https://shiftgrid-eight.vercel.app/auth/callback",
-  "https://shiftgrid-eight.vercel.app/accept-invitation",
-  "https://shiftgrid-eight.vercel.app/reset-password",
+  "https://shiftgridtn.vercel.app/auth/callback",
+  "https://shiftgridtn.vercel.app/accept-invitation",
+  "https://shiftgridtn.vercel.app/reset-password",
   # local development (next dev on port 3000)
   "http://localhost:3000/auth/callback",
   "http://localhost:3000/accept-invitation",

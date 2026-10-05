@@ -1,9 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { headers } from 'next/headers'
 import { z } from 'zod'
 
+import { resolveAppUrl } from '@/lib/app-url'
 import { sendStaffInviteEmail } from '@/lib/email/staff-invite'
 import { requireOrgAction } from '@/lib/org-access'
 import { findPendingInviteForEmail } from '@/lib/staff-invite-core'
@@ -32,13 +32,7 @@ export type InviteActionResult =
   | { ok: true; inviteUrl: string; emailSent: boolean }
   | { ok: false; message: string }
 
-async function appOrigin() {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')
-  const h = await headers()
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
-  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
-  return `${proto}://${host}`
-}
+const appOrigin = async () => resolveAppUrl()
 
 /** Auth users are looked up by email through the admin API (there is no by-email getter). */
 async function emailHasAccount(email: string): Promise<boolean> {

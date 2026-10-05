@@ -192,6 +192,8 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     ends_at: string
     amount: number
     cancel_token: string | null
+    /** Always set: a member's read-only pass token, or the guest's own token. */
+    pass_token: string | null
   }
 
   // --- take the payment. The booking exists (and holds the slot) as pending. ----
@@ -240,6 +242,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
       bookingId: row.booking_id,
       origin,
       guestToken: row.cancel_token,
+      passToken: row.pass_token,
       guestEmail,
       paidNow,
       invites: invites.map((invite, i) => ({ ...invite, email: inviteAddresses[i] ?? null })),
@@ -258,7 +261,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     payment: choice,
     paidNow,
     invites,
-    passPath: row.cancel_token ? `/reservations/${row.booking_id}?token=${row.cancel_token}` : `/reservations/${row.booking_id}`,
+    passPath: row.pass_token ? `/reservations/${row.booking_id}?token=${row.pass_token}` : `/reservations/${row.booking_id}`,
     emailsEnabled: emailEnabled(),
   }
 }

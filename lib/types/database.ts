@@ -234,6 +234,8 @@ export type Database = {
           cancellation_reason: string | null
           /** SHA-256 of the guest's cancel token (never the token itself). Guests only. */
           guest_cancel_token_hash: string | null
+          /** SHA-256 of a MEMBER booking's read-only pass token (the email button). Never the token. */
+          pass_token_hash: string | null
           /** 6 digits shown to the player; staff type it (or scan its QR) at reception. */
           check_in_code: string | null
           checked_in_at: string | null
@@ -258,6 +260,7 @@ export type Database = {
           cancellation_deadline?: string
           cancellation_reason?: string | null
           guest_cancel_token_hash?: string | null
+          pass_token_hash?: string | null
           check_in_code?: string | null
           checked_in_at?: string | null
           source?: BookingSource

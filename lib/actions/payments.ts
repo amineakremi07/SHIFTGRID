@@ -102,7 +102,8 @@ export async function regenerateShareInviteAction(
 
   const access = await resolveViewer(bookingId, guestToken)
   // Only the person who booked (or holds the guest link) manages invites; club staff do not.
-  if (!access || access.viewer === 'staff') return { ok: false, message: 'You cannot change this booking.' }
+  // A read-only pass link (`pass`) can look at the booking but never change it.
+  if (!access || access.viewer === 'staff' || access.viewer === 'pass') return { ok: false, message: 'You cannot change this booking.' }
 
   const token = randomBytes(24).toString('hex')
   const { data, error } = await getSupabaseAdmin()

@@ -6,7 +6,7 @@
  * token and read the Location header, so the answer is the project's real behaviour, not a config file.
  *
  *   npm run verify:auth-urls                      uses NEXT_PUBLIC_APP_URL from .env.local
- *   node scripts/verify-auth-redirects.mjs --app-url https://shiftgrid-eight.vercel.app
+ *   node scripts/verify-auth-redirects.mjs --app-url https://shiftgridtn.vercel.app
  *
  * If it fails: `supabase config diff` (must list only auth.site_url and auth.additional_redirect_urls), then
  * `supabase config push`, or add the URLs in the dashboard (Authentication > URL Configuration). Exit 1 on failure.

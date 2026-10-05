@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 
 import { expect, test } from '@playwright/test'
 
+import { DEFAULT_APP_URL } from '../lib/app-url'
 import { AUTH_PATHS, AUTH_REDIRECT_PATHS, LOCAL_ORIGIN, requiredAuthRedirectUrls } from '../lib/auth-urls'
 
 /**
@@ -10,7 +11,7 @@ import { AUTH_PATHS, AUTH_REDIRECT_PATHS, LOCAL_ORIGIN, requiredAuthRedirectUrls
  */
 
 const read = (path: string) => readFileSync(path, 'utf8')
-const PROD = 'https://shiftgrid-eight.vercel.app'
+const PROD = DEFAULT_APP_URL
 
 test.describe('the redirect URL list', () => {
   test('is the three paths, for the app origin and for localhost', () => {
@@ -47,7 +48,7 @@ test.describe('supabase/config.toml', () => {
   })
 
   test('the Site URL is the production origin, not a local scaffold value', () => {
-    expect(toml).toMatch(/^site_url = "https:\/\/shiftgrid-eight\.vercel\.app"$/m)
+    expect(toml).toContain(`site_url = "${PROD}"`)
   })
 
   test('does not declare hosted settings it does not manage (a `config push` must not rewrite them)', () => {

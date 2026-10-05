@@ -109,6 +109,7 @@ export async function createManualBooking(orgId: string, rawInput: unknown): Pro
     ends_at: string
     amount: number
     cancel_token: string | null
+    pass_token: string | null
     check_in_code: string | null
   }
 
@@ -121,6 +122,7 @@ export async function createManualBooking(orgId: string, rawInput: unknown): Pro
         bookingId: row.booking_id,
         origin,
         guestToken: row.cancel_token,
+        passToken: row.pass_token,
         guestEmail: email,
         paidNow: paid ? Number(row.amount) : 0,
         invites: [],

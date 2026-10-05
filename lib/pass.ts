@@ -13,11 +13,13 @@ import type { BookingStatus, PaymentProvider, PaymentStatus, Sport } from '@/lib
  * secret token, never from the URL alone:
  *  - `owner`: the signed-in member who booked it;
  *  - `guest`: whoever holds the booking's secret link (its guest cancel token);
+ *  - `pass`: whoever holds a MEMBER booking's pass link (`pass_token_hash`): view only, no cancelling or managing;
  *  - `staff`: owner/staff of the booking's club, or a platform admin.
  * Everyone else gets `null`, which the page turns into a 404.
  */
 
-export type Viewer = 'owner' | 'guest' | 'staff'
+/** `pass`: holds a member booking's READ-ONLY pass link (the email button): can see the pass, nothing else. */
+export type Viewer = 'owner' | 'guest' | 'staff' | 'pass'
 
 export type PassShare = {
   shareNo: number
@@ -55,20 +57,23 @@ export type Pass = {
 export const hashShareToken = (token: string) => createHash('sha256').update(token).digest('hex')
 export { SHARE_TOKEN_PATTERN }
 
-type BookingRow = { id: string; org_id: string; booker_profile_id: string | null; guest_cancel_token_hash: string | null }
+type BookingRow = { id: string; org_id: string; booker_profile_id: string | null; guest_cancel_token_hash: string | null; pass_token_hash: string | null }
 
 /** How the caller relates to a booking, or null when they have no right to it. */
 export async function resolveViewer(bookingId: string, guestToken?: string | null): Promise<{ viewer: Viewer; booking: BookingRow } | null> {
   const admin = getSupabaseAdmin()
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, org_id, booker_profile_id, guest_cancel_token_hash')
+    .select('id, org_id, booker_profile_id, guest_cancel_token_hash, pass_token_hash')
     .eq('id', bookingId)
     .maybeSingle()
   if (!booking) return null
 
   if (guestToken && GUEST_TOKEN_PATTERN.test(guestToken) && booking.guest_cancel_token_hash === hashGuestToken(guestToken)) {
     return { viewer: 'guest', booking }
+  }
+  if (guestToken && GUEST_TOKEN_PATTERN.test(guestToken) && booking.pass_token_hash && booking.pass_token_hash === hashGuestToken(guestToken)) {
+    return { viewer: 'pass', booking }
   }
 
   const supabase = await createClient()
