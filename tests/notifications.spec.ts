@@ -119,7 +119,7 @@ async function bookingIdFromPass(page: Page): Promise<string> {
 test('a guest booking with an email: confirmation recorded once, address remembered, nothing secret stored', async ({ page }) => {
   await openClub(page, 44)
   await pickPadel(page)
-  await drawer(page).getByLabel(/Pay in full online/).check()
+  await drawer(page).getByLabel(/Pay all now/).check()
   await drawer(page).getByRole('tab', { name: 'Guest' }).click()
   await drawer(page).locator('#guest-name').fill('E2E Mail Guest')
   await drawer(page).locator('#guest-phone').fill('98121212')
@@ -164,7 +164,7 @@ test('a guest booking with an email: confirmation recorded once, address remembe
 test('a split booking emails each tagged player their link; a blank box sends nothing', async ({ page }) => {
   await openClub(page, 45)
   await pickPadel(page)
-  await drawer(page).getByLabel(/Split with your players/).check()
+  await drawer(page).getByLabel(/Split ·/).check()
   await drawer(page).getByLabel('Email for player 2').fill('e2e.friend.one@example.com')
   await drawer(page).getByLabel('Email for player 4').fill('e2e.friend.three@example.com')
   await drawer(page).getByRole('tab', { name: 'Guest' }).click()
@@ -195,7 +195,7 @@ test('a split booking emails each tagged player their link; a blank box sends no
 test('a bad invite address is caught before booking, not silently dropped', async ({ page }) => {
   await openClub(page, 46)
   await pickPadel(page)
-  await drawer(page).getByLabel(/Split with your players/).check()
+  await drawer(page).getByLabel(/Split ·/).check()
   await drawer(page).getByLabel('Email for player 2').fill('not-an-email')
   await drawer(page).getByRole('tab', { name: 'Guest' }).click()
   await drawer(page).locator('#guest-name').fill('E2E Typo Organizer')

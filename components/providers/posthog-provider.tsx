@@ -1,11 +1,14 @@
 'use client'
 
+import * as Sentry from '@sentry/nextjs'
 import { useEffect, useSyncExternalStore } from 'react'
 import { usePathname } from 'next/navigation'
 
 import { sanitizeEvent, stripQueryAndHash } from '@/lib/analytics-sanitize'
+import { INTERNAL_FLAG, INTERNAL_STORAGE_KEY, shouldRegisterInternal } from '@/lib/internal-user'
 import { getConsent, replayAllowed, subscribeConsent, TRACKING_CONFIGURED } from '@/lib/consent'
 import { registerRecorder } from '@/lib/replay-guard'
+import { linkSentryToPostHog, unlinkSentryFromPostHog } from '@/lib/sentry-link'
 
 /**
  * PostHog analytics behind a consent gate, loaded lazily and guarded to stay in the free tier.
@@ -29,6 +32,49 @@ import { registerRecorder } from '@/lib/replay-guard'
  */
 const KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY
 const HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST
+const APP_ENV = process.env.NEXT_PUBLIC_APP_ENV
+
+/** Tag this browser's events as team traffic when it is a local/dev machine or a team member opted in. */
+function applyInternalFlag(posthog: PostHog) {
+  let storage: Storage | null = null
+  try {
+    storage = window.localStorage
+  } catch {
+    /* storage blocked */
+  }
+  if (shouldRegisterInternal({ hostname: window.location.hostname, appEnv: APP_ENV, nodeEnv: process.env.NODE_ENV, storage })) {
+    posthog.register({ ...INTERNAL_FLAG })
+  } else {
+    posthog.unregister('is_internal_user')
+  }
+}
+
+/**
+ * Console helper for team members on production: `shiftgridInternal.enable()` marks this browser as
+ * internal (kept in localStorage `sg-internal`), `.disable()` undoes it. Takes effect on the next
+ * PostHog load and at once if PostHog is already running (i.e. the visitor accepted analytics).
+ */
+function installConsoleHelper() {
+  const set = (on: boolean) => {
+    try {
+      if (on) window.localStorage.setItem(INTERNAL_STORAGE_KEY, '1')
+      else window.localStorage.removeItem(INTERNAL_STORAGE_KEY)
+    } catch {
+      console.warn('ShiftGrid: browser storage is blocked, the internal flag could not be saved.')
+      return
+    }
+    if (instance) applyInternalFlag(instance)
+    console.info(
+      on
+        ? 'ShiftGrid: this browser is now marked is_internal_user = true.' + (instance ? '' : ' It applies once analytics consent is given.')
+        : 'ShiftGrid: internal flag removed from this browser.'
+    )
+  }
+  ;(window as unknown as { shiftgridInternal?: unknown }).shiftgridInternal = {
+    enable: () => set(true),
+    disable: () => set(false),
+  }
+}
 
 type PostHog = (typeof import('posthog-js'))['default']
 let loading: Promise<PostHog | null> | null = null
@@ -66,6 +112,7 @@ function loadPostHog(): Promise<PostHog | null> {
         })
       }
       instance = posthog
+      applyInternalFlag(posthog)
       // Lets instrumentation-client.ts stop recording before navigating into an excluded page.
       registerRecorder(posthog)
       return posthog
@@ -101,6 +148,9 @@ function clearPostHogStorage() {
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  useEffect(() => {
+    if (TRACKING_CONFIGURED) installConsoleHelper()
+  }, [])
   // Server snapshot is null: nothing optional renders or runs before hydration.
   const consent = useSyncExternalStore(subscribeConsent, getConsent, () => null)
   const analytics = TRACKING_CONFIGURED && consent?.analytics === true
@@ -115,6 +165,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       })
     } else if (instance) {
       // Was on in this page session and has been withdrawn.
+      unlinkSentryFromPostHog(Sentry)
       instance.stopSessionRecording()
       instance.opt_out_capturing()
       instance.reset()
@@ -136,6 +187,8 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         posthog.stopSessionRecording()
       }
       posthog.capture('$pageview', { $current_url: stripQueryAndHash(window.location.href) })
+      // Errors reported from here on point back to this PostHog session (and its replay, when recording).
+      linkSentryToPostHog(posthog, Sentry)
     })
     return () => {
       cancelled = true

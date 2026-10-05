@@ -5,6 +5,7 @@ import { after } from 'next/server'
 import { z } from 'zod'
 
 import { actionRateLimit } from '@/lib/rate-limit'
+import { captureAudit, timed } from '@/lib/telemetry'
 
 import { GUEST_TOKEN_PATTERN, hashGuestToken } from '@/lib/guest-cancel'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
@@ -43,7 +44,11 @@ const OPEN = ['pending_payment', 'confirmed'] as const
  *  - Staff (`org_admin` / `staff` of the booking's org): any open booking that has
  *    not finished, including inside the 24 h window.
  */
-export async function cancelBookingAction(input: CancelBookingInput): Promise<CancelBookingResult> {
+export async function cancelBookingAction(...args: Parameters<typeof cancelBookingActionImpl>): ReturnType<typeof cancelBookingActionImpl> {
+  return timed('action.booking.cancel', () => cancelBookingActionImpl(...args))
+}
+
+async function cancelBookingActionImpl(input: CancelBookingInput): Promise<CancelBookingResult> {
   const parsed = cancelSchema.safeParse(input)
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? 'Invalid request.' }
@@ -116,6 +121,13 @@ export async function cancelBookingAction(input: CancelBookingInput): Promise<Ca
   revalidatePath('/reservations')
   // Tell the booker, after the response (never throws, never blocks the cancel).
   const by = isOwner ? 'you' : 'club'
+  captureAudit({
+    action: 'booking.cancel',
+    status: 'cancelled',
+    booking_id: bookingId,
+    org_id: booking.org_id,
+    actor: isStaff ? (profile?.role ?? 'staff') : 'player',
+  })
   after(async () => {
     await notifyCancellation({ bookingId, by })
   })
@@ -164,6 +176,7 @@ async function cancelAsGuest(bookingId: string, token: string, reason: string | 
   revalidatePath(`/courts/${booking.org_id}`)
   revalidatePath('/dashboard/org/bookings')
   revalidatePath('/reservations/cancel-guest')
+  captureAudit({ action: 'booking.cancel', status: 'cancelled', booking_id: booking.id, org_id: booking.org_id, actor: 'guest' })
   after(async () => {
     await notifyCancellation({ bookingId: booking.id, by: 'you' })
   })

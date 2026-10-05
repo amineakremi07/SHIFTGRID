@@ -87,23 +87,23 @@ test('payment choices: three methods, split preview shows the share', async ({ p
   await pickSlot(page, 'Padel Court 1')
 
   await expect(drawer(page).getByRole('radio')).toHaveCount(3)
-  await expect(drawer(page).getByLabel(/Pay in full online/)).toBeEnabled()
-  await expect(drawer(page).getByLabel(/Split with your players/)).toBeEnabled()
-  await expect(drawer(page).getByLabel(/Pay at the venue/)).toBeChecked()
+  await expect(drawer(page).getByLabel(/Pay all now/)).toBeEnabled()
+  await expect(drawer(page).getByLabel(/Split ·/)).toBeEnabled()
+  await expect(drawer(page).getByLabel(/At club/)).toBeChecked()
 
-  await drawer(page).getByLabel(/Split with your players/).check()
+  await drawer(page).getByLabel(/Split ·/).check()
   await expect(drawer(page)).toContainText('Pay your 22.50 TND share')
   await expect(drawer(page).getByRole('button', { name: /Pay 22.50 TND & Reserve/ })).toBeVisible()
 
-  await drawer(page).getByLabel(/Pay in full online/).check()
+  await drawer(page).getByLabel(/Pay all now/).check()
   await expect(drawer(page).getByRole('button', { name: /Pay 90 TND & Reserve/ })).toBeVisible()
-  await expect(drawer(page)).toContainText('Test mode')
+  await expect(drawer(page)).toContainText('TEST')
 })
 
 test('full booking: pay online, land on the pass at /reservations/[id]', async ({ page }) => {
   await openClub(page, 42)
   await pickSlot(page, 'Padel Court 1')
-  await drawer(page).getByLabel(/Pay in full online/).check()
+  await drawer(page).getByLabel(/Pay all now/).check()
   await fillGuest(page, 'E2E Full Booking', '98111222')
   await drawer(page).getByRole('button', { name: /Pay 90 TND & Reserve/ }).click()
 
@@ -135,7 +135,7 @@ test('full booking: pay online, land on the pass at /reservations/[id]', async (
 test('split payment: invite links are generated, distinct, and each can be paid once', async ({ page, browser }) => {
   await openClub(page, 43)
   await pickSlot(page, 'Padel Court 1')
-  await drawer(page).getByLabel(/Split with your players/).check()
+  await drawer(page).getByLabel(/Split ·/).check()
   await fillGuest(page, 'E2E Split Booking', '98333444')
   await drawer(page).getByRole('button', { name: /Pay 22.50 TND & Reserve/ }).click()
 

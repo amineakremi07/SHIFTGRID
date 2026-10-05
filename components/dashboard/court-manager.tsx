@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { archiveCourtAction, restoreCourtAction, saveCourt, setCourtStatus } from '@/lib/actions/org-courts'
+import { slotHoursLabel, slotPrice } from '@/lib/pricing'
 import { BUFFER_MIN, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { courtFormSchema, type CourtFormInput } from '@/lib/validations/court'
 
@@ -41,7 +42,7 @@ const SPORT_LABEL: Record<Sport, string> = { padel: 'Padel', tennis: 'Tennis', f
 const EMPTY_FORM: CourtFormInput = {
   name: '',
   sport: 'padel',
-  pricePerHour: '',
+  pricePerSlot: '',
   nightSurchargePerHour: '0',
   nightStartsAt: '18:00',
   status: 'active',
@@ -94,7 +95,7 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Courts</h2>
           <p className="text-sm text-[#645757]">
-            Prices are per hour in TND. Slot length follows the sport and cannot be changed.
+            Prices are per slot in TND. Slot length follows the sport (padel and football 1.5h, tennis 1h) and cannot be changed.
           </p>
         </div>
         <Button
@@ -139,14 +140,17 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
 
                 <dl className="mt-4 grid grid-cols-3 gap-3 text-sm">
                   <div>
-                    <dt className="text-[#645757]">Base rate</dt>
-                    <dd className="font-medium">{tnd(court.pricePerHour)}/h</dd>
+                    <dt className="text-[#645757]">Base price</dt>
+                    <dd className="font-medium">
+                      {tnd(slotPrice(court.pricePerHour, SPORT_DURATION_MIN[court.sport]))}
+                      <span className="text-[#645757]"> / {slotHoursLabel(SPORT_DURATION_MIN[court.sport])}</span>
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-[#645757]">Night light</dt>
                     <dd className="font-medium">
                       {court.nightSurchargePerHour > 0
-                        ? `+${tnd(court.nightSurchargePerHour)}/h from ${court.nightStartsAt}`
+                        ? `+${tnd(court.nightSurchargePerHour)} from ${court.nightStartsAt}`
                         : 'None'}
                     </dd>
                   </div>
@@ -242,7 +246,7 @@ function CourtDialog({
       ? {
           name: existing.name,
           sport: existing.sport,
-          pricePerHour: String(existing.pricePerHour),
+          pricePerSlot: String(slotPrice(existing.pricePerHour, SPORT_DURATION_MIN[existing.sport])),
           nightSurchargePerHour: String(existing.nightSurchargePerHour),
           nightStartsAt: existing.nightStartsAt,
           status: existing.status,
@@ -312,19 +316,19 @@ function CourtDialog({
             </Select>
           </Field>
 
-          <Field id="court-price" label="Base price (TND / hour)" error={err('pricePerHour')}>
+          <Field id="court-price" label={`Price per ${slotHoursLabel(sportMinutes)} slot (TND)`} error={err('pricePerSlot')}>
             <Input
               id="court-price"
               inputMode="decimal"
-              value={form.pricePerHour}
-              onChange={(e) => set('pricePerHour', e.target.value)}
-              placeholder="60"
-              error={Boolean(err('pricePerHour'))}
+              value={form.pricePerSlot}
+              onChange={(e) => set('pricePerSlot', e.target.value)}
+              placeholder={sportMinutes === 60 ? '40' : '60'}
+              error={Boolean(err('pricePerSlot'))}
             />
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field id="court-night" label="Night surcharge (TND / h)" error={err('nightSurchargePerHour')}>
+            <Field id="court-night" label="Night Surcharge (TND)" error={err('nightSurchargePerHour')}>
               <Input
                 id="court-night"
                 inputMode="decimal"

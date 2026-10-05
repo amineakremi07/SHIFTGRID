@@ -53,7 +53,7 @@ export async function proxy(request: NextRequest) {
   // Rate limit API routes (Upstash when configured, in-memory otherwise).
   if (pathname.startsWith('/api/')) {
     const rule = apiRule(pathname)
-    const result = await rateLimit(rule, `${getClientIp(request)}:${rule === 'api' ? pathname : rule}`)
+    const result = await rateLimit(rule, `${getClientIp(request)}:${rule === 'api' ? pathname : rule}`, pathname)
     if (!result.ok) return tooManyRequests(result, securityHeaders)
   }
 

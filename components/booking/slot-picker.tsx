@@ -4,6 +4,8 @@ import * as React from 'react'
 
 import { CourtSlotMatrix, type MatrixCourt, type MatrixSelection } from '@/components/courts/court-slot-matrix'
 import { DayPicker } from '@/components/courts/day-picker'
+import { Badge } from '@/components/ui/badge'
+import { InfoTip } from '@/components/ui/info-tip'
 import { BUFFER_MIN, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { cn } from '@/lib/utils'
 
@@ -39,7 +41,11 @@ export function SlotLegend({ hasPeak, nightStartsAt }: { hasPeak: boolean; night
           >
             Peak
           </span>
-          Includes night lighting{nightStartsAt ? ` (from ${nightStartsAt.slice(0, 5)})` : ''}; other slots are off-peak
+          <span className="sr-only">Peak slots</span>
+          <InfoTip label="About peak slots">
+            Peak slots include the night surcharge{nightStartsAt ? ` (slots from ${nightStartsAt.slice(0, 5)})` : ''}; other
+            slots are off-peak.
+          </InfoTip>
         </li>
       )}
     </ul>
@@ -100,11 +106,20 @@ export function SlotPicker({
       <div className="space-y-2">
         <SlotLegend hasPeak={Boolean(peakCourt)} nightStartsAt={peakCourt?.nightStartsAt} />
         {sports.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Slot lengths are fixed per sport:{' '}
-            {sports.map((s) => `${SPORT_NAME[s]} ${SPORT_DURATION_MIN[s]} min`).join(', ')}, plus {BUFFER_MIN} min
-            changeover between bookings.
-          </p>
+          <ul aria-label="Slot lengths" className="flex flex-wrap items-center gap-1.5">
+            {sports.map((sp) => (
+              <li key={sp}>
+                <Badge variant="outline" className="tabular-nums">
+                  {SPORT_NAME[sp]} · {SPORT_DURATION_MIN[sp]} min
+                </Badge>
+              </li>
+            ))}
+            <li>
+              <InfoTip label="About slot lengths and changeover">
+                Slot lengths are fixed per sport. A {BUFFER_MIN} min changeover is kept free between bookings.
+              </InfoTip>
+            </li>
+          </ul>
         )}
       </div>
     </div>

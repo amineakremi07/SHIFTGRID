@@ -6,6 +6,7 @@ import { timeToMinutes, venueInstant } from '@/lib/court-time'
 import { appOrigin } from '@/lib/notifications/origin'
 import { notifyBookingCreated } from '@/lib/notifications/service'
 import { reportServerError } from '@/lib/observability'
+import { captureAudit, captureRateLimit, timed } from '@/lib/telemetry'
 import { PLAYER_COUNT_OPTIONS, type Sport } from '@/lib/slot-duration'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { manualBookingSchema } from '@/lib/validations/booking'
@@ -53,7 +54,11 @@ const fail = (
   fieldErrors?: ManualBookingFailure['fieldErrors']
 ): ManualBookingFailure => ({ ok: false, status, code, message, fieldErrors })
 
-export async function createManualBooking(orgId: string, rawInput: unknown): Promise<ManualBookingSuccess | ManualBookingFailure> {
+export async function createManualBooking(...args: Parameters<typeof createManualBookingImpl>): ReturnType<typeof createManualBookingImpl> {
+  return timed('api.booking.manual', () => createManualBookingImpl(...args))
+}
+
+async function createManualBookingImpl(orgId: string, rawInput: unknown): Promise<ManualBookingSuccess | ManualBookingFailure> {
   const parsed = manualBookingSchema.safeParse(rawInput)
   if (!parsed.success) {
     return fail(400, 'invalid_input', 'Please check the details and try again.', parsed.error.flatten().fieldErrors)
@@ -93,6 +98,7 @@ export async function createManualBooking(orgId: string, rawInput: unknown): Pro
   if (error) {
     // 23P01 (overlapping lock) or 23505 on the lock's primary key (identical start): the slot is gone.
     if (error.code === '23P01' || (error.code === '23505' && error.message.includes('court_slot_locks'))) {
+      captureRateLimit({ route: 'booking.manual', limit: 1, remaining: 0, source: 'slot_lock' })
       return fail(409, 'slot_taken', 'Slot already booked')
     }
     if (error.message.includes('slot_in_past')) return fail(422, 'slot_in_past', 'That time has already started. Pick a later slot.')
@@ -112,6 +118,17 @@ export async function createManualBooking(orgId: string, rawInput: unknown): Pro
     pass_token: string | null
     check_in_code: string | null
   }
+
+  // Audit trail: a booking made by the club (desk or phone), not by the player.
+  captureAudit({
+    action: 'booking.manual_create',
+    status: paid ? 'confirmed' : 'pending_payment',
+    booking_id: row.booking_id,
+    court_id: court.id,
+    org_id: orgId,
+    actor: 'staff',
+    detail: data.source,
+  })
 
   // The customer's confirmation (with the check-in code and QR) goes out after the response.
   if (data.email) {

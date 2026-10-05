@@ -1,5 +1,6 @@
 import { parseCheckInInput } from '@/lib/check-in-input'
 import { reportServerError } from '@/lib/observability'
+import { captureAudit, timed } from '@/lib/telemetry'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 
 /**
@@ -80,7 +81,11 @@ async function bookingIdByReference(orgId: string, reference: string): Promise<s
   return data.length > 1 ? 'ambiguous' : data[0].id
 }
 
-export async function checkInBooking(orgId: string, rawInput: string): Promise<CheckInSuccess | CheckInFailure> {
+export async function checkInBooking(...args: Parameters<typeof checkInBookingImpl>): ReturnType<typeof checkInBookingImpl> {
+  return timed('api.booking.check_in', () => checkInBookingImpl(...args))
+}
+
+async function checkInBookingImpl(orgId: string, rawInput: string): Promise<CheckInSuccess | CheckInFailure> {
   const key = parseCheckInInput(rawInput)
   if (!key) return { ok: false, code: 'invalid_input', ...MESSAGES.invalid_input }
 
@@ -121,6 +126,7 @@ export async function checkInBooking(orgId: string, rawInput: string): Promise<C
     row.booker_anon_id ? admin.from('anonymous_bookers').select('name').eq('id', row.booker_anon_id).maybeSingle() : Promise.resolve({ data: null }),
   ])
 
+  captureAudit({ action: 'booking.check_in', status: 'completed', booking_id: row.booking_id, org_id: orgId, actor: 'staff' })
   const unpaid = row.payment_status === 'pending'
   return {
     ok: true,
@@ -145,7 +151,11 @@ export type NoShowSuccess = {
   suspendedUntil: string | null
 }
 
-export async function markNoShow(orgId: string, bookingId: string): Promise<NoShowSuccess | CheckInFailure> {
+export async function markNoShow(...args: Parameters<typeof markNoShowImpl>): ReturnType<typeof markNoShowImpl> {
+  return timed('action.booking.no_show', () => markNoShowImpl(...args))
+}
+
+async function markNoShowImpl(orgId: string, bookingId: string): Promise<NoShowSuccess | CheckInFailure> {
   const { data, error } = await getSupabaseAdmin().rpc('mark_booking_no_show', { p_org_id: orgId, p_booking_id: bookingId })
   if (error) {
     if (error.message?.includes('too_early')) {
@@ -160,6 +170,13 @@ export async function markNoShow(orgId: string, bookingId: string): Promise<NoSh
     is_suspended: boolean | null
     suspended_until: string | null
   }
+  captureAudit({
+    action: 'booking.no_show',
+    status: row.is_suspended ? 'no_show_member_suspended' : 'no_show',
+    booking_id: bookingId,
+    org_id: orgId,
+    actor: 'staff',
+  })
   return {
     ok: true,
     isMember: row.is_member,

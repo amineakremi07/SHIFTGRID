@@ -3,6 +3,8 @@ import { Redis } from '@upstash/redis'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 
+import { captureRateLimit, pathOf } from '@/lib/telemetry'
+
 /**
  * Rate limiting for sensitive routes and Server Actions.
  *
@@ -111,26 +113,41 @@ function upstashLimiter(rule: RateRule): Ratelimit | null {
   return limiter
 }
 
-/** Count one request against `rule` for `key` (an IP, or `user:<id>`). */
-export async function rateLimit(rule: RateRule, key: string): Promise<RateResult> {
+/**
+ * Count one request against `rule` for `key` (an IP, or `user:<id>`). A blocked request is reported to
+ * PostHog as `rate_limit_exceeded` (route, limit, remaining, backend; never the key, which holds an IP or user id).
+ * `route` is the path being protected; without it the rule name stands in.
+ */
+export async function rateLimit(rule: RateRule, key: string, route?: string): Promise<RateResult> {
+  const { result, source } = await countRequest(rule, key)
+  if (!result.ok) {
+    captureRateLimit({ route: route ?? `rule:${rule}`, rule, limit: result.limit, remaining: result.remaining, source })
+  }
+  return result
+}
+
+async function countRequest(rule: RateRule, key: string): Promise<{ result: RateResult; source: 'upstash_redis' | 'memory' }> {
   const { max } = RATE_RULES[rule]
-  if (disabled()) return { ok: true, limit: max, remaining: max, retryAfter: 0 }
+  if (disabled()) return { result: { ok: true, limit: max, remaining: max, retryAfter: 0 }, source: 'memory' }
 
   const limiter = upstashLimiter(rule)
   if (limiter) {
     try {
       const r = await limiter.limit(key)
       return {
-        ok: r.success,
-        limit: r.limit,
-        remaining: r.remaining,
-        retryAfter: r.success ? 0 : Math.max(1, Math.ceil((r.reset - Date.now()) / 1000)),
+        result: {
+          ok: r.success,
+          limit: r.limit,
+          remaining: r.remaining,
+          retryAfter: r.success ? 0 : Math.max(1, Math.ceil((r.reset - Date.now()) / 1000)),
+        },
+        source: 'upstash_redis',
       }
     } catch (error) {
       console.error('rate-limit: upstash failed, using memory', error instanceof Error ? error.message : String(error))
     }
   }
-  return memoryLimit(rule, key)
+  return { result: memoryLimit(rule, key), source: 'memory' }
 }
 
 /* --------------------------------- helpers ------------------------------------ */
@@ -171,6 +188,7 @@ export function retryMessage(rule: RateRule, result: RateResult): string {
 export async function actionRateLimit(rule: RateRule, userId?: string | null): Promise<string | null> {
   const h = await headers()
   const key = userId ? `user:${userId}` : `ip:${clientIpFrom(h)}`
-  const result = await rateLimit(rule, key)
+  // The page the action was called from (path only) tells which feature was throttled.
+  const result = await rateLimit(rule, key, pathOf(h.get('referer')))
   return result.ok ? null : retryMessage(rule, result)
 }

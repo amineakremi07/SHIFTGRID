@@ -18,6 +18,7 @@ import {
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { InfoTip } from '@/components/ui/info-tip'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -32,7 +33,7 @@ import { CheckoutConfirmation, PaymentOptions, payNow } from '@/components/booki
 import { createBooking, type BookingResult } from '@/lib/actions/booking'
 import { canSplit, formatTND, type OnlineMode, type PaymentChoice } from '@/lib/payments'
 import { formatVenueDate, formatVenueTime, minutesSinceVenueDayStart, timeToMinutes } from '@/lib/court-time'
-import { computePrice } from '@/lib/pricing'
+import { computePrice, slotHoursLabel, slotPrice } from '@/lib/pricing'
 import { BUFFER_MIN, PLAYER_COUNT_OPTIONS, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { guestBookingFormSchema } from '@/lib/validations/booking'
 import { ConsentCheckbox, LegalLinks } from '@/components/legal/consent-checkbox'
@@ -132,7 +133,7 @@ export function PriceSummary({ selection }: { selection: BookingDrawerSelection 
           <dt className="text-muted-foreground">
             Court fee
             <span className="block text-xs tabular-nums">
-              {price.durationMinutes} min × {formatTND(selection.pricePerHour)}/h
+              {slotHoursLabel(price.durationMinutes)} slot · {formatTND(slotPrice(selection.pricePerHour, price.durationMinutes))}
             </span>
           </dt>
           <dd className="font-medium tabular-nums">{formatTND(price.base)}</dd>
@@ -143,8 +144,7 @@ export function PriceSummary({ selection }: { selection: BookingDrawerSelection 
             <dt className="text-muted-foreground">
               Night lighting surcharge
               <span className="block text-xs tabular-nums">
-                {price.surchargeMinutes} min after {selection.nightStartsAt.slice(0, 5)} ×{' '}
-                {formatTND(selection.nightSurchargePerHour)}/h
+                Flat fee for slots from {selection.nightStartsAt.slice(0, 5)}
               </span>
             </dt>
             <dd className="font-medium tabular-nums">{formatTND(price.surcharge)}</dd>
@@ -322,13 +322,16 @@ export function DrawerBody({
             </dd>
           </div>
           <div className="col-span-2">
-            <dt className="text-xs text-muted-foreground">Total duration</dt>
+            <dt className="text-xs text-muted-foreground">Duration</dt>
             <dd className="mt-0.5 flex items-center gap-1.5 font-medium tabular-nums">
-              <Clock className="size-3.5 text-muted-foreground" aria-hidden />
-              {duration} min
-              <span className="text-xs font-normal text-muted-foreground">
-                (+{BUFFER_MIN} min changeover before the next booking)
-              </span>
+              <Badge variant="outline" className="gap-1">
+                <Clock aria-hidden />
+                {duration} min
+              </Badge>
+              <InfoTip label="About the changeover">
+                {BUFFER_MIN} min changeover is kept free before the next booking, so slots start {duration + BUFFER_MIN} min
+                apart.
+              </InfoTip>
             </dd>
           </div>
         </dl>
@@ -372,10 +375,12 @@ export function DrawerBody({
 
       {choice === 'split' && (
         <fieldset className="space-y-2" disabled={submitting}>
-          <legend className="text-sm font-medium">Email the invitations (optional)</legend>
-          <p className="text-xs text-muted-foreground">
-            We can email each player their payment link. You also get the links on the next screen.
-          </p>
+          <legend className="flex items-center gap-1 text-sm font-medium">
+            Email the invites (optional)
+            <InfoTip label="About the invite emails">
+              We can email each player their payment link. You also get the links on the next screen.
+            </InfoTip>
+          </legend>
           {Array.from({ length: playerCount - 1 }, (_, i) => (
             <Input
               key={i}
@@ -424,15 +429,11 @@ export function DrawerBody({
                     {[member.email, member.phone].filter(Boolean).join(' · ')}
                   </p>
                 </div>
-                <Badge variant="success" className="shrink-0 gap-1">
+                <Badge variant="success" className="shrink-0 gap-1" title={`Member of ${orgName}`}>
                   <ShieldCheck aria-hidden />
-                  Member
+                  Member · {orgName}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">
-                You&apos;re a member of {orgName}. Your details are on file, so there is nothing
-                to fill in.
-              </p>
               <Button
                 className="h-11 w-full"
                 disabled={submitting}
@@ -444,9 +445,13 @@ export function DrawerBody({
             </>
           ) : member ? (
             <>
-              <p className="text-sm text-muted-foreground">
-                You&apos;re signed in as <strong>{member.displayName}</strong> ({member.role}).
-                Member booking is only available to players registered with {orgName}.
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="min-w-0 truncate">
+                  Signed in as <strong>{member.displayName}</strong>
+                </span>
+                <InfoTip label="Why can't I book as a member?">
+                  Member booking is only available to players registered with {orgName}. You can still book as a guest.
+                </InfoTip>
               </p>
               <Button variant="outline" className="h-11 w-full" onClick={() => setTab('guest')}>
                 Book as a guest instead
@@ -454,12 +459,8 @@ export function DrawerBody({
             </>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">
-                Sign in to book with your member profile. It takes one tap and your details are
-                remembered.
-              </p>
               <Button variant="outline" className="h-11 w-full" onClick={onRequestSignIn}>
-                Sign in or create an account
+                Sign in for one-tap booking
               </Button>
               <p className="text-center text-xs text-muted-foreground">
                 No account? Use the <strong>Guest</strong> tab.
@@ -493,7 +494,12 @@ export function DrawerBody({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="guest-phone">Mobile number</Label>
+              <Label htmlFor="guest-phone" className="flex items-center gap-1">
+                Mobile number
+                <InfoTip label="About the mobile number">
+                  8 digits starting with 2, 4, 5 or 9. The club uses it to reach you about this booking.
+                </InfoTip>
+              </Label>
               <div className="flex">
                 <span className="flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
                   +216
@@ -506,26 +512,24 @@ export function DrawerBody({
                   placeholder="98 123 456"
                   className="rounded-l-none"
                   aria-invalid={!!form.formState.errors.phone}
-                  aria-describedby={
-                    form.formState.errors.phone ? 'guest-phone-error' : 'guest-phone-hint'
-                  }
+                  aria-describedby={form.formState.errors.phone ? 'guest-phone-error' : undefined}
                   {...form.register('phone')}
                 />
               </div>
-              {form.formState.errors.phone ? (
+              {form.formState.errors.phone && (
                 <p id="guest-phone-error" className="text-sm text-destructive">
                   {form.formState.errors.phone.message}
-                </p>
-              ) : (
-                <p id="guest-phone-hint" className="text-xs text-muted-foreground">
-                  8 digits starting with 2, 4, 5 or 9. The club uses it to reach you about this
-                  booking.
                 </p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="guest-email">Email (optional)</Label>
+              <Label htmlFor="guest-email" className="flex items-center gap-1">
+                Email (optional)
+                <InfoTip label="About the email">
+                  For your confirmation, a reminder two hours before, and a cancellation notice. Not shared.
+                </InfoTip>
+              </Label>
               <Input
                 id="guest-email"
                 type="email"
@@ -535,12 +539,8 @@ export function DrawerBody({
                 aria-invalid={!!form.formState.errors.email}
                 {...form.register('email')}
               />
-              {form.formState.errors.email ? (
+              {form.formState.errors.email && (
                 <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  For your confirmation, a reminder two hours before, and a cancellation notice. Not shared.
-                </p>
               )}
             </div>
 
@@ -606,7 +606,7 @@ export function BookingDrawer({
       >
         <SheetHeader>
           <SheetTitle>Reserve your slot</SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="sr-only">
             Check the details, then confirm. Your slot is held the moment you book.
           </SheetDescription>
         </SheetHeader>

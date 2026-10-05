@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Calendar, Check, Clock, Trophy, Zap } from 'lucide-react'
+import { Calendar, Check, Clock, Moon, Trophy, Zap } from 'lucide-react'
 
 import { useRealtimeBookings } from '@/hooks/use-realtime-bookings'
 import { Badge } from '@/components/ui/badge'
@@ -18,7 +18,7 @@ import {
 import { SPRING } from '@/components/ui/motion-button'
 import { formatVenueTime, minutesSinceVenueDayStart, timeToMinutes, venueDateString, venueInstant } from '@/lib/court-time'
 import type { CourtSlot, SlotState } from '@/lib/court-slots'
-import { computePrice } from '@/lib/pricing'
+import { computePrice, slotHoursLabel, slotPrice as slotFee } from '@/lib/pricing'
 import { BUFFER_MIN, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { cn } from '@/lib/utils'
 
@@ -420,16 +420,31 @@ function CourtColumn({
             {openCount > 0 ? `${openCount} open` : 'Full'}
           </Badge>
         </CardTitle>
-        <p className="text-sm text-muted-foreground tabular-nums">
-          {formatTND(court.pricePerHour)}/hour · {slotMinutes(court.sport)} min slots
+        <ul aria-label="Court details" className="flex flex-wrap items-center gap-1.5 tabular-nums">
+          <li>
+            <Badge variant="outline" className="gap-1">
+              <Clock aria-hidden />
+              {slotMinutes(court.sport)} min
+            </Badge>
+          </li>
+          <li>
+            <Badge variant="secondary" title={`Price per ${slotHoursLabel(slotMinutes(court.sport))} slot`}>
+              {formatTND(slotFee(court.pricePerHour, slotMinutes(court.sport)))}
+            </Badge>
+          </li>
           {(court.nightSurchargePerHour ?? 0) > 0 && (
-            <>
-              {' '}
-              · +{formatTND(court.nightSurchargePerHour ?? 0)}/h lighting from{' '}
-              {(court.nightStartsAt ?? '18:00:00').slice(0, 5)}
-            </>
+            <li>
+              <Badge
+                variant="outline"
+                className="gap-1"
+                title={`Night surcharge: +${formatTND(court.nightSurchargePerHour ?? 0)} for slots from ${(court.nightStartsAt ?? '18:00:00').slice(0, 5)}`}
+              >
+                <Moon aria-hidden />
+                +{formatTND(court.nightSurchargePerHour ?? 0)} · {(court.nightStartsAt ?? '18:00:00').slice(0, 5)}
+              </Badge>
+            </li>
           )}
-        </p>
+        </ul>
       </CardHeader>
 
       <CardContent>

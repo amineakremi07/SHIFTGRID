@@ -136,7 +136,8 @@ export async function loadPass(bookingId: string, guestToken?: string | null): P
       amount: Number(s.amount),
       status: s.status,
       isOrganizer: s.is_organizer,
-      payerName: s.payer_name,
+      // A read-only pass link (shared by email) never reveals what other players typed as their name.
+      payerName: access.viewer === 'pass' ? null : s.payer_name,
     })),
     viewer: access.viewer,
     guestToken: access.viewer === 'guest' ? (guestToken ?? null) : null,

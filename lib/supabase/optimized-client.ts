@@ -1,3 +1,4 @@
+import 'server-only' // build error if a Client Component ever imports this (it holds the service-role key)
 import { cache } from 'react'
 import { createServerClient, createBrowserClient as createSsrBrowserClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'

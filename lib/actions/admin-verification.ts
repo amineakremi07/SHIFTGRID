@@ -9,6 +9,7 @@ import { documentRef } from '@/lib/admin/verification'
 import { sendOrgDecisionEmail } from '@/lib/email/org-decision'
 import { notifyCancellation } from '@/lib/notifications/service'
 import { reportServerError } from '@/lib/observability'
+import { captureAudit } from '@/lib/telemetry'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import type { OrgStatus } from '@/lib/types/database'
 
@@ -88,6 +89,7 @@ async function decide(
     return { ok: false, message: 'This organization was already reviewed. The list has been refreshed.' }
   }
 
+  captureAudit({ action: `organization.${decision === 'approved' ? 'approve' : 'reject'}`, status: decision, org_id: orgId, actor: 'platform_admin' })
   const owner = await findOwner(orgId)
   const emailed = owner
     ? await sendOrgDecisionEmail({
@@ -188,6 +190,13 @@ export async function archiveOrganizationAction(orgId: string, cancelUpcoming = 
     return { ok: false, message: 'Could not archive the club. Please try again.' }
   }
 
+  captureAudit({
+    action: 'organization.archive',
+    status: 'archived',
+    org_id: orgId,
+    actor: 'platform_admin',
+    detail: cancelUpcoming ? 'upcoming_bookings_cancelled' : undefined,
+  })
   // The players whose bookings were cancelled hear about it after the response.
   const ids = ((data as { cancelled_booking_ids?: string[] } | null)?.cancelled_booking_ids ?? []).filter((id) => uuid.safeParse(id).success)
   if (ids.length) {
@@ -215,6 +224,8 @@ export async function restoreOrganizationAction(orgId: string): Promise<ArchiveR
     console.error('restoreOrganization failed', { code: error.code, message: error.message })
     return { ok: false, message: 'Could not restore the club. Please try again.' }
   }
+
+  captureAudit({ action: 'organization.restore', status: 'restored', org_id: orgId, actor: 'platform_admin' })
 
   refreshPages()
   revalidatePath(`/courts/${orgId}`)

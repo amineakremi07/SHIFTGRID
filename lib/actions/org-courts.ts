@@ -2,8 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { hourlyFromSlotPrice } from '@/lib/pricing'
 import { requireOrgAction } from '@/lib/org-access'
+import { captureAudit } from '@/lib/telemetry'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
+import { SPORT_DURATION_MIN } from '@/lib/slot-duration'
 import { createClient } from '@/lib/supabase/server'
 import { courtFormSchema, type CourtFormInput } from '@/lib/validations/court'
 
@@ -34,7 +37,8 @@ export async function saveCourt(courtId: string | null, input: CourtFormInput): 
   const fields = {
     name: v.name,
     sport: v.sport,
-    price_per_hour: v.pricePerHour,
+    // The owner enters the price of one slot; the stored rate is hourly.
+    price_per_hour: hourlyFromSlotPrice(v.pricePerSlot, SPORT_DURATION_MIN[v.sport]),
     night_surcharge_per_hour: v.nightSurchargePerHour,
     night_starts_at: v.nightStartsAt,
     status: v.status,
@@ -84,6 +88,7 @@ export async function setCourtStatus(courtId: string, status: 'active' | 'mainte
   }
   if (!data?.length) return { ok: false, message: 'That court no longer exists.' }
 
+  captureAudit({ action: 'court.set_status', status, court_id: courtId, org_id: auth.ctx.orgId, actor: 'org_admin' })
   revalidatePath('/dashboard/org/courts')
   revalidatePath(`/courts/${auth.ctx.orgId}`)
   return { ok: true }
@@ -119,6 +124,7 @@ export async function archiveCourtAction(courtId: string): Promise<CourtActionRe
   }
   if (!data?.length) return { ok: false, message: 'That court no longer exists.' }
 
+  captureAudit({ action: 'court.archive', status: 'archived', court_id: courtId, org_id: auth.ctx.orgId, actor: 'org_admin' })
   revalidatePath('/dashboard/org/courts')
   revalidatePath('/dashboard/org/bookings')
   revalidatePath(`/courts/${auth.ctx.orgId}`)
@@ -145,6 +151,8 @@ export async function restoreCourtAction(courtId: string): Promise<CourtActionRe
     return { ok: false, message: 'Could not restore the court. Please try again.' }
   }
   if (!data?.length) return { ok: false, message: 'That court is not archived.' }
+
+  captureAudit({ action: 'court.restore', status: 'active', court_id: courtId, org_id: auth.ctx.orgId, actor: 'org_admin' })
 
   revalidatePath('/dashboard/org/courts')
   revalidatePath('/dashboard/org/bookings')

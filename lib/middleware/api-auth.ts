@@ -1,3 +1,4 @@
+import 'server-only' // build error if a Client Component ever imports this (it holds the service-role key)
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { reportServerError } from '@/lib/observability'

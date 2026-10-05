@@ -5,6 +5,7 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { reportServerError } from '@/lib/observability'
 import { actionRateLimit } from '@/lib/rate-limit'
+import { captureRateLimit, timed } from '@/lib/telemetry'
 import { notifyBookingCreated } from '@/lib/notifications/service'
 import { appOrigin } from '@/lib/notifications/origin'
 import { emailEnabled } from '@/lib/notifications/mailer'
@@ -68,6 +69,8 @@ function mapDatabaseError(error: { code?: string; message?: string }): BookingRe
   // An identical start time collides on the (court_id, occupied_from) primary key
   // first, which is 23505 rather than 23P01; both mean "someone else got it".
   if (error.code === '23P01' || (error.code === '23505' && error.message?.includes('court_slot_locks'))) {
+    // Lost the race for a slot: reported like a throttle (limit 1 per slot, none left).
+    captureRateLimit({ route: 'booking.create', limit: 1, remaining: 0, source: 'slot_lock' })
     return fail('slot_taken', 'This slot was just taken by another player. Please select another time.')
   }
   const message = error.message ?? ''
@@ -100,7 +103,11 @@ function mapDatabaseError(error: { code?: string; message?: string }): BookingRe
  * from the court row, the member id from the verified session, and the start
  * time must be a real slot on that court's grid.
  */
-export async function createBooking(input: CreateBookingInput): Promise<BookingResult> {
+export async function createBooking(...args: Parameters<typeof createBookingImpl>): ReturnType<typeof createBookingImpl> {
+  return timed('action.booking.create', () => createBookingImpl(...args))
+}
+
+async function createBookingImpl(input: CreateBookingInput): Promise<BookingResult> {
   const parsed = createBookingSchema.safeParse(input)
   if (!parsed.success) {
     return {

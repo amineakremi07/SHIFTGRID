@@ -11,6 +11,7 @@ import { onlinePaymentMode, onlineProvider, shareInvitePath, SHARE_TOKEN_PATTERN
 import { GUEST_TOKEN_PATTERN } from '@/lib/guest-cancel'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { actionRateLimit } from '@/lib/rate-limit'
+import { captureAudit, timed } from '@/lib/telemetry'
 
 export type PaymentActionResult<T = object> = ({ ok: true } & T) | { ok: false; message: string }
 
@@ -34,7 +35,11 @@ const payShareSchema = z.object({
   payerName: z.string().trim().max(100).optional(),
 })
 
-export async function payShareAction(
+export async function payShareAction(...args: Parameters<typeof payShareActionImpl>): ReturnType<typeof payShareActionImpl> {
+  return timed('action.payment.share', () => payShareActionImpl(...args))
+}
+
+async function payShareActionImpl(
   input: z.input<typeof payShareSchema>
 ): Promise<PaymentActionResult<{ amount: number; confirmed: boolean }>> {
   const limited = await actionRateLimit('booking')
@@ -63,7 +68,11 @@ export async function payShareAction(
    Staff collect the cash at the venue: payment -> paid, booking -> confirmed.
    ------------------------------------------------------------------------ */
 
-export async function markCashPaidAction(bookingId: string): Promise<PaymentActionResult> {
+export async function markCashPaidAction(...args: Parameters<typeof markCashPaidActionImpl>): ReturnType<typeof markCashPaidActionImpl> {
+  return timed('action.payment.cash', () => markCashPaidActionImpl(...args))
+}
+
+async function markCashPaidActionImpl(bookingId: string): Promise<PaymentActionResult> {
   if (!z.string().uuid().safeParse(bookingId).success) return { ok: false, message: 'Invalid booking.' }
 
   const auth = await requireOrgAction(['org_admin', 'staff'])
@@ -76,6 +85,7 @@ export async function markCashPaidAction(bookingId: string): Promise<PaymentActi
   })
   if (error) return { ok: false, message: mapPaymentError(error.message) }
 
+  captureAudit({ action: 'payment.mark_cash_paid', status: 'paid', booking_id: bookingId, org_id: auth.ctx.orgId, actor: auth.ctx.role })
   revalidatePath('/dashboard/org/bookings')
   revalidatePath('/dashboard/org/analytics')
   revalidatePath('/reservations')

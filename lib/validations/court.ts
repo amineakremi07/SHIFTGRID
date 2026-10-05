@@ -20,7 +20,7 @@ const tnd = (label: string) =>
 export const courtFormSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(80, 'Name is too long'),
   sport: z.enum(['padel', 'tennis', 'football']),
-  pricePerHour: tnd('Base price'),
+  pricePerSlot: tnd('Slot price'),
   nightSurchargePerHour: tnd('Surcharge'),
   nightStartsAt: hhmm,
   status: z.enum(['active', 'maintenance']),
@@ -30,7 +30,8 @@ export const courtFormSchema = z.object({
 export type CourtFormInput = {
   name: string
   sport: string
-  pricePerHour: string
+  /** Price of ONE slot (the sport sets its length), not an hourly rate. */
+  pricePerSlot: string
   nightSurchargePerHour: string
   nightStartsAt: string
   status: string

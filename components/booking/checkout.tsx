@@ -3,10 +3,13 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Banknote, Check, CreditCard, FlaskConical, Loader2, Ticket, Users } from 'lucide-react'
+import { Banknote, Check, CreditCard, Link2, Loader2, Mail, Ticket, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Disclosure } from '@/components/ui/disclosure'
+import { InfoTip } from '@/components/ui/info-tip'
 import { SPRING } from '@/components/ui/motion-button'
 import { regenerateShareInviteAction } from '@/lib/actions/payments'
 import type { BookingResult } from '@/lib/actions/booking'
@@ -21,9 +24,9 @@ import { cn } from '@/lib/utils'
    ========================================================================== */
 
 const OPTION_META: Record<PaymentChoice, { title: string; icon: typeof CreditCard }> = {
-  online_full: { title: 'Pay in full online', icon: CreditCard },
-  split: { title: 'Split with your players', icon: Users },
-  cash: { title: 'Pay at the venue', icon: Banknote },
+  online_full: { title: 'Pay all now', icon: CreditCard },
+  split: { title: 'Split', icon: Users },
+  cash: { title: 'At club', icon: Banknote },
 }
 
 /** The amount charged right now for a choice (0 for cash). */
@@ -52,20 +55,23 @@ export function PaymentOptions({
   const splitOk = canSplit(playerCount)
   const shares = splitOk ? splitShares(total, playerCount) : null
 
-  const options: { key: PaymentChoice; available: boolean; detail: React.ReactNode; note?: string }[] = [
+  // `chip` is the one-line summary shown on the card; `detail` is the full sentence, one tap away in the ⓘ.
+  const options: { key: PaymentChoice; available: boolean; chip: string; detail: React.ReactNode; note?: string }[] = [
     {
       key: 'online_full',
       available: online,
+      chip: formatTND(total),
       detail: <>Pay {formatTND(total)} now. Your booking is confirmed straight away.</>,
       note: online ? undefined : 'Online payment is not available yet.',
     },
     {
       key: 'split',
       available: online && splitOk,
+      chip: shares ? `${formatTND(shares.organizer)} each` : 'share it',
       detail: shares ? (
         <>
           Pay your {formatTND(shares.organizer)} share now ({playerCount} players). You get a link for each of the other{' '}
-          {playerCount - 1} to pay {formatTND(shares.others)}.
+          {playerCount - 1} to pay {formatTND(shares.others)}. The slot is held until every share is paid.
         </>
       ) : (
         <>Pay your share now and send a link to the other players.</>
@@ -75,21 +81,35 @@ export function PaymentOptions({
     {
       key: 'cash',
       available: true,
+      chip: 'cash',
       detail: <>Pay {formatTND(total)} in cash at the club. Staff confirm your payment when you arrive.</>,
     },
   ]
 
   return (
     <fieldset className="space-y-2" disabled={disabled}>
-      <legend className="mb-2 text-sm font-medium">How would you like to pay?</legend>
-      {options.map(({ key, available, detail, note }) => {
+      <legend className="mb-2 flex w-full items-center gap-2 text-sm font-medium">
+        Payment
+        {onlineMode === 'test' && value !== 'cash' && (
+          <>
+            <Badge variant="warning" className="px-1.5 py-0 text-[10px] tracking-wide">
+              TEST
+            </Badge>
+            <InfoTip label="About test mode">
+              <strong>Test mode:</strong> no real payment gateway is connected, so no money is charged. The payment is
+              recorded as paid for testing.
+            </InfoTip>
+          </>
+        )}
+      </legend>
+      {options.map(({ key, available, chip, detail, note }) => {
         const { title, icon: Icon } = OPTION_META[key]
         const selected = value === key
         return (
           <label
             key={key}
             className={cn(
-              'flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors',
+              'flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors',
               selected ? 'border-forest-depths bg-card' : 'border-border hover:bg-card/60',
               !available && 'cursor-not-allowed opacity-55 hover:bg-transparent'
             )}
@@ -101,27 +121,19 @@ export function PaymentOptions({
               checked={selected}
               disabled={!available}
               onChange={() => onChange(key)}
-              className="mt-1 size-4 accent-[#1d3023]"
+              className="size-4 shrink-0 accent-[#1d3023]"
             />
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <Icon className="size-4 text-muted-foreground" aria-hidden />
-                {title}
+            <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
+              <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <span className="truncate">
+                {title} <span className="font-normal text-muted-foreground">·</span>{' '}
+                <span className="tabular-nums">{available ? chip : (note ? 'unavailable' : chip)}</span>
               </span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">{note ?? detail}</span>
             </span>
+            <InfoTip label={`About: ${title}`}>{note ?? detail}</InfoTip>
           </label>
         )
       })}
-      {onlineMode === 'test' && value !== 'cash' && (
-        <p className="flex items-start gap-2 rounded-lg bg-accent p-3 text-xs text-accent-foreground">
-          <FlaskConical className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          <span>
-            <strong>Test mode:</strong> no real payment gateway is connected, so no money is charged. The payment is
-            recorded as paid for testing.
-          </span>
-        </p>
-      )}
     </fieldset>
   )
 }
@@ -149,9 +161,8 @@ export function GuestCancelLink({ path }: { path: string }) {
   const { copied, copy } = useCopy()
   const url = absolute(path)
   return (
-    <div className="rounded-lg border border-border p-4 text-sm">
-      <p className="font-medium">Need to cancel? Save this link.</p>
-      <p className="mt-1 text-muted-foreground">
+    <Disclosure title="Cancel link (keep private)" icon={<Link2 className="size-4 text-muted-foreground" aria-hidden />}>
+      <p>
         It is the only way to cancel online without an account, free until 24 hours before your slot. Anyone with the
         link can cancel, so keep it private.
       </p>
@@ -160,12 +171,12 @@ export function GuestCancelLink({ path }: { path: string }) {
         value={url}
         aria-label="Cancellation link"
         onFocus={(e) => e.currentTarget.select()}
-        className="ph-no-capture mt-3 w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
+        className="ph-no-capture w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs text-foreground"
       />
-      <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => copy('cancel', url)}>
+      <Button type="button" variant="outline" size="sm" onClick={() => copy('cancel', url)}>
         {copied === 'cancel' ? 'Copied' : 'Copy link'}
       </Button>
-    </div>
+    </Disclosure>
   )
 }
 
@@ -255,10 +266,10 @@ export function CheckoutConfirmation({
 
   const headline = confirmed ? 'Booking confirmed' : split ? 'Slot held, waiting for your players' : 'Your slot is reserved'
   const sub = confirmed
-    ? `Paid in full. Show this code at ${orgName}.`
+    ? `Paid in full · show the code at ${orgName}`
     : split
-      ? 'It becomes confirmed once every share is paid. Send each player their link below.'
-      : `Pay at the club. Show this code at ${orgName}.`
+      ? 'Confirmed once every share is paid'
+      : `Pay at ${orgName} · show the code`
 
   return (
     <motion.div
@@ -309,23 +320,24 @@ export function CheckoutConfirmation({
       </dl>
 
       {(emailedTo || invitesEmailed > 0) && (
-        <p className="ph-mask rounded-lg bg-card p-3 text-sm text-muted-foreground">
-          {emailedTo && (
-            <>
-              A confirmation is on its way to <strong className="text-foreground">{emailedTo}</strong>.{' '}
-            </>
-          )}
-          {invitesEmailed > 0 &&
-            `We are also emailing ${invitesEmailed} ${invitesEmailed === 1 ? 'player' : 'players'} their payment link.`}
+        <p className="ph-mask flex items-center gap-2 rounded-lg bg-card px-3 py-2 text-sm text-muted-foreground">
+          <Mail className="size-4 shrink-0" aria-hidden />
+          <span className="min-w-0">
+            {emailedTo && <strong className="break-all font-medium text-foreground">{emailedTo}</strong>}
+            {emailedTo && invitesEmailed > 0 && ' · '}
+            {invitesEmailed > 0 && `${invitesEmailed} ${invitesEmailed === 1 ? 'invite' : 'invites'} sent`}
+          </span>
         </p>
       )}
 
       {split && result.invites.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-medium">Payment links for your players</p>
-          <p className="text-xs text-muted-foreground">
-            Each link works once. You can find your booking later under My reservations and create a new link if one is
-            lost.
+          <p className="flex items-center gap-2 text-sm font-medium">
+            Player links
+            <InfoTip label="About the payment links">
+              Each link works once. You can find your booking later under My reservations and create a new link if one is
+              lost.
+            </InfoTip>
           </p>
           <InviteLinks invites={result.invites} />
         </div>
