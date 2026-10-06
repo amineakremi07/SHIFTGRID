@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { trackEvent } from '@/components/providers/posthog-provider'
 import { cancelBookingAction } from '@/lib/actions/bookings'
 
 /**
@@ -29,6 +30,7 @@ export function GuestCancelForm({ bookingId, token }: { bookingId: string; token
       router.refresh() // show the booking's real state
       return
     }
+    trackEvent('booking.cancelled', { booking_id: bookingId, actor: 'guest' })
     toast.success('Booking cancelled. The slot is free again.')
     router.refresh()
   }

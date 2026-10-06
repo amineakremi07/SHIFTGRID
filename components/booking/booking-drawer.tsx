@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CheckoutConfirmation, PaymentOptions, payNow } from '@/components/booking/checkout'
+import { trackEvent } from '@/components/providers/posthog-provider'
 import { createBooking, type BookingResult } from '@/lib/actions/booking'
 import { canSplit, formatTND, type OnlineMode, type PaymentChoice } from '@/lib/payments'
 import { formatVenueDate, formatVenueTime, minutesSinceVenueDayStart, timeToMinutes } from '@/lib/court-time'
@@ -255,6 +256,7 @@ export function DrawerBody({
           invites: invites.filter(Boolean).length,
         })
         setResult(outcome)
+        trackEvent('booking.created', { booking_id: outcome.bookingId, payment: outcome.payment, status: outcome.status, amount: outcome.amount, actor: who.mode })
         toast.success('Slot reserved', { description: `Reference ${outcome.reference}` })
         onBooked?.()
         return

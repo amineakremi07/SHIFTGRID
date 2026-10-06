@@ -5,7 +5,7 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { reportServerError } from '@/lib/observability'
 import { actionRateLimit } from '@/lib/rate-limit'
-import { captureRateLimit, timed } from '@/lib/telemetry'
+import { captureBooking, captureRateLimit, timed } from '@/lib/telemetry'
 import { notifyBookingCreated } from '@/lib/notifications/service'
 import { appOrigin } from '@/lib/notifications/origin'
 import { emailEnabled } from '@/lib/notifications/mailer'
@@ -238,6 +238,18 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
       invites = split.invites.map((i) => ({ shareNo: i.share_no, amount: Number(i.amount), path: shareInvitePath(i.token) }))
     }
   }
+
+  captureBooking('booking.created', {
+    booking_id: row.booking_id,
+    org_id: data.orgId,
+    court_id: data.courtId,
+    sport,
+    status,
+    amount: Number(row.amount),
+    payment: choice,
+    actor: data.mode,
+    source: 'online',
+  })
 
   // Emails go out after the response: the player never waits for the provider, and a
   // failed email cannot undo a booking. notifyBookingCreated() never throws.

@@ -6,7 +6,7 @@ import { timeToMinutes, venueInstant } from '@/lib/court-time'
 import { appOrigin } from '@/lib/notifications/origin'
 import { notifyBookingCreated } from '@/lib/notifications/service'
 import { reportServerError } from '@/lib/observability'
-import { captureAudit, captureRateLimit, timed } from '@/lib/telemetry'
+import { captureAudit, captureBooking, captureRateLimit, timed } from '@/lib/telemetry'
 import { PLAYER_COUNT_OPTIONS, type Sport } from '@/lib/slot-duration'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { manualBookingSchema } from '@/lib/validations/booking'
@@ -128,6 +128,16 @@ async function createManualBookingImpl(orgId: string, rawInput: unknown): Promis
     org_id: orgId,
     actor: 'staff',
     detail: data.source,
+  })
+
+  captureBooking('booking.created', {
+    booking_id: row.booking_id,
+    org_id: orgId,
+    court_id: court.id,
+    status: paid ? 'confirmed' : 'pending_payment',
+    amount: Number(row.amount),
+    actor: 'staff',
+    source: data.source,
   })
 
   // The customer's confirmation (with the check-in code and QR) goes out after the response.

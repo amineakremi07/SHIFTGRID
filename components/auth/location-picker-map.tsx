@@ -51,7 +51,7 @@ export const LocationPickerMap = ({
   zoom = 13,
 }: MapProps) => {
   return (
-    <MapContainer center={[latitude, longitude]} zoom={zoom} style={{ height, width: '100%', borderRadius: '0.5rem' }}>
+    <MapContainer center={[latitude, longitude]} zoom={zoom} style={{ height, width: '100%', borderRadius: '0.5rem', position: 'relative', zIndex: 0 }}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

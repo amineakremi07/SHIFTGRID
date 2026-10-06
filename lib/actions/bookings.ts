@@ -5,7 +5,7 @@ import { after } from 'next/server'
 import { z } from 'zod'
 
 import { actionRateLimit } from '@/lib/rate-limit'
-import { captureAudit, timed } from '@/lib/telemetry'
+import { captureAudit, captureBooking, timed } from '@/lib/telemetry'
 
 import { GUEST_TOKEN_PATTERN, hashGuestToken } from '@/lib/guest-cancel'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
@@ -128,6 +128,12 @@ async function cancelBookingActionImpl(input: CancelBookingInput): Promise<Cance
     org_id: booking.org_id,
     actor: isStaff ? (profile?.role ?? 'staff') : 'player',
   })
+  captureBooking('booking.cancelled', {
+    booking_id: bookingId,
+    org_id: booking.org_id,
+    status: 'cancelled',
+    actor: isStaff ? (profile?.role ?? 'staff') : 'player',
+  })
   after(async () => {
     await notifyCancellation({ bookingId, by })
   })
@@ -177,6 +183,7 @@ async function cancelAsGuest(bookingId: string, token: string, reason: string | 
   revalidatePath('/dashboard/org/bookings')
   revalidatePath('/reservations/cancel-guest')
   captureAudit({ action: 'booking.cancel', status: 'cancelled', booking_id: booking.id, org_id: booking.org_id, actor: 'guest' })
+  captureBooking('booking.cancelled', { booking_id: booking.id, org_id: booking.org_id, status: 'cancelled', actor: 'guest' })
   after(async () => {
     await notifyCancellation({ bookingId: booking.id, by: 'you' })
   })

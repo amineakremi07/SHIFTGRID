@@ -1,6 +1,5 @@
 import nodemailer from 'nodemailer'
 
-import { reportServerError } from '@/lib/observability'
 import { captureServerEvent } from '@/lib/telemetry'
 
 /**
@@ -10,7 +9,7 @@ import { captureServerEvent } from '@/lib/telemetry'
  *
  * `deliver()` never throws and never hangs: the caller records the outcome and the user's action goes
  * on regardless. A failure (bad credentials, network glitch, provider timeout) is returned as
- * `failed`, logged, reported to Sentry (code only) and counted in PostHog; it never reaches the user.
+ * `failed`, logged (console.warn, never Sentry) and counted in PostHog; it never reaches the user.
  * Without credentials (no SMTP_USER and no SMTP_HOST) or with EMAIL_DRY_RUN=1 the result is `skipped`,
  * not an error, so development works without an account.
  *
@@ -65,6 +64,15 @@ function createTransporter() {
   })
 }
 
+/** A plain-language cause for the usual SMTP failures, to make the log actionable. */
+function smtpHint(e: unknown, code: string): string {
+  const responseCode = (e as { responseCode?: unknown } | null)?.responseCode
+  if (code === 'EAUTH' || responseCode === 535) return 'SMTP authentication failed: check SMTP_USER / SMTP_PASS (Brevo needs the SMTP key, not the account password)'
+  if (code === 'EENVELOPE' || responseCode === 550 || responseCode === 553) return 'sender or recipient refused: the From address/domain must be verified with the provider (SMTP_FROM)'
+  if (code === 'ETIMEDOUT' || code === 'ECONNECTION' || code === 'ESOCKET' || code === 'ECONNREFUSED') return 'cannot reach the SMTP server: check SMTP_HOST / SMTP_PORT and the network'
+  return 'see message'
+}
+
 export async function deliver(message: { to: string; subject: string; html: string; text?: string; attachments?: EmailAttachment[] }): Promise<DeliverResult> {
   if (!emailEnabled()) {
     const delay = Number(process.env.EMAIL_DRY_RUN_DELAY_MS ?? 0)
@@ -110,8 +118,9 @@ export async function deliver(message: { to: string; subject: string; html: stri
     const errorCode = typeof code === 'string' ? code : e instanceof Error && e.message.includes('timed out') ? 'ETIMEDOUT' : 'unknown'
     const error = (e instanceof Error ? e.message : String(e)).slice(0, 500)
     // Message only (no recipient or body); the outbox row also keeps it for the retry run.
-    console.error('email delivery failed', { code: errorCode, message: error })
-    reportServerError('email.deliver', new Error(`email delivery failed: ${errorCode}`), { code: errorCode })
+    // A provider failure is an expected operational problem (bad key, unverified sender, outage), not an
+    // application bug, so it is logged (console.warn) and counted in PostHog, never sent to Sentry.
+    console.warn('email delivery failed', { code: errorCode, hint: smtpHint(e, errorCode), message: error })
     return finish({ status: 'failed', error }, errorCode)
   } finally {
     clearTimeout(timer)

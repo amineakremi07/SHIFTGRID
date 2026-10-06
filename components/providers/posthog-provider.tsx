@@ -126,6 +126,20 @@ function loadPostHog(): Promise<PostHog | null> {
   return loading
 }
 
+/**
+ * Send a product event from the browser, e.g. `trackEvent('booking.created', { sport })`.
+ * Consent-gated: a no-op until the visitor accepted analytics and PostHog has loaded; never throws.
+ * Pass only ids and labels (no names, contacts or tokens).
+ */
+export function trackEvent(event: string, props?: Record<string, string | number | boolean | null | undefined>) {
+  try {
+    if (!instance || !instance.has_opted_in_capturing()) return
+    instance.capture(event, { ...props, source_runtime: 'client' })
+  } catch {
+    /* analytics must never break the app */
+  }
+}
+
 /** Remove everything PostHog may have stored in this browser. */
 function clearPostHogStorage() {
   const isPh = (k: string) => /^(ph_|__ph)/.test(k)

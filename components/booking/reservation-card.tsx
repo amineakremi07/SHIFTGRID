@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { trackEvent } from '@/components/providers/posthog-provider'
 import { cancelBookingAction } from '@/lib/actions/bookings'
 import { formatVenueDate, formatVenueTime, venueDateString } from '@/lib/court-time'
 import type { BookingStatus, Sport } from '@/lib/types/database'
@@ -72,6 +73,7 @@ export function ReservationCard({ reservation: r }: { reservation: Reservation }
       router.refresh() // the booking may have changed since this page loaded
       return
     }
+    trackEvent('booking.cancelled', { booking_id: r.id, actor: 'player' })
     toast.success('Booking cancelled. The slot is free for other players.')
     setOpen(false)
     router.refresh()

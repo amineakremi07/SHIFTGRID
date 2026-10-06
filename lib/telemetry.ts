@@ -17,7 +17,7 @@ import { after } from 'next/server'
 type Primitive = string | number | boolean | null | undefined
 export type TelemetryProps = Record<string, Primitive>
 
-export type TelemetryEvent = 'rate_limit_exceeded' | 'api_request_perf' | 'audit_log_event'
+export type TelemetryEvent = 'rate_limit_exceeded' | 'api_request_perf' | 'audit_log_event' | 'booking.created' | 'booking.cancelled'
 
 const SERVER_DISTINCT_ID = 'shiftgrid-server'
 const TIMEOUT_MS = 3000
@@ -118,6 +118,25 @@ export function captureAudit(p: {
   detail?: string
 }) {
   captureServerEvent('audit_log_event', p)
+}
+
+/** `booking.created` / `booking.cancelled`: ids and labels only, never names, contacts or tokens. */
+export function captureBooking(
+  event: 'booking.created' | 'booking.cancelled',
+  p: {
+    booking_id: string
+    org_id?: string
+    court_id?: string
+    sport?: string
+    status?: string
+    amount?: number
+    payment?: string
+    /** 'member' | 'guest' | 'staff' | 'player' | 'org_admin' ... (a label, never an id). */
+    actor?: string
+    source?: string
+  }
+) {
+  captureServerEvent(event, p)
 }
 
 function statusOf(result: unknown): string {

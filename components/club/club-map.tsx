@@ -13,7 +13,8 @@ export default function ClubMap({ latitude, longitude, name }: { latitude: numbe
       zoom={16}
       // The page scrolls past this map: the wheel must not zoom it by accident.
       scrollWheelZoom={false}
-      style={{ height: '100%', width: '100%' }}
+      // zIndex 0 makes the map its own stacking context: Leaflet's internal z-indexes (up to 1000) stay inside it.
+      style={{ height: '100%', width: '100%', position: 'relative', zIndex: 0 }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

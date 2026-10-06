@@ -36,7 +36,9 @@ export function ClubLocation({
         </p>
       )}
       <div
-        className="h-72 overflow-hidden rounded-xl border border-border sm:h-80"
+        // `relative z-0 isolate`: Leaflet's panes/controls use z-index up to 1000; this contains them in one
+        // stacking context below the dialogs, drawers and toasts (z-50+).
+        className="relative isolate z-0 h-72 overflow-hidden rounded-xl border border-border sm:h-80"
         role="region"
         aria-label={`Map showing the location of ${name}`}
         data-testid="club-map"
