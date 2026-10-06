@@ -20,8 +20,10 @@
  *   6. Manual        : things no script can check (printed; they fail only with --strict).
  *
  * Exit code 1 on any FAIL. WARN means "decide on purpose"; MANUAL is a reminder.
- * Without --env-file the process environment is used (as in CI); `.env.local` is never read implicitly because it
- * holds development values.
+ * Environment source: `--env-file <file>`, else `.env.local` in the project root when it exists (so
+ * `npm run verify:launch` works from any shell, PowerShell included, without shell-specific parameters),
+ * else the process environment. `--process-env` forces the process environment only (CI). `.env.local` often
+ * holds development values: for the real go/no-go use the production file from `vercel env pull`.
  */
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
@@ -48,7 +50,7 @@ heading('1. Environment')
 
 function loadEnv() {
   const env = { ...process.env }
-  const file = opt('--env-file')
+  const file = flag('--process-env') ? undefined : (opt('--env-file') ?? (existsSync('.env.local') ? '.env.local' : undefined))
   if (file) {
     if (!existsSync(file)) {
       fail('env', `env file ${file} exists`, 'pass the file produced by `vercel env pull`')
@@ -56,11 +58,12 @@ function loadEnv() {
     }
     for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
       const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/)
-      if (m) env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '')
+      // Quoted values lose their outer pair only when both ends match ('"A" <b>' keeps its inner quotes).
+      if (m) env[m[1]] = m[2].trim().replace(/^(["'])(.*)\1$/, '$2')
     }
-    pass('env', `loaded ${file}`)
+    pass('env', `loaded ${file}${flag('--env-file') ? '' : ' (default)'}`)
   } else {
-    warn('env', 'no --env-file: checking the process environment only')
+    warn('env', 'no env file: checking the process environment only')
   }
   return env
 }
@@ -91,16 +94,17 @@ const isLocalUrl = (u) => /^(https?:\/\/)?(localhost|127\.|0\.0\.0\.0|host\.dock
   const app = val('NEXT_PUBLIC_APP_URL')
   check(S, app.startsWith('https://') && !isLocalUrl(app), 'NEXT_PUBLIC_APP_URL is the public https origin', app || 'unset')
 
-  const smtpHost = val('SMTP_HOST')
+  // Brevo is the default relay once credentials are set (lib/notifications/mailer.ts).
+  const smtpHost = val('SMTP_HOST') || (val('SMTP_USER') ? 'smtp-relay.brevo.com' : '')
   // Test inboxes accept mail but never deliver it (Mailtrap's live sending host is fine).
   const testInbox = /localhost|127\.0\.0\.1|sandbox\.smtp\.mailtrap|^smtp\.mailtrap\.io$|mailhog|mailpit|ethereal/i
-  check(S, !!smtpHost && !testInbox.test(smtpHost), 'SMTP_HOST is a real mail server', smtpHost ? `${smtpHost} is a local or test inbox` : 'unset: no email is sent')
+  check(S, !!smtpHost && !testInbox.test(smtpHost), 'SMTP host is a real mail server', smtpHost ? `${smtpHost} is a local or test inbox` : 'unset: set SMTP_USER and SMTP_PASS (Brevo) to send email')
   const smtpPort = val('SMTP_PORT')
   check(S, !smtpPort || /^\d+$/.test(smtpPort), 'SMTP_PORT is a number (default 587)', smtpPort)
   check(S, !!val('SMTP_USER') && !!val('SMTP_PASS'), 'SMTP_USER and SMTP_PASS are set', 'missing: most providers refuse unauthenticated mail')
   check(S, val('EMAIL_DRY_RUN') !== '1', 'EMAIL_DRY_RUN is off (emails really send)', 'EMAIL_DRY_RUN=1')
-  const from = val('EMAIL_FROM')
-  check(S, !!from && !/example\.|localhost|\.local\b/i.test(from), 'EMAIL_FROM is set to a verified sender', from || 'unset (default noreply@shiftgrid.tn needs a verified domain)')
+  const from = val('SMTP_FROM') || val('EMAIL_FROM')
+  check(S, !!from && !/example\.|localhost|\.local\b/i.test(from), 'SMTP_FROM is set to a verified sender', from || 'unset (default noreply@shiftgrid.tn needs a verified domain)')
 
   const cron = val('CRON_SECRET')
   check(S, cron.length >= 16, 'CRON_SECRET is set (16+ chars)', cron ? `${cron.length} chars` : 'unset: /api/cron/notifications answers 503')
@@ -122,7 +126,8 @@ const isLocalUrl = (u) => /^(https?:\/\/)?(localhost|127\.|0\.0\.0\.0|host\.dock
     check(S, existsSync('components/consent/consent-banner.tsx') && existsSync('lib/consent.ts'), 'PostHog runs behind the consent gate')
   } else pass(S, 'PostHog off (no analytics consent needed)')
 
-  check(S, !!val('NEXT_PUBLIC_LEGAL_ENTITY') && val('NEXT_PUBLIC_LEGAL_ENTITY') !== 'ShiftGrid', 'NEXT_PUBLIC_LEGAL_ENTITY names the operating company', 'unset: /terms and /privacy show "ShiftGrid" with no company')
+  // "ShiftGrid" is accepted as the operating name (no "SARL" suffix required); only an empty value fails.
+  check(S, !!val('NEXT_PUBLIC_LEGAL_ENTITY'), 'NEXT_PUBLIC_LEGAL_ENTITY names the operating company', 'unset: /terms and /privacy show no operating company')
   check(S, !!val('NEXT_PUBLIC_LEGAL_ENTITY_DETAILS'), 'NEXT_PUBLIC_LEGAL_ENTITY_DETAILS (address / registry no.) set', 'unset')
   check(S, /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(val('NEXT_PUBLIC_LEGAL_EMAIL')), 'NEXT_PUBLIC_LEGAL_EMAIL is a monitored privacy mailbox', 'unset: falls back to privacy@shiftgrid.tn, which must exist')
 }
@@ -221,8 +226,13 @@ if (flag('--skip-data')) {
 
       const { data: orgs, error: oErr } = await db.from('organizations').select('id, name, status')
       if (oErr) throw new Error(oErr.message)
-      const testOrgs = orgs.filter((o) => /test club|rls probe|e2e|k6|load bench/i.test(o.name))
-      check(S, testOrgs.length === 0, 'no test clubs in organizations', testOrgs.map((o) => `${o.name} [${o.status}]`).join(', '))
+      // Leftovers of automated runs are always a failure; the seeded "... Test Club" is tolerated on purpose
+      // (the owner keeps it) and shown as a warning so it is still visible.
+      const label = (o) => `${o.name} [${o.status}]`
+      const leftovers = orgs.filter((o) => /rls probe|e2e|k6|load bench/i.test(o.name))
+      check(S, leftovers.length === 0, 'no automated-test clubs in organizations (RLS probe, e2e, k6)', leftovers.map(label).join(', '))
+      const keptTestClubs = orgs.filter((o) => /test club/i.test(o.name) && !leftovers.includes(o))
+      if (keptTestClubs.length) warn(S, 'test club kept in organizations (accepted)', keptTestClubs.map(label).join(', '))
 
       const { count } = await db.from('anonymous_bookers').select('id', { count: 'exact', head: true }).or('name.like.K6 LOAD%,name.like.LOAD BENCH%,name.like.E2E %')
       check(S, !count, 'no load-test / e2e guest bookers', `${count} found; run npm run cleanup:load`)
