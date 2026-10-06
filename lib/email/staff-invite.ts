@@ -21,6 +21,7 @@ export async function sendStaffInviteEmail(data: StaffInviteEmailData): Promise<
   const url = esc(data.inviteUrl)
 
   const result = await deliver({
+    type: 'staff_invite',
     to: data.email,
     subject: `You've been invited to join ${data.organizationName} on ShiftGrid`,
     text: `${data.invitedByName} has invited you to join ${data.organizationName} as a ${roleLabel} on ShiftGrid.\n\nAccept the invitation: ${data.inviteUrl}\n\nIf you didn't expect this invitation, you can safely ignore this email.`,

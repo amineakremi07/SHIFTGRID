@@ -73,7 +73,20 @@ function smtpHint(e: unknown, code: string): string {
   return 'see message'
 }
 
-export async function deliver(message: { to: string; subject: string; html: string; text?: string; attachments?: EmailAttachment[] }): Promise<DeliverResult> {
+/** `jane@example.org` -> `example.org`: analytics get the provider's domain, never the person's address. */
+function recipientDomain(to: string): string {
+  return to.split('@')[1]?.toLowerCase() ?? 'unknown'
+}
+
+export async function deliver(message: {
+  to: string
+  subject: string
+  html: string
+  text?: string
+  attachments?: EmailAttachment[]
+  /** Template / purpose label for analytics, e.g. 'booking_confirmation'. */
+  type?: string
+}): Promise<DeliverResult> {
   if (!emailEnabled()) {
     const delay = Number(process.env.EMAIL_DRY_RUN_DELAY_MS ?? 0)
     if (delay > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 30_000)))
@@ -84,11 +97,19 @@ export async function deliver(message: { to: string; subject: string; html: stri
   let transporter: ReturnType<typeof createTransporter> | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
   const finish = (result: DeliverResult, errorCode?: string): DeliverResult => {
+    const duration_ms = Math.round(performance.now() - started)
     captureServerEvent('api_request_perf', {
       endpoint: 'email.deliver',
-      duration_ms: Math.round(performance.now() - started),
+      duration_ms,
       status: result.status === 'failed' ? `failed:${errorCode ?? 'unknown'}` : result.status,
     })
+    const common = { template: message.type ?? 'unspecified', recipient_domain: recipientDomain(message.to), duration_ms }
+    if (result.status === 'sent') captureServerEvent('email.sent', common)
+    // Provider messages can quote the recipient ("550 jane@x.com rejected"): strip addresses before analytics.
+    else if (result.status === 'failed') {
+      const safeError = result.error?.replace(/[^\s<>@,;]+@[^\s<>@,;]+/g, '[redacted]').slice(0, 200)
+      captureServerEvent('email.failed', { ...common, error: safeError, error_code: errorCode ?? 'rejected' })
+    }
     return result
   }
   try {
@@ -120,7 +141,7 @@ export async function deliver(message: { to: string; subject: string; html: stri
     // Message only (no recipient or body); the outbox row also keeps it for the retry run.
     // A provider failure is an expected operational problem (bad key, unverified sender, outage), not an
     // application bug, so it is logged (console.warn) and counted in PostHog, never sent to Sentry.
-    console.warn('email delivery failed', { code: errorCode, hint: smtpHint(e, errorCode), message: error })
+    console.error('email delivery failed', { type: message.type, code: errorCode, hint: smtpHint(e, errorCode), message: error })
     return finish({ status: 'failed', error }, errorCode)
   } finally {
     clearTimeout(timer)

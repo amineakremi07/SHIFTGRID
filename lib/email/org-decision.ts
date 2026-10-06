@@ -31,7 +31,7 @@ export async function sendOrgDecisionEmail(input: {
        <p><strong>Reason:</strong> ${escapeHtml(input.reason ?? 'Not specified')}</p>
        <p>Please contact <a href="mailto:support@shiftgrid.tn">support@shiftgrid.tn</a> with the corrected documents and we will review it again.</p>`
 
-  const result = await deliver({ to: input.to, subject, html })
+  const result = await deliver({ to: input.to, type: 'org_decision', subject, html })
   if (result.status !== 'sent') {
     console.error('Decision email not sent', { status: result.status, error: result.error })
     return { sent: false }

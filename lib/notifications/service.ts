@@ -146,7 +146,7 @@ async function sendRecorded(admin: Admin, draft: Draft): Promise<DeliverResult |
   if (error?.code === '23505') return null // the same notification was already recorded
   if (error) console.error('notification outbox insert failed', { kind: draft.kind, message: error.message })
 
-  const result = await deliver({ to: draft.to, ...draft.rendered })
+  const result = await deliver({ to: draft.to, type: draft.kind, ...draft.rendered })
   if (row) await finish(admin, row.id, 0, result)
   if (result.status === 'failed') console.error('email failed', { kind: draft.kind, error: result.error })
   return result
@@ -382,7 +382,7 @@ export async function retryFailedNotifications(now: Date): Promise<BatchResult> 
         row.kind === 'cancellation'
           ? cancellationEmail(row.payload as unknown as CancellationProps)
           : reminderEmail(row.payload as unknown as ReminderProps)
-      const result = await deliver({ to: row.recipient, ...rendered })
+      const result = await deliver({ to: row.recipient, type: row.kind, ...rendered })
       await finish(admin, row.id, row.attempts, result)
       tally(batch, result)
     }

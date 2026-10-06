@@ -17,7 +17,7 @@ import { after } from 'next/server'
 type Primitive = string | number | boolean | null | undefined
 export type TelemetryProps = Record<string, Primitive>
 
-export type TelemetryEvent = 'rate_limit_exceeded' | 'api_request_perf' | 'audit_log_event' | 'booking.created' | 'booking.cancelled'
+export type TelemetryEvent = 'rate_limit_exceeded' | 'api_request_perf' | 'audit_log_event' | 'booking.created' | 'booking.cancelled' | 'email.sent' | 'email.failed'
 
 const SERVER_DISTINCT_ID = 'shiftgrid-server'
 const TIMEOUT_MS = 3000

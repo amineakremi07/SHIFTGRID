@@ -166,6 +166,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     const adminUrl = esc(`${process.env.NEXT_PUBLIC_APP_URL ?? ''}/admin/verification`)
     if (process.env.ADMIN_EMAIL) {
       const adminEmail = await deliver({
+        type: 'admin_new_org',
         to: process.env.ADMIN_EMAIL,
         subject: `New Organization Pending Verification: ${company.companyName}`,
         html: `
@@ -193,6 +194,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     }
 
     const ownerEmail = await deliver({
+      type: 'owner_registration_received',
       to: owner.ownerEmail,
       subject: 'Your ShiftGrid Organization Registration Received',
       html: `
