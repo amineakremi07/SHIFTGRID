@@ -7,6 +7,8 @@ import { BookingDrawer, type BookingDrawerMember, type BookingDrawerSelection } 
 import { PlayerAuthModal } from '@/components/booking/player-auth-modal'
 import { SlotPicker } from '@/components/booking/slot-picker'
 import type { MatrixCourt, MatrixSelection } from '@/components/courts/court-slot-matrix'
+import { trackEvent } from '@/components/providers/posthog-provider'
+import { timeSlotLabel } from '@/lib/court-time'
 import type { OnlineMode } from '@/lib/payments'
 import { toast } from 'sonner'
 
@@ -81,6 +83,13 @@ export function ClubBookingView({
     const court = courts.find((c) => c.id === picked.courtId)
     if (!court) return
 
+    trackEvent('time_slot.selected', {
+      time_slot: timeSlotLabel(picked.slot.start, picked.slot.end),
+      date: dateStr,
+      club_id: orgId,
+      court_id: court.id,
+      sport: court.sport,
+    })
     setJustBooked(false)
     setSelection({
       courtId: court.id,

@@ -2,7 +2,7 @@ import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
 
 import { checkBookableSlot } from '@/lib/booking-core'
-import { timeToMinutes, venueInstant } from '@/lib/court-time'
+import { timeSlotLabel, timeToMinutes, venueInstant } from '@/lib/court-time'
 import { appOrigin } from '@/lib/notifications/origin'
 import { notifyBookingCreated } from '@/lib/notifications/service'
 import { reportServerError } from '@/lib/observability'
@@ -135,7 +135,10 @@ async function createManualBookingImpl(orgId: string, rawInput: unknown): Promis
     org_id: orgId,
     court_id: court.id,
     status: paid ? 'confirmed' : 'pending_payment',
+    time_slot: timeSlotLabel(row.starts_at, row.ends_at),
+    date: data.date,
     amount: Number(row.amount),
+    price: Number(row.amount),
     actor: 'staff',
     source: data.source,
   })

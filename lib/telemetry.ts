@@ -130,6 +130,11 @@ export function captureBooking(
     sport?: string
     status?: string
     amount?: number
+    /** Same value as `amount` (TND), under the name the dashboards use. */
+    price?: number
+    /** Venue-time slot, e.g. "18:00 - 19:30". */
+    time_slot?: string
+    date?: string
     payment?: string
     /** 'member' | 'guest' | 'staff' | 'player' | 'org_admin' ... (a label, never an id). */
     actor?: string

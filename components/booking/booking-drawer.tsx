@@ -33,7 +33,7 @@ import { CheckoutConfirmation, PaymentOptions, payNow } from '@/components/booki
 import { trackEvent } from '@/components/providers/posthog-provider'
 import { createBooking, type BookingResult } from '@/lib/actions/booking'
 import { canSplit, formatTND, type OnlineMode, type PaymentChoice } from '@/lib/payments'
-import { formatVenueDate, formatVenueTime, minutesSinceVenueDayStart, timeToMinutes } from '@/lib/court-time'
+import { formatVenueDate, formatVenueTime, minutesSinceVenueDayStart, timeSlotLabel, timeToMinutes } from '@/lib/court-time'
 import { computePrice, slotHoursLabel, slotPrice } from '@/lib/pricing'
 import { BUFFER_MIN, PLAYER_COUNT_OPTIONS, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { guestBookingFormSchema } from '@/lib/validations/booking'
@@ -256,7 +256,19 @@ export function DrawerBody({
           invites: invites.filter(Boolean).length,
         })
         setResult(outcome)
-        trackEvent('booking.created', { booking_id: outcome.bookingId, payment: outcome.payment, status: outcome.status, amount: outcome.amount, actor: who.mode })
+        trackEvent('booking.created', {
+          booking_id: outcome.bookingId,
+          club_id: orgId,
+          court_id: selection.courtId,
+          sport: selection.sport,
+          date: selection.date,
+          time_slot: timeSlotLabel(selection.startsAt, selection.endsAt),
+          amount: outcome.amount,
+          price: outcome.amount,
+          payment: outcome.payment,
+          status: outcome.status,
+          actor: who.mode,
+        })
         toast.success('Slot reserved', { description: `Reference ${outcome.reference}` })
         onBooked?.()
         return

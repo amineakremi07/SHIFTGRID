@@ -40,6 +40,11 @@ export function addDays(dateStr: string, days: number): string {
 }
 
 /** "18:00" in venue time. */
+/** "18:00 - 19:30" in venue time, the `time_slot` value used by analytics events. */
+export function timeSlotLabel(startsAt: Date | string, endsAt: Date | string): string {
+  return `${formatVenueTime(startsAt)} - ${formatVenueTime(endsAt)}`
+}
+
 export function formatVenueTime(instant: Date | string): string {
   const at = typeof instant === 'string' ? new Date(instant) : instant
   return new Intl.DateTimeFormat('en-GB', {

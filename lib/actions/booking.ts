@@ -12,7 +12,7 @@ import { emailEnabled } from '@/lib/notifications/mailer'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { createBookingSchema, type CreateBookingInput } from '@/lib/validations/booking'
 import { checkBookableSlot } from '@/lib/booking-core'
-import { formatVenueDate, venueDateString } from '@/lib/court-time'
+import { formatVenueDate, timeSlotLabel, venueDateString } from '@/lib/court-time'
 import { guestCancelPath } from '@/lib/guest-cancel'
 import { canSplit, onlinePaymentMode, onlineProvider, shareInvitePath, type PaymentChoice } from '@/lib/payments'
 
@@ -245,7 +245,10 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
     court_id: data.courtId,
     sport,
     status,
+    time_slot: timeSlotLabel(row.starts_at, row.ends_at),
+    date: data.date,
     amount: Number(row.amount),
+    price: Number(row.amount),
     payment: choice,
     actor: data.mode,
     source: 'online',

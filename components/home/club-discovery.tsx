@@ -21,6 +21,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { trackEvent } from '@/components/providers/posthog-provider'
 import { SPRING } from '@/components/ui/motion-button'
 import {
   SPORT_LABEL,
@@ -156,7 +157,11 @@ function ClubCard({
 
           <Button asChild className={ACTIVE_FILTER}>
             {/* Described by the club name so a screen reader hears which club. */}
-            <Link href={`/courts/${club.id}`} aria-describedby={headingId}>
+            <Link
+              href={`/courts/${club.id}`}
+              aria-describedby={headingId}
+              onClick={() => trackEvent('club.selected', { club_id: club.id, club_name: club.name })}
+            >
               View Slots &amp; Book
               <ArrowRight aria-hidden />
             </Link>
