@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import type { z } from 'zod'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
+import { GoogleButton } from '@/components/auth/google-button'
 import { Button } from '@/components/ui/button'
 import { ConsentCheckbox } from '@/components/legal/consent-checkbox'
 import { Input } from '@/components/ui/input'
@@ -64,6 +65,8 @@ export function PlayerSignupForm({
     mode: 'onTouched',
   })
   const { errors } = form.formState
+  const watchedOrgId = form.watch('orgId')
+  const acceptedTerms = !!form.watch('acceptTerms')
 
   const onSubmit = async (values: FormOutput) => {
     setSubmitting(true)
@@ -255,6 +258,24 @@ export function PlayerSignupForm({
         {submitting && <Loader2 className="animate-spin" aria-hidden />}
         Create player account
       </Button>
+
+      <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground" aria-hidden>
+        <span className="h-px flex-1 bg-border" />
+        or
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      {/* The chosen club and the return path travel in the sg-oauth cookie; the Terms box above must be ticked. */}
+      <GoogleButton
+        orgId={watchedOrgId || undefined}
+        next={next ?? undefined}
+        disabled={submitting || noClubs || !watchedOrgId || !acceptedTerms}
+      />
+      {!noClubs && (!watchedOrgId || !acceptedTerms) && (
+        <p className="-mt-3 text-xs text-muted-foreground">
+          Choose your club and accept the Terms to continue with Google.
+        </p>
+      )}
     </form>
   )
 }
