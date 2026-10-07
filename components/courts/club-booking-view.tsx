@@ -57,7 +57,7 @@ export function ClubBookingView({
 
   const isDesktop = useIsDesktop()
   const [selection, setSelection] = React.useState<BookingDrawerSelection | null>(null)
-  // Phones: picking a slot shows the sticky "Réserver maintenant" bar; the drawer opens from it.
+  // Phones: picking a slot shows the sticky "Book now" bar; the drawer opens from it.
   const [barOpen, setBarOpen] = React.useState(false)
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [authOpen, setAuthOpen] = React.useState(false)
@@ -242,7 +242,7 @@ function StickyBookingBar({
           ✕
         </Button>
         <Button type="button" className="h-12 px-5 text-base" onClick={onBook}>
-          Réserver maintenant
+          Book now
         </Button>
       </div>
     </div>

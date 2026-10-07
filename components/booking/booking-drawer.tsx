@@ -29,6 +29,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { GoogleButton } from '@/components/auth/google-button'
+import { CheckoutStepper, type CheckoutStep } from '@/components/booking/checkout-stepper'
 import { CheckoutConfirmation, PaymentOptions, payNow } from '@/components/booking/checkout'
 import { trackEvent } from '@/components/providers/posthog-provider'
 import { createBooking, type BookingResult } from '@/lib/actions/booking'
@@ -221,6 +223,40 @@ export function DrawerBody({
   const SportIcon = meta.icon
   const duration = SPORT_DURATION_MIN[selection.sport]
 
+  // The 3-step flow. Everything the player enters lives in this component, so moving between
+  // steps (or jumping back through the progress map) never loses it.
+  const [step, setStep] = React.useState<CheckoutStep>(1)
+  const [maxStep, setMaxStep] = React.useState<CheckoutStep>(1)
+  const goTo = (next: CheckoutStep) => {
+    if (next <= maxStep) {
+      setError(null)
+      setStep(next)
+    }
+  }
+  const advance = (next: CheckoutStep) => {
+    if (next === 3 && choice === 'split') {
+      // A typo in an invite address is caught before the last step, not silently dropped by the server.
+      const bad = Array.from({ length: playerCount - 1 }, (_, i) => (inviteEmails[i] ?? '').trim()).find(
+        (e) => e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
+      )
+      if (bad) {
+        setError(`"${bad}" does not look like an email address. Fix it or leave it blank.`)
+        return
+      }
+    }
+    setError(null)
+    setStep(next)
+    setMaxStep((m) => (next > m ? next : m))
+    trackEvent('checkout.step_viewed', { step: next, club_id: orgId, payment: choice })
+  }
+  // A member has no form to fill in, but still accepts the Terms.
+  const confirmAsMember = () => {
+    if (!form.getValues('consent')) {
+      form.setError('consent', { type: 'custom', message: 'Please accept the Terms and Privacy Policy to book' })
+      return
+    }
+    void submit({ mode: 'member' })
+  }
   const submit = async (
     who: { mode: 'member' } | { mode: 'guest'; guest: GuestFormOutput }
   ) => {
@@ -318,269 +354,171 @@ export function DrawerBody({
   }
 
   return (
-    <div className="space-y-5 px-4 pb-6">
-      {/* ---- slot summary ---- */}
-      <section aria-label="Selected slot" className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <MapPin className="size-3.5 shrink-0" aria-hidden />
-              <span className="truncate">{orgName}</span>
-            </p>
-            <p className="mt-0.5 text-lg font-semibold leading-tight">{selection.courtName}</p>
-          </div>
-          <Badge variant="secondary" className="shrink-0 gap-1">
-            <SportIcon aria-hidden />
-            {meta.label}
-          </Badge>
-        </div>
-
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <div>
-            <dt className="text-xs text-muted-foreground">Date</dt>
-            <dd className="mt-0.5 font-medium">{formatVenueDate(selection.date)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Time</dt>
-            <dd className="mt-0.5 font-medium tabular-nums">
-              {formatVenueTime(selection.startsAt)} – {formatVenueTime(selection.endsAt)}
-            </dd>
-          </div>
-          <div className="col-span-2">
-            <dt className="text-xs text-muted-foreground">Duration</dt>
-            <dd className="mt-0.5 flex items-center gap-1.5 font-medium tabular-nums">
-              <Badge variant="outline" className="gap-1">
-                <Clock aria-hidden />
-                {duration} min
-              </Badge>
-              <InfoTip label="About the changeover">
-                {BUFFER_MIN} min changeover is kept free before the next booking, so slots start {duration + BUFFER_MIN} min
-                apart.
-              </InfoTip>
-            </dd>
-          </div>
-        </dl>
-
-        {playerOptions.length > 1 && (
-          <div role="group" aria-label="Number of players" className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Users className="size-3.5" aria-hidden />
-              Players
-            </span>
-            {playerOptions.map((count) => (
-              <Button
-                key={count}
-                type="button"
-                size="sm"
-                variant="outline"
-                aria-pressed={playerCount === count}
-                onClick={() => setPlayerCount(count)}
-                className={cn(
-                  playerCount === count &&
-                    'border-forest-depths bg-forest-depths text-bone-linen hover:bg-forest-depths/90 hover:text-bone-linen'
-                )}
-              >
-                {count}
-              </Button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <PriceSummary selection={selection} />
-
-      <PaymentOptions
-        value={choice}
-        onChange={setPayment}
-        total={price.total}
-        playerCount={playerCount}
-        onlineMode={onlineMode}
-        disabled={submitting}
-      />
-
-      {choice === 'split' && (
-        <fieldset className="space-y-2" disabled={submitting}>
-          <legend className="flex items-center gap-1 text-sm font-medium">
-            Email the invites (optional)
-            <InfoTip label="About the invite emails">
-              We can email each player their payment link. You also get the links on the next screen.
-            </InfoTip>
-          </legend>
-          {Array.from({ length: playerCount - 1 }, (_, i) => (
-            <Input
-              key={i}
-              type="email"
-              inputMode="email"
-              autoComplete="off"
-              placeholder={`Player ${i + 2} email`}
-              aria-label={`Email for player ${i + 2}`}
-              value={inviteEmails[i] ?? ''}
-              onChange={(e) =>
-                setInviteEmails((prev) => {
-                  const next = [...prev]
-                  next[i] = e.target.value
-                  return next
-                })
-              }
-            />
-          ))}
-        </fieldset>
-      )}
-
-      {/* ---- who is booking ---- */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as 'member' | 'guest')}>
-        <TabsList className="w-full">
-          <TabsTrigger value="member" className="flex-1">
-            Member
-          </TabsTrigger>
-          <TabsTrigger value="guest" className="flex-1">
-            Guest
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="member" className="mt-4 space-y-4">
-          {member?.isMember ? (
-            <>
-              <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-                <span
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold"
-                  aria-hidden
-                >
-                  {member.displayName.slice(0, 2).toUpperCase()}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{member.displayName}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {[member.email, member.phone].filter(Boolean).join(' · ')}
+    <>
+      <CheckoutStepper step={step} maxStep={maxStep} onStep={goTo} disabled={submitting} />
+      <div className="space-y-5 px-4 pb-6" data-step={step}>
+        {step === 1 && (
+          <>
+            {/* ---- step 1: the court and slot ---- */}
+            <section aria-label="Selected slot" className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <MapPin className="size-3.5 shrink-0" aria-hidden />
+                    <span className="truncate">{orgName}</span>
                   </p>
+                  <p className="mt-0.5 text-lg font-semibold leading-tight">{selection.courtName}</p>
                 </div>
-                <Badge variant="success" className="shrink-0 gap-1" title={`Member of ${orgName}`}>
-                  <ShieldCheck aria-hidden />
-                  Member · {orgName}
+                <Badge variant="secondary" className="shrink-0 gap-1">
+                  <SportIcon aria-hidden />
+                  {meta.label}
                 </Badge>
               </div>
-              <Button
-                className="h-11 w-full"
-                disabled={submitting}
-                onClick={() => submit({ mode: 'member' })}
-              >
-                {submitting && <Loader2 className="animate-spin" aria-hidden />}
-                {reserveLabel}
-              </Button>
-            </>
-          ) : member ? (
-            <>
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="min-w-0 truncate">
-                  Signed in as <strong>{member.displayName}</strong>
-                </span>
-                <InfoTip label="Why can't I book as a member?">
-                  Member booking is only available to players registered with {orgName}. You can still book as a guest.
-                </InfoTip>
-              </p>
-              <Button variant="outline" className="h-11 w-full" onClick={() => setTab('guest')}>
-                Book as a guest instead
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" className="h-11 w-full" onClick={onRequestSignIn}>
-                Sign in for one-tap booking
-              </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                No account? Use the <strong>Guest</strong> tab.
-              </p>
-            </>
-          )}
-        </TabsContent>
 
-        {/* ph-no-capture: guest name/phone/email never appear in session recordings (inputs are masked anyway). */}
-        <TabsContent value="guest" className="ph-no-capture mt-4">
-          <form
-            noValidate
-            onSubmit={form.handleSubmit((guest) => submit({ mode: 'guest', guest }))}
-            className="space-y-4"
-          >
-            {/* Honeypot: off-screen, unreachable by keyboard and screen readers; only bots fill it. */}
-            <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
-              <label htmlFor="guest-website">Website</label>
-              <input
-                id="guest-website"
-                name="website"
-                type="text"
-                tabIndex={-1}
-                autoComplete="off"
-                value={honeypot}
-                onChange={(e) => setHoneypot(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="guest-name">Full name</Label>
-              <Input
-                id="guest-name"
-                autoComplete="name"
-                placeholder="Ali Ben Salah"
-                aria-invalid={!!form.formState.errors.fullName}
-                aria-describedby={form.formState.errors.fullName ? 'guest-name-error' : undefined}
-                {...form.register('fullName')}
-              />
-              {form.formState.errors.fullName && (
-                <p id="guest-name-error" className="text-sm text-destructive">
-                  {form.formState.errors.fullName.message}
-                </p>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Date</dt>
+                  <dd className="mt-0.5 font-medium">{formatVenueDate(selection.date)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Time</dt>
+                  <dd className="mt-0.5 font-medium tabular-nums">
+                    {formatVenueTime(selection.startsAt)} – {formatVenueTime(selection.endsAt)}
+                  </dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-xs text-muted-foreground">Duration</dt>
+                  <dd className="mt-0.5 flex items-center gap-1.5 font-medium tabular-nums">
+                    <Badge variant="outline" className="gap-1">
+                      <Clock aria-hidden />
+                      {duration} min
+                    </Badge>
+                    <InfoTip label="About the changeover">
+                      {BUFFER_MIN} min changeover is kept free before the next booking, so slots start {duration + BUFFER_MIN} min
+                      apart.
+                    </InfoTip>
+                  </dd>
+                </div>
+              </dl>
+
+              {playerOptions.length > 1 && (
+                <div role="group" aria-label="Number of players" className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Users className="size-3.5" aria-hidden />
+                    Players
+                  </span>
+                  {playerOptions.map((count) => (
+                    <Button
+                      key={count}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      aria-pressed={playerCount === count}
+                      onClick={() => setPlayerCount(count)}
+                      className={cn(
+                        'max-md:h-12 max-md:min-w-12',
+                        playerCount === count &&
+                          'border-forest-depths bg-forest-depths text-bone-linen hover:bg-forest-depths/90 hover:text-bone-linen'
+                      )}
+                    >
+                      {count}
+                    </Button>
+                  ))}
+                </div>
               )}
-            </div>
+            </section>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="guest-phone" className="flex items-center gap-1">
-                Mobile number
-                <InfoTip label="About the mobile number">
-                  8 digits starting with 2, 4, 5 or 9. The club uses it to reach you about this booking.
-                </InfoTip>
-              </Label>
-              <div className="flex">
-                <span className="flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-                  +216
-                </span>
-                <Input
-                  id="guest-phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel-national"
-                  placeholder="98 123 456"
-                  className="rounded-l-none"
-                  aria-invalid={!!form.formState.errors.phone}
-                  aria-describedby={form.formState.errors.phone ? 'guest-phone-error' : undefined}
-                  {...form.register('phone')}
+            <PriceSummary selection={selection} />
+
+            <Button type="button" data-testid="step-next" className="h-12 w-full text-base" onClick={() => advance(2)}>
+              Continue to payment
+            </Button>
+          </>
+        )}
+
+        {step !== 1 && (
+          <p className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2 text-sm" data-testid="step-summary">
+            <span className="min-w-0 truncate">
+              <strong>{selection.courtName}</strong> · {formatVenueDate(selection.date)} ·{' '}
+              <span className="tabular-nums">{formatVenueTime(selection.startsAt)}</span>
+            </span>
+            <span className="shrink-0 font-semibold tabular-nums">{formatTND(price.total)}</span>
+          </p>
+        )}
+
+        {step === 2 && (
+          <>
+            {/* ---- step 2: how to pay ---- */}
+            <PaymentOptions
+              value={choice}
+              onChange={setPayment}
+              total={price.total}
+              playerCount={playerCount}
+              onlineMode={onlineMode}
+              disabled={submitting}
+            />
+
+            {choice === 'split' && (
+              <fieldset className="space-y-2" disabled={submitting}>
+                <legend className="flex items-center gap-1 text-sm font-medium">
+                  Email the invites (optional)
+                  <InfoTip label="About the invite emails">
+                    We can email each player their payment link. You also get the links on the next screen.
+                  </InfoTip>
+                </legend>
+                {Array.from({ length: playerCount - 1 }, (_, i) => (
+                  <Input
+                    key={i}
+                    type="email"
+                    inputMode="email"
+                    autoComplete="off"
+                    placeholder={`Player ${i + 2} email`}
+                    aria-label={`Email for player ${i + 2}`}
+                    className="max-md:h-12"
+                    value={inviteEmails[i] ?? ''}
+                    onChange={(e) =>
+                      setInviteEmails((prev) => {
+                        const next = [...prev]
+                        next[i] = e.target.value
+                        return next
+                      })
+                    }
+                  />
+                ))}
+              </fieldset>
+            )}
+
+            {error && (
+              <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
+            <div className="grid grid-cols-[auto_1fr] gap-2">
+              <Button type="button" variant="outline" className="h-12 px-5" onClick={() => goTo(1)}>
+                Back
+              </Button>
+              <Button type="button" data-testid="step-next" className="h-12 text-base" onClick={() => advance(3)}>
+                Continue
+              </Button>
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            {/* ---- step 3: who is booking, terms, confirm ---- */}
+            {!member?.isMember && (
+              <div className="space-y-3">
+                <GoogleButton
+                  orgId={orgId}
+                  next={typeof window === 'undefined' ? undefined : window.location.pathname + window.location.search}
                 />
-              </div>
-              {form.formState.errors.phone && (
-                <p id="guest-phone-error" className="text-sm text-destructive">
-                  {form.formState.errors.phone.message}
+                <p className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+                  or
                 </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="guest-email" className="flex items-center gap-1">
-                Email (optional)
-                <InfoTip label="About the email">
-                  For your confirmation, a reminder two hours before, and a cancellation notice. Not shared.
-                </InfoTip>
-              </Label>
-              <Input
-                id="guest-email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                aria-invalid={!!form.formState.errors.email}
-                {...form.register('email')}
-              />
-              {form.formState.errors.email && (
-                <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
-              )}
-            </div>
+              </div>
+            )}
 
             <Controller
               name="consent"
@@ -599,20 +537,179 @@ export function DrawerBody({
               )}
             />
 
-            <Button type="submit" className="h-11 w-full" disabled={submitting}>
-              {submitting && <Loader2 className="animate-spin" aria-hidden />}
-              {reserveLabel}
-            </Button>
-          </form>
-        </TabsContent>
-      </Tabs>
+            <Tabs value={tab} onValueChange={(v) => setTab(v as 'member' | 'guest')}>
+              <TabsList className="w-full">
+                <TabsTrigger value="member" className="flex-1 max-md:min-h-12">
+                  Member
+                </TabsTrigger>
+                <TabsTrigger value="guest" className="flex-1 max-md:min-h-12">
+                  Guest
+                </TabsTrigger>
+              </TabsList>
 
-      {error && (
-        <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
+              <TabsContent value="member" className="mt-4 space-y-4">
+                {member?.isMember ? (
+                  <>
+                    <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+                      <span
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold"
+                        aria-hidden
+                      >
+                        {member.displayName.slice(0, 2).toUpperCase()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{member.displayName}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {[member.email, member.phone].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <Badge variant="success" className="shrink-0 gap-1" title={`Member of ${orgName}`}>
+                        <ShieldCheck aria-hidden />
+                        Member · {orgName}
+                      </Badge>
+                    </div>
+                    <Button className="h-12 w-full text-base" disabled={submitting} onClick={confirmAsMember}>
+                      {submitting && <Loader2 className="animate-spin" aria-hidden />}
+                      {reserveLabel}
+                    </Button>
+                  </>
+                ) : member ? (
+                  <>
+                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span className="min-w-0 truncate">
+                        Signed in as <strong>{member.displayName}</strong>
+                      </span>
+                      <InfoTip label="Why can't I book as a member?">
+                        Member booking is only available to players registered with {orgName}. You can still book as a guest.
+                      </InfoTip>
+                    </p>
+                    <Button variant="outline" className="h-12 w-full" onClick={() => setTab('guest')}>
+                      Book as a guest instead
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" className="h-12 w-full" onClick={onRequestSignIn}>
+                      Sign in with your email
+                    </Button>
+                    <p className="text-center text-xs text-muted-foreground">
+                      No account? Use the <strong>Guest</strong> tab.
+                    </p>
+                  </>
+                )}
+              </TabsContent>
+
+              {/* ph-no-capture: guest name/phone/email never appear in session recordings (inputs are masked anyway). */}
+              <TabsContent value="guest" className="ph-no-capture mt-4">
+                <form
+                  noValidate
+                  onSubmit={form.handleSubmit((guest) => submit({ mode: 'guest', guest }))}
+                  className="space-y-4"
+                >
+                  {/* Honeypot: off-screen, unreachable by keyboard and screen readers; only bots fill it. */}
+                  <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                    <label htmlFor="guest-website">Website</label>
+                    <input
+                      id="guest-website"
+                      name="website"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={honeypot}
+                      onChange={(e) => setHoneypot(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="guest-name">Full name</Label>
+                    <Input
+                      id="guest-name"
+                      autoComplete="name"
+                      placeholder="Ali Ben Salah"
+                      className="max-md:h-12"
+                      aria-invalid={!!form.formState.errors.fullName}
+                      aria-describedby={form.formState.errors.fullName ? 'guest-name-error' : undefined}
+                      {...form.register('fullName')}
+                    />
+                    {form.formState.errors.fullName && (
+                      <p id="guest-name-error" className="text-sm text-destructive">
+                        {form.formState.errors.fullName.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="guest-phone" className="flex items-center gap-1">
+                      Mobile number
+                      <InfoTip label="About the mobile number">
+                        8 digits starting with 2, 4, 5 or 9. The club uses it to reach you about this booking.
+                      </InfoTip>
+                    </Label>
+                    <div className="flex">
+                      <span className="flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                        +216
+                      </span>
+                      <Input
+                        id="guest-phone"
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel-national"
+                        placeholder="98 123 456"
+                        className="rounded-l-none max-md:h-12"
+                        aria-invalid={!!form.formState.errors.phone}
+                        aria-describedby={form.formState.errors.phone ? 'guest-phone-error' : undefined}
+                        {...form.register('phone')}
+                      />
+                    </div>
+                    {form.formState.errors.phone && (
+                      <p id="guest-phone-error" className="text-sm text-destructive">
+                        {form.formState.errors.phone.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="guest-email" className="flex items-center gap-1">
+                      Email (optional)
+                      <InfoTip label="About the email">
+                        For your confirmation, a reminder two hours before, and a cancellation notice. Not shared.
+                      </InfoTip>
+                    </Label>
+                    <Input
+                      id="guest-email"
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      className="max-md:h-12"
+                      aria-invalid={!!form.formState.errors.email}
+                      {...form.register('email')}
+                    />
+                    {form.formState.errors.email && (
+                      <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+                    )}
+                  </div>
+
+                  <Button type="submit" className="h-12 w-full text-base" disabled={submitting}>
+                    {submitting && <Loader2 className="animate-spin" aria-hidden />}
+                    {reserveLabel}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+
+            {error && (
+              <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
+            <Button type="button" variant="ghost" className="h-12 w-full" disabled={submitting} onClick={() => goTo(2)}>
+              Back to payment
+            </Button>
+          </>
+        )}
+      </div>
+    </>
   )
 }
 

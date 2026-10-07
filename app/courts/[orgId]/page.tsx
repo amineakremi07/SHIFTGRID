@@ -8,6 +8,9 @@ import { ClubBookingView } from '@/components/courts/club-booking-view'
 import { ClubGallery } from '@/components/club/club-gallery'
 import { ClubLocation } from '@/components/club/club-location'
 import { ownGalleryUrls } from '@/lib/club-profile'
+import { demandFor, venueWeekdayHour } from '@/lib/demand'
+import { loadClubDemand, loadMemberHistory } from '@/lib/insights-loader'
+import { favouriteSlot, isRecommended } from '@/lib/recommendations'
 import { displayAddress } from '@/lib/geocode'
 import { generateCourtSlots } from '@/lib/court-slots'
 import { addDays, venueDateString, venueInstant } from '@/lib/court-time'
@@ -31,7 +34,7 @@ function isSport(value: string): value is Sport {
 }
 
 /** Who is browsing, for the drawer's Member tab. Null when signed out. */
-async function loadMember(orgId: string): Promise<BookingDrawerMember | null> {
+async function loadMember(orgId: string): Promise<{ member: BookingDrawerMember; userId: string } | null> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -45,11 +48,14 @@ async function loadMember(orgId: string): Promise<BookingDrawerMember | null> {
     .maybeSingle()
 
   return {
-    displayName: profile?.display_name ?? user.email ?? 'Your account',
-    email: user.email ?? null,
-    phone: profile?.phone ?? null,
-    role: profile?.role ?? 'unknown',
-    isMember: profile?.role === 'player' && profile.org_id === orgId,
+    userId: user.id,
+    member: {
+      displayName: profile?.display_name ?? user.email ?? 'Your account',
+      email: user.email ?? null,
+      phone: profile?.phone ?? null,
+      role: profile?.role ?? 'unknown',
+      isMember: profile?.role === 'player' && profile.org_id === orgId,
+    },
   }
 }
 
@@ -75,7 +81,7 @@ export default async function ClubPage({
 
   // The club, its courts and who is browsing do not depend on each other: one round
   // trip. Only the slot locks need the court ids, so they follow.
-  const [{ data: org }, { data: courts, error: courtsError }, member] = await Promise.all([
+  const [{ data: org }, { data: courts, error: courtsError }, viewer] = await Promise.all([
     supabase
       .from('organizations')
       .select('id, name, address, city, whatsapp_number, weekly_hours, description, latitude, longitude, gallery_urls')
@@ -93,6 +99,15 @@ export default async function ClubPage({
     loadMember(orgId),
   ])
   if (!org) notFound()
+  const member = viewer?.member ?? null
+
+  // Slot hints, in parallel with the locks below: how busy this club usually is at each hour, and (for a
+  // signed-in member) the weekday + hour they usually book. Both fall back quietly when unavailable.
+  const [demand, history] = await Promise.all([
+    loadClubDemand(orgId, (courts ?? []).length),
+    viewer?.member.isMember ? loadMemberHistory(viewer.userId, orgId) : Promise.resolve([] as string[]),
+  ])
+  const favourite = favouriteSlot(history)
 
   // Locks overlapping the day (through 24:00 + 24h so late-night slots are covered).
   const courtIds = (courts ?? []).map((c) => c.id)
@@ -150,6 +165,12 @@ export default async function ClubPage({
                   dateStr: day,
                   locks: courtLocks,
                   now,
+                }).map((slot) => {
+                  if (slot.state !== 'available') return slot
+                  const { weekday, hour } = venueWeekdayHour(slot.start)
+                  const level = demandFor(demand, weekday, hour)
+                  const tag = isRecommended(slot.start, favourite) ? 'recommended' : level === 'high' ? 'high_demand' : level === 'quiet' ? 'quiet' : undefined
+                  return tag ? { ...slot, tag } : slot
                 })
               : [],
           },

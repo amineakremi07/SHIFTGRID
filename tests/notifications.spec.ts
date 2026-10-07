@@ -107,8 +107,10 @@ async function openClub(page: Page, dayOffset: number) {
 async function pickPadel(page: Page) {
   await page.getByRole('button', { name: /Padel Court 1.*Available/ }).first().click()
   await expect(page.getByText('Reserve your slot')).toBeVisible()
+  await drawer(page).getByTestId('step-next').click() // step 1 -> payment
 }
 const drawer = (page: Page) => page.getByRole('dialog')
+const toConfirm = (page: Page) => drawer(page).getByTestId('step-next').click() // payment -> confirm
 
 async function bookingIdFromPass(page: Page): Promise<string> {
   await drawer(page).getByRole('link', { name: 'View your pass' }).click()
@@ -119,7 +121,8 @@ async function bookingIdFromPass(page: Page): Promise<string> {
 test('a guest booking with an email: confirmation recorded once, address remembered, nothing secret stored', async ({ page }) => {
   await openClub(page, 44)
   await pickPadel(page)
-  await drawer(page).getByLabel(/Pay all now/).check()
+  await drawer(page).getByRole('radio', { name: /Pay all now/ }).check()
+  await toConfirm(page)
   await drawer(page).getByRole('tab', { name: 'Guest' }).click()
   await drawer(page).locator('#guest-name').fill('E2E Mail Guest')
   await drawer(page).locator('#guest-phone').fill('98121212')
@@ -164,9 +167,10 @@ test('a guest booking with an email: confirmation recorded once, address remembe
 test('a split booking emails each tagged player their link; a blank box sends nothing', async ({ page }) => {
   await openClub(page, 45)
   await pickPadel(page)
-  await drawer(page).getByLabel(/Split ·/).check()
+  await drawer(page).getByRole('radio', { name: /Split ·/ }).check()
   await drawer(page).getByLabel('Email for player 2').fill('e2e.friend.one@example.com')
   await drawer(page).getByLabel('Email for player 4').fill('e2e.friend.three@example.com')
+  await toConfirm(page)
   await drawer(page).getByRole('tab', { name: 'Guest' }).click()
   await drawer(page).locator('#guest-name').fill('E2E Split Organizer')
   await drawer(page).locator('#guest-phone').fill('98343434')
@@ -195,15 +199,11 @@ test('a split booking emails each tagged player their link; a blank box sends no
 test('a bad invite address is caught before booking, not silently dropped', async ({ page }) => {
   await openClub(page, 46)
   await pickPadel(page)
-  await drawer(page).getByLabel(/Split ·/).check()
+  await drawer(page).getByRole('radio', { name: /Split ·/ }).check()
   await drawer(page).getByLabel('Email for player 2').fill('not-an-email')
-  await drawer(page).getByRole('tab', { name: 'Guest' }).click()
-  await drawer(page).locator('#guest-name').fill('E2E Typo Organizer')
-  await drawer(page).locator('#guest-phone').fill('98454545')
-
-  await drawer(page).locator('#guest-consent').check()
-  await drawer(page).getByRole('button', { name: /Pay 22\.50 TND & Reserve/ }).click()
+  await toConfirm(page) // the typo stops the player on the payment step
   await expect(drawer(page).getByRole('alert')).toContainText('does not look like an email address')
+  await expect(drawer(page).getByTestId('step-3')).toBeDisabled()
   await expect(drawer(page)).not.toContainText('waiting for your players')
 })
 

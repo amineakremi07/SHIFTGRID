@@ -64,3 +64,28 @@ export function pathAfterVerify(args: { type?: OtpType; redirectType?: string | 
 
 /** Where a failed link ends up: the sign-in page, which explains it. */
 export const CALLBACK_ERROR_PATH = '/login?error=link_invalid'
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** A club id taken from a callback link: a uuid or null. Never trusted further than that (the club is re-checked). */
+export const clubFromParam = (value: string | null): string | null => (value && UUID.test(value) ? value : null)
+
+/** Name of the short-lived cookie that carries the club and return path through the Google round trip. */
+export const OAUTH_COOKIE = 'sg-oauth'
+
+/**
+ * The club and return path saved before leaving for Google. They travel in a cookie, not in the redirect
+ * URL, so the URL stays exactly the one on Supabase's Redirect URLs list. Both are re-validated here.
+ */
+export function parseOAuthCookie(raw: string | null | undefined): { club: string | null; next: string | null } {
+  if (!raw) return { club: null, next: null }
+  try {
+    const value = JSON.parse(decodeURIComponent(raw)) as { club?: unknown; next?: unknown }
+    return {
+      club: clubFromParam(typeof value.club === 'string' ? value.club : null),
+      next: safeRedirectPath(typeof value.next === 'string' ? value.next : null),
+    }
+  } catch {
+    return { club: null, next: null }
+  }
+}

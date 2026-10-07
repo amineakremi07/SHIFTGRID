@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { postLoginPath } from '@/lib/auth-landing'
 import { createClient } from '@/lib/supabase/client'
+import { GoogleButton } from '@/components/auth/google-button'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -46,6 +47,8 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
   const passwordWasReset = searchParams.get('reset') === '1'
   // /auth/callback sends a bad, expired or already used email link here.
   const linkProblem = searchParams.get('error') === 'link_invalid'
+  // Google sign-in found no account and no club to join (the button on a club page knows the club).
+  const googleNoClub = searchParams.get('error') === 'google_no_club'
 
   const [error, setError] = useState<React.ReactNode>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -131,6 +134,15 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
                 ).
               </div>
             )}
+            {googleNoClub && !error && (
+              <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive" data-testid="google-no-club">
+                No ShiftGrid account uses that Google address yet. Open a club page and tap <strong>Continue with Google</strong> there to join that club, or{' '}
+                <Link href="/register" className="font-medium underline underline-offset-2">
+                  create an account
+                </Link>
+                .
+              </div>
+            )}
             {passwordWasReset && !error && (
               <div role="status" className="rounded-md border border-[#0e634f]/30 bg-[#0e634f]/10 p-3 text-sm text-[#0e634f]">
                 Your password was updated. Please sign in with your new password.
@@ -192,6 +204,20 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Signing in" /> : 'Sign In'}
             </Button>
           </form>
+
+          {portal === 'general' && (
+            <div className="mt-5 space-y-3">
+              <p className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+                or
+              </p>
+              <GoogleButton next={requested ?? undefined} disabled={isLoading} />
+              <p className="text-center text-xs text-muted-foreground">
+                By continuing you accept the{' '}
+                <Link href="/terms" className="underline underline-offset-2">Terms</Link> and{' '}
+                <Link href="/privacy" className="underline underline-offset-2">Privacy Policy</Link>.
+              </p>
+            </div>
+          )}
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
             {portal === 'general' ? (

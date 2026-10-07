@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { CALLBACK_ERROR_PATH, decideCallback, pathAfterVerify } from '@/lib/auth-callback'
+import { CALLBACK_ERROR_PATH, decideCallback, OAUTH_COOKIE, parseOAuthCookie, pathAfterVerify } from '@/lib/auth-callback'
 import { landingPathFor } from '@/lib/auth-landing'
+import { createGooglePlayerProfile, isGoogleUser } from '@/lib/google-signup'
 import { reportServerError } from '@/lib/observability'
+import { captureServerEvent } from '@/lib/telemetry'
 import { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/types/database'
 
@@ -18,7 +20,13 @@ import type { UserRole } from '@/lib/types/database'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  const go = (path: string) => NextResponse.redirect(new URL(path, request.url))
+  // The Google round trip leaves its club / return path in a short-lived cookie; it is used once.
+  const oauth = parseOAuthCookie(request.cookies.get(OAUTH_COOKIE)?.value)
+  const go = (path: string) => {
+    const response = NextResponse.redirect(new URL(path, request.url))
+    if (request.cookies.has(OAUTH_COOKIE)) response.cookies.set(OAUTH_COOKIE, '', { path: '/auth', maxAge: 0 })
+    return response
+  }
 
   try {
     const decision = decideCallback(request.nextUrl.searchParams)
@@ -46,10 +54,28 @@ export async function GET(request: NextRequest) {
     if (!user) return go(CALLBACK_ERROR_PATH)
 
     // The role decides the landing page (an account with no profile yet simply goes home).
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    const { data: existing } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    let profile = existing
+
+    // "Continue with Google": an existing account just signs in; a new one needs a club to belong to.
+    if (isGoogleUser(user)) {
+      let signedUp = false
+      if (!profile) {
+        const club = oauth.club
+        if (!club || !(await createGooglePlayerProfile(user, club))) {
+          await supabase.auth.signOut()
+          return go('/login?error=google_no_club')
+        }
+        profile = { role: 'player' }
+        signedUp = true
+      }
+      // Counts only: no email, name or id.
+      captureServerEvent(signedUp ? 'user_signup_google_success' : 'user_login_google_success', { role: profile.role })
+    }
+
     const roleLanding = profile ? landingPathFor(profile.role as UserRole) : '/'
 
-    return go(pathAfterVerify({ type, redirectType, next: decision.next, roleLanding }))
+    return go(pathAfterVerify({ type, redirectType, next: decision.next ?? oauth.next, roleLanding }))
   } catch (error) {
     console.error('auth callback failed', error instanceof Error ? error.message : error)
     reportServerError('auth.callback', error)

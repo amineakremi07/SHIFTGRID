@@ -33,6 +33,7 @@ import {
   type AnonymousBookerInput,
 } from '@/lib/validations/player-auth'
 import { signInPlayer, signUpPlayer, createAnonymousBooker } from '@/lib/actions/player-auth'
+import { GoogleButton } from '@/components/auth/google-button'
 
 type AuthMode = 'signin' | 'signup' | 'anonymous'
 
@@ -461,6 +462,16 @@ export function PlayerAuthModal({
               : 'Book without an account — confirmations sent via SMS'}
           </DialogDescription>
         </DialogHeader>
+
+        <div className="mt-4 space-y-3">
+          <GoogleButton orgId={orgId} next={typeof window === 'undefined' ? undefined : window.location.pathname + window.location.search} />
+          <p className="text-center text-xs text-muted-foreground">
+            By continuing with Google you accept the Terms and the Privacy Policy.
+          </p>
+          <p className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+            or
+          </p>
+        </div>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as AuthMode)} className="mt-4">
           <TabsList className="grid w-full grid-cols-3">

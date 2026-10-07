@@ -5,7 +5,8 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { reportServerError } from '@/lib/observability'
 import { actionRateLimit } from '@/lib/rate-limit'
-import { captureAudit, captureBooking, captureRateLimit, timed } from '@/lib/telemetry'
+import { assessBookingRisk } from '@/lib/risk-loader'
+import { captureAudit, captureBooking, captureRateLimit, captureServerEvent, timed } from '@/lib/telemetry'
 import { notifyBookingCreated } from '@/lib/notifications/service'
 import { appOrigin } from '@/lib/notifications/origin'
 import { emailEnabled } from '@/lib/notifications/mailer'
@@ -52,6 +53,8 @@ export type BookingResult =
       passPath: string
       /** Whether emails are being sent at all (a provider is configured). */
       emailsEnabled: boolean
+      /** The booker's history makes a no-show likely: the screen shows a deposit warning. Never blocks the booking. */
+      highRisk?: boolean
     }
   | {
       ok: false
@@ -189,6 +192,13 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
     profileId = user.id
   }
 
+  // Anti no-show: score the booker's history. It only warns (and is counted in analytics), it never refuses.
+  const risk = await assessBookingRisk({
+    profileId,
+    guestPhone: data.mode === 'guest' ? data.guest.phone : undefined,
+    startsAt: data.startsAt,
+  })
+
   const { data: booked, error } = await admin.rpc('create_booking', {
     p_org_id: data.orgId,
     p_court_id: data.courtId,
@@ -276,6 +286,19 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
     source: 'online',
   })
 
+  if (risk.level === 'high') {
+    // Ids, a score and short reasons only: no name, phone or email.
+    captureServerEvent('booking.high_risk_flagged', {
+      booking_id: row.booking_id,
+      org_id: data.orgId,
+      risk_score: risk.score,
+      risk_level: risk.level,
+      reasons: risk.reasons.join(' | '),
+      payment: choice,
+      actor: data.mode,
+    })
+  }
+
   // Emails go out after the response: the player never waits for the provider, and a
   // failed email cannot undo a booking. notifyBookingCreated() never throws.
   const origin = await appOrigin()
@@ -307,5 +330,6 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
     invites,
     passPath: row.pass_token ? `/reservations/${row.booking_id}?token=${row.pass_token}` : `/reservations/${row.booking_id}`,
     emailsEnabled: emailEnabled(),
+    ...(risk.level === 'high' ? { highRisk: true } : {}),
   }
 }

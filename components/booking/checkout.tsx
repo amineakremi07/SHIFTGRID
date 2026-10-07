@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Banknote, Check, CreditCard, Link2, Loader2, Mail, Ticket, Users } from 'lucide-react'
+import { Banknote, Check, CreditCard, Link2, Loader2, Mail, ShieldAlert, Ticket, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -325,6 +325,16 @@ export function CheckoutConfirmation({
           </div>
         )}
       </dl>
+
+      {result.highRisk && (
+        <p role="note" data-testid="risk-notice" className="flex items-start gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+          <ShieldAlert className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <span>
+            Please arrive on time: {orgName} may ask for a deposit at the desk, and a missed booking is recorded against your
+            account. Cancel in advance if your plans change.
+          </span>
+        </p>
+      )}
 
       {(emailedTo || invitesEmailed > 0) && (
         <p className="ph-mask flex items-center gap-2 rounded-lg bg-card px-3 py-2 text-sm text-muted-foreground">
