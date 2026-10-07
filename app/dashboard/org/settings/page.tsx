@@ -18,7 +18,7 @@ export default async function OrgSettingsPage() {
   const supabase = await createClient()
   const { data: org } = await supabase
     .from('organizations')
-    .select('name, description, address, city, latitude, longitude, gallery_urls, weekly_hours')
+    .select('name, description, whatsapp_number, address, city, latitude, longitude, gallery_urls, weekly_hours')
     .eq('id', access.ctx.orgId)
     .maybeSingle()
   if (!org) redirect('/dashboard/org')
@@ -40,6 +40,7 @@ export default async function OrgSettingsPage() {
           initial={{
             name: org.name,
             description: org.description,
+            whatsappNumber: org.whatsapp_number,
             address: org.address,
             city: org.city,
             latitude: org.latitude,

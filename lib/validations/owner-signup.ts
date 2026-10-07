@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { termsConsentSchema } from '@/lib/validations/player-auth'
+import { stripHtml } from '@/lib/sanitize-text'
 
 export const companyDetailsSchema = z.object({
   companyName: z.string().min(2, 'Company name must be at least 2 characters').max(100),
@@ -8,8 +9,8 @@ export const companyDetailsSchema = z.object({
     .regex(/^\d{14}$/, 'Registry number must be 14 digits (Tunisia Registre de Commerce)')
     .optional()
     .or(z.literal('')),
-  address: z.string().min(5, 'Address must be at least 5 characters').max(200),
-  city: z.string().min(2, 'City is required').max(100),
+  address: z.string().trim().min(5, 'Address must be at least 5 characters').max(200).transform(stripHtml),
+  city: z.string().trim().min(2, 'City is required').max(100).transform(stripHtml),
   postalCode: z.string().regex(/^\d{4}$/, 'Postal code must be 4 digits').optional().or(z.literal('')),
   phone: z.string().regex(/^\+216\s?\d{2}\s?\d{3}\s?\d{3}$/, 'Phone must be Tunisian format: +216 XX XXX XXX'),
   email: z.string().email('Invalid email address'),

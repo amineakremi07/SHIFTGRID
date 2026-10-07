@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Disclosure } from '@/components/ui/disclosure'
 import { InfoTip } from '@/components/ui/info-tip'
 import { SPRING } from '@/components/ui/motion-button'
+import { BookingActions } from '@/components/booking/booking-actions'
 import { regenerateShareInviteAction } from '@/lib/actions/payments'
 import type { BookingResult } from '@/lib/actions/booking'
 import { formatVenueDate, formatVenueTime } from '@/lib/court-time'
@@ -245,6 +246,9 @@ export function CheckoutConfirmation({
   date,
   result,
   orgName,
+  orgAddress = null,
+  orgWhatsapp = null,
+  sport,
   emailedTo = null,
   invitesEmailed = 0,
   onDone,
@@ -253,6 +257,9 @@ export function CheckoutConfirmation({
   date: string
   result: Extract<BookingResult, { ok: true }>
   orgName: string
+  sport: string
+  orgAddress?: string | null
+  orgWhatsapp?: string | null
   /** The address a confirmation is being emailed to (only when email is configured). */
   emailedTo?: string | null
   /** How many other players are being emailed their payment link. */
@@ -342,6 +349,20 @@ export function CheckoutConfirmation({
           <InviteLinks invites={result.invites} />
         </div>
       )}
+
+      <BookingActions
+        bookingId={result.bookingId}
+        clubName={orgName}
+        courtName={courtName}
+        sport={sport}
+        date={formatVenueDate(date)}
+        time={`${formatVenueTime(result.startsAt)} – ${formatVenueTime(result.endsAt)}`}
+        startsAt={result.startsAt}
+        endsAt={result.endsAt}
+        reference={result.reference}
+        address={orgAddress}
+        whatsappNumber={orgWhatsapp}
+      />
 
       {result.cancelPath && <GuestCancelLink path={result.cancelPath} />}
 

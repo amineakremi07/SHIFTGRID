@@ -34,6 +34,9 @@ export type Pass = {
   reference: string
   orgId: string
   clubName: string
+  /** For the calendar event and the WhatsApp button. */
+  clubAddress: string | null
+  clubWhatsapp: string | null
   courtName: string
   sport: Sport
   startsAt: string
@@ -105,7 +108,7 @@ export async function loadPass(bookingId: string, guestToken?: string | null): P
   if (!b) return null
 
   const [org, court, payment, shares] = await Promise.all([
-    admin.from('organizations').select('name').eq('id', b.org_id).maybeSingle(),
+    admin.from('organizations').select('name, address, city, whatsapp_number').eq('id', b.org_id).maybeSingle(),
     b.court_id ? admin.from('courts').select('name').eq('id', b.court_id).maybeSingle() : Promise.resolve({ data: null }),
     admin.from('payment_records').select('amount, status, provider').eq('booking_id', b.id).maybeSingle(),
     admin
@@ -120,6 +123,8 @@ export async function loadPass(bookingId: string, guestToken?: string | null): P
     reference: b.id.replace(/-/g, '').slice(0, 8).toUpperCase(),
     orgId: b.org_id,
     clubName: org.data?.name ?? 'the club',
+    clubAddress: [org.data?.address, org.data?.city].filter(Boolean).join(', ') || null,
+    clubWhatsapp: org.data?.whatsapp_number ?? null,
     courtName: court.data?.name ?? 'Court',
     sport: b.sport as Sport,
     startsAt: b.starts_at,

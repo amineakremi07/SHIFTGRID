@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { PAYMENT_CHOICES } from '@/lib/payments'
+import { stripHtml } from '@/lib/sanitize-text'
 
 /**
  * Tunisian mobile number -> canonical "+216XXXXXXXX", or null if invalid.
@@ -59,7 +60,9 @@ export const guestDetailsSchema = z.object({
     .string()
     .trim()
     .min(2, 'Please enter your full name')
-    .max(100, 'Name is too long'),
+    .max(100, 'Name is too long')
+    .transform(stripHtml)
+    .refine((v) => v.length >= 2, 'Please enter your full name'),
   phone: guestPhoneSchema,
   /** Optional: where the confirmation, reminders and cancellation notice are sent. */
   email: optionalEmailSchema,
@@ -118,6 +121,8 @@ const bookingBase = {
   payment: z.enum(PAYMENT_CHOICES).default('cash'),
   /** Split only: addresses to email the other players' payment links to, in link order. Blanks are skipped. */
   inviteEmails: z.array(inviteEmailSchema).max(3).optional(),
+  /** Honeypot: invisible to people, so only a bot fills it. Never stored; see createBooking. */
+  website: z.string().max(500).optional(),
 }
 
 /**
@@ -166,11 +171,17 @@ export const manualBookingSchema = z
     start_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM').optional(),
     /** Defaults to the sport's first allowed size (padel 4, tennis 2, football 12). */
     player_count: z.number().int().min(1).max(MAX_PLAYERS).optional(),
-    full_name: z.string().trim().min(2, 'Please enter the customer name').max(100, 'Name is too long'),
+    full_name: z
+      .string()
+      .trim()
+      .min(2, 'Please enter the customer name')
+      .max(100, 'Name is too long')
+      .transform(stripHtml)
+      .refine((v) => v.length >= 2, 'Please enter the customer name'),
     phone: z.preprocess(blankToUndefined, guestPhoneSchema.optional()),
     email: z.preprocess(blankToUndefined, optionalEmailSchema),
     payment_status: z.enum(MANUAL_PAYMENT_STATUSES),
-    notes: z.preprocess(blankToUndefined, z.string().trim().max(300, 'Notes are limited to 300 characters').optional()),
+    notes: z.preprocess(blankToUndefined, z.string().trim().max(300, 'Notes are limited to 300 characters').transform(stripHtml).optional()),
     source: z.enum(MANUAL_SOURCES).default('manual'),
   })
   .strict()

@@ -10,6 +10,7 @@ import { findPendingInviteForEmail } from '@/lib/staff-invite-core'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { actionRateLimit } from '@/lib/rate-limit'
+import { stripHtml } from '@/lib/sanitize-text'
 
 /**
  * Staff management for club owners.
@@ -264,7 +265,7 @@ export async function previewStaffInvite(token: string): Promise<InvitePreview> 
 
 const acceptSchema = z.object({
   token: z.string().regex(TOKEN),
-  displayName: z.string().trim().min(2, 'Please enter your name').max(100),
+  displayName: z.string().trim().min(2, 'Please enter your name').max(100).transform(stripHtml),
   password: z.string().min(8, 'Password must be at least 8 characters').max(72),
 })
 
@@ -335,7 +336,7 @@ export async function acceptStaffInvite(input: {
 /* --------------- the invitee's side when the link came from Supabase Auth ------------------ */
 
 const completeSchema = z.object({
-  displayName: z.string().trim().min(2, 'Please enter your name').max(100),
+  displayName: z.string().trim().min(2, 'Please enter your name').max(100).transform(stripHtml),
   password: z.string().min(8, 'Password must be at least 8 characters').max(72),
 })
 

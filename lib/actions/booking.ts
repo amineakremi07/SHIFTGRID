@@ -5,7 +5,7 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { reportServerError } from '@/lib/observability'
 import { actionRateLimit } from '@/lib/rate-limit'
-import { captureBooking, captureRateLimit, timed } from '@/lib/telemetry'
+import { captureAudit, captureBooking, captureRateLimit, timed } from '@/lib/telemetry'
 import { notifyBookingCreated } from '@/lib/notifications/service'
 import { appOrigin } from '@/lib/notifications/origin'
 import { emailEnabled } from '@/lib/notifications/mailer'
@@ -118,6 +118,28 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
     }
   }
   const data = parsed.data
+
+  // Honeypot: a person never sees this field. Answer a bot with a believable success and do nothing
+  // (no slot held, no email, no database write), so it has no signal to adapt to.
+  if (data.website) {
+    captureAudit({ action: 'booking.honeypot', status: 'blocked', actor: data.mode })
+    const id = crypto.randomUUID()
+    return {
+      ok: true,
+      bookingId: id,
+      reference: id.replace(/-/g, '').slice(0, 8).toUpperCase(),
+      amount: 0,
+      startsAt: data.startsAt,
+      endsAt: data.startsAt,
+      cancelPath: null,
+      status: 'pending_payment',
+      payment: 'cash',
+      paidNow: 0,
+      invites: [],
+      passPath: '/',
+      emailsEnabled: false,
+    }
+  }
 
   // Slot hogging guard: members are counted per account, guests per IP. Runs after
   // validation (so junk is cheap to refuse) and before any database work.

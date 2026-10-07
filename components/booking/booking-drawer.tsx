@@ -78,6 +78,9 @@ export interface BookingDrawerProps {
   onOpenChange: (open: boolean) => void
   orgId: string
   orgName: string
+  /** Venue address and WhatsApp number, for the confirmation's calendar and contact buttons. */
+  orgAddress?: string | null
+  orgWhatsapp?: string | null
   selection: BookingDrawerSelection | null
   /** null when nobody is signed in. */
   member: BookingDrawerMember | null
@@ -98,7 +101,7 @@ const SPORT_META: Record<Sport, { label: string; icon: typeof Zap }> = {
 }
 
 /** Bottom sheet on phones, right-hand sheet from the `md` breakpoint up. */
-function useIsDesktop() {
+export function useIsDesktop() {
   return React.useSyncExternalStore(
     (onChange) => {
       const query = window.matchMedia('(min-width: 768px)')
@@ -168,6 +171,8 @@ export function PriceSummary({ selection }: { selection: BookingDrawerSelection 
 export function DrawerBody({
   orgId,
   orgName,
+  orgAddress = null,
+  orgWhatsapp = null,
   selection,
   member,
   onRequestSignIn,
@@ -186,6 +191,8 @@ export function DrawerBody({
   const [playerCount, setPlayerCount] = React.useState<number>(playerOptions[0])
   const [payment, setPayment] = React.useState<PaymentChoice>('cash')
   const [submitting, setSubmitting] = React.useState(false)
+  // Honeypot value (hidden field): stays empty for people.
+  const [honeypot, setHoneypot] = React.useState('')
   const [error, setError] = React.useState<string | null>(null)
   // Split only: where to email each other player's payment link (all optional).
   const [inviteEmails, setInviteEmails] = React.useState<string[]>([])
@@ -238,6 +245,7 @@ export function DrawerBody({
       playerCount,
       payment: choice,
       ...(invites.some(Boolean) ? { inviteEmails: invites } : {}),
+      ...(honeypot ? { website: honeypot } : {}),
     }
 
     try {
@@ -298,6 +306,9 @@ export function DrawerBody({
           date={selection.date}
           result={result}
           orgName={orgName}
+          orgAddress={orgAddress}
+          orgWhatsapp={orgWhatsapp}
+          sport={selection.sport}
           emailedTo={result.emailsEnabled ? sentTo.email : null}
           invitesEmailed={result.emailsEnabled ? sentTo.invites : 0}
           onDone={onClose}
@@ -490,6 +501,19 @@ export function DrawerBody({
             onSubmit={form.handleSubmit((guest) => submit({ mode: 'guest', guest }))}
             className="space-y-4"
           >
+            {/* Honeypot: off-screen, unreachable by keyboard and screen readers; only bots fill it. */}
+            <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+              <label htmlFor="guest-website">Website</label>
+              <input
+                id="guest-website"
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="guest-name">Full name</Label>
               <Input

@@ -76,6 +76,8 @@ export interface CourtSlotMatrixProps {
   sport?: Sport
   /** Fires when the internal tabs change the sport (uncontrolled mode). */
   onSportChange?: (sport: Sport) => void
+  /** The caller shows its own sticky action bar on phones, so skip the inline selection summary there. */
+  hideSummaryOnMobile?: boolean
   className?: string
 }
 
@@ -303,9 +305,10 @@ function SlotCell({
       onClick={isAvailable ? onSelect : undefined}
       disabled={!isAvailable}
       aria-pressed={isSelected}
+      data-slot-cell
       aria-label={`${court.name}, ${formatTime(slot.start)} to ${formatTime(slot.end)}, ${STATE_LABEL[slot.state]}${isAvailable ? `, ${formatTND(price)}, ${peak ? 'peak' : 'off-peak'} price` : ''}`}
       className={cn(
-        'relative w-full rounded-lg border p-3 text-left transition-colors',
+        'relative min-h-12 w-full rounded-lg border p-3 text-left transition-colors',
         'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
         isAvailable &&
           !isSelected &&
@@ -492,6 +495,7 @@ export function CourtSlotMatrix({
   realtime,
   sport: controlledSport,
   onSportChange,
+  hideSummaryOnMobile = false,
   className,
 }: CourtSlotMatrixProps) {
   const reduceMotion = useReducedMotion()
@@ -552,9 +556,26 @@ export function CourtSlotMatrix({
     [selection, onSlotSelect, selectedDate]
   )
 
+  // Desktop keyboard: arrows / Home / End move focus between the free slots that are on screen.
+  const handleGridKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    const keys = ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End']
+    if (!keys.includes(e.key)) return
+    const target = e.target as HTMLElement
+    if (!target.matches('[data-slot-cell]')) return
+    const cells = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[data-slot-cell]:not(:disabled)')).filter(
+      (el) => el.offsetParent !== null
+    )
+    const at = cells.indexOf(target as HTMLButtonElement)
+    if (at === -1) return
+    const next =
+      e.key === 'Home' ? 0 : e.key === 'End' ? cells.length - 1 : e.key === 'ArrowDown' || e.key === 'ArrowRight' ? Math.min(at + 1, cells.length - 1) : Math.max(at - 1, 0)
+    e.preventDefault()
+    cells[next]?.focus()
+  }
+
   return (
     <TooltipProvider delayDuration={200}>
-      <section className={cn('w-full', className)} aria-label="Court availability">
+      <section className={cn('w-full', className)} aria-label="Court availability" onKeyDown={handleGridKeyDown}>
         <Tabs
           value={sport}
           onValueChange={(v) => {
@@ -567,7 +588,7 @@ export function CourtSlotMatrix({
           {!isControlled && (
           <TabsList variant="line" className="mb-4">
             {availableSports.map(({ value, label, icon: Icon }) => (
-              <TabsTrigger key={value} value={value} className="relative">
+              <TabsTrigger key={value} value={value} className="relative max-md:min-h-12">
                 {/* Shared layoutId slides the indicator between sports. */}
                 {sport === value && animate && (
                   <motion.span
@@ -596,9 +617,8 @@ export function CourtSlotMatrix({
                   {/* Desktop: courts side by side. */}
                   <div
                     className="hidden gap-4 md:grid"
-                    style={{
-                      gridTemplateColumns: `repeat(${Math.min(sportCourts.length, 4)}, minmax(0, 1fr))`,
-                    }}
+                    // Tablet (768-1024px) wraps to 2-3 courts per row, desktop fits more; empty tracks collapse.
+                    style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(13rem, 1fr))' }}
                   >
                     {sportCourts.map((court) => (
                       <CourtColumn
@@ -626,6 +646,7 @@ export function CourtSlotMatrix({
                           <Button
                             key={court.id}
                             size="sm"
+                            className="min-h-12 px-4 text-sm"
                             variant={
                               activeMobileCourt?.id === court.id
                                 ? 'default'
@@ -664,7 +685,7 @@ export function CourtSlotMatrix({
               animate={{ opacity: 1, y: 0 }}
               exit={animate ? { opacity: 0, y: 8 } : undefined}
               transition={SPRING}
-              className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4"
+              className={cn('mt-4 flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4', hideSummaryOnMobile ? 'hidden md:flex' : 'flex')}
               aria-live="polite"
             >
               <div className="text-sm">

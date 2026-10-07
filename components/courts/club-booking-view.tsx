@@ -3,12 +3,16 @@
 import * as React from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
-import { BookingDrawer, type BookingDrawerMember, type BookingDrawerSelection } from '@/components/booking/booking-drawer'
+import { BookingDrawer, useIsDesktop, type BookingDrawerMember, type BookingDrawerSelection } from '@/components/booking/booking-drawer'
 import { PlayerAuthModal } from '@/components/booking/player-auth-modal'
 import { SlotPicker } from '@/components/booking/slot-picker'
 import type { MatrixCourt, MatrixSelection } from '@/components/courts/court-slot-matrix'
 import { trackEvent } from '@/components/providers/posthog-provider'
-import { timeSlotLabel } from '@/lib/court-time'
+import { Button } from '@/components/ui/button'
+import { formatVenueDate, minutesSinceVenueDayStart, timeSlotLabel, timeToMinutes } from '@/lib/court-time'
+import { computePrice } from '@/lib/pricing'
+import { formatTND } from '@/lib/payments'
+import { SPORT_DURATION_MIN } from '@/lib/slot-duration'
 import type { OnlineMode } from '@/lib/payments'
 import { toast } from 'sonner'
 
@@ -21,6 +25,8 @@ import { toast } from 'sonner'
 export function ClubBookingView({
   orgId,
   orgName,
+  orgAddress = null,
+  orgWhatsapp = null,
   dateStr,
   minDate,
   maxDate,
@@ -31,6 +37,10 @@ export function ClubBookingView({
 }: {
   orgId: string
   orgName: string
+  /** Venue address for the calendar event. */
+  orgAddress?: string | null
+  /** The club's WhatsApp number (digits), if it set one. */
+  orgWhatsapp?: string | null
   dateStr: string
   minDate: string
   maxDate: string
@@ -45,7 +55,10 @@ export function ClubBookingView({
   const pathname = usePathname()
   const [pending, startTransition] = React.useTransition()
 
+  const isDesktop = useIsDesktop()
   const [selection, setSelection] = React.useState<BookingDrawerSelection | null>(null)
+  // Phones: picking a slot shows the sticky "Réserver maintenant" bar; the drawer opens from it.
+  const [barOpen, setBarOpen] = React.useState(false)
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [authOpen, setAuthOpen] = React.useState(false)
   // Remounting the matrix is how its highlighted slot is cleared.
@@ -72,12 +85,14 @@ export function ClubBookingView({
 
   const changeDate = (next: string) => {
     setDrawerOpen(false)
+    setBarOpen(false)
     startTransition(() => router.push(`${pathname}?date=${next}`, { scroll: false }))
   }
 
   const handleSlotSelect = (picked: MatrixSelection | null) => {
     if (!picked) {
       setDrawerOpen(false)
+      setBarOpen(false)
       return
     }
     const court = courts.find((c) => c.id === picked.courtId)
@@ -102,11 +117,13 @@ export function ClubBookingView({
       nightSurchargePerHour: court.nightSurchargePerHour ?? 0,
       nightStartsAt: court.nightStartsAt ?? '18:00:00',
     })
-    setDrawerOpen(true)
+    if (isDesktop) setDrawerOpen(true)
+    else setBarOpen(true)
   }
 
   const handleDrawerOpenChange = (open: boolean) => {
     setDrawerOpen(open)
+    if (!open) setBarOpen(false)
     // Closing the drawer un-highlights the slot. (The selection itself is kept so
     // the drawer's content does not vanish mid slide-out.)
     if (!open) {
@@ -147,6 +164,8 @@ export function ClubBookingView({
         onOpenChange={handleDrawerOpenChange}
         orgId={orgId}
         orgName={orgName}
+        orgAddress={orgAddress}
+        orgWhatsapp={orgWhatsapp}
         selection={selection}
         member={member}
         onlineMode={onlineMode}
@@ -157,6 +176,20 @@ export function ClubBookingView({
         }}
         onSlotUnavailable={() => router.refresh()}
       />
+
+      {barOpen && selection && !drawerOpen && !authOpen && (
+        <StickyBookingBar
+          selection={selection}
+          onBook={() => {
+            setBarOpen(false)
+            setDrawerOpen(true)
+          }}
+          onClear={() => {
+            setBarOpen(false)
+            setMatrixKey((k) => k + 1)
+          }}
+        />
+      )}
 
       <PlayerAuthModal
         orgId={orgId}
@@ -170,6 +203,48 @@ export function ClubBookingView({
           if (selection) setDrawerOpen(true)
         }}
       />
+    </div>
+  )
+}
+
+/** Phones only: a thumb-reach action bar pinned to the bottom once a slot is picked. */
+function StickyBookingBar({
+  selection,
+  onBook,
+  onClear,
+}: {
+  selection: BookingDrawerSelection
+  onBook: () => void
+  onClear: () => void
+}) {
+  const price = computePrice({
+    pricePerHour: selection.pricePerHour,
+    nightSurchargePerHour: selection.nightSurchargePerHour,
+    nightStartsAtMinutes: timeToMinutes(selection.nightStartsAt),
+    startMinutes: minutesSinceVenueDayStart(selection.startsAt, selection.date),
+    durationMinutes: SPORT_DURATION_MIN[selection.sport],
+  })
+  return (
+    <div
+      role="region"
+      aria-label="Your selection"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 pt-3 shadow-none backdrop-blur md:hidden"
+      style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+    >
+      <div className="mx-auto flex max-w-xl items-center gap-3">
+        <div className="min-w-0 flex-1 text-sm">
+          <p className="truncate font-semibold">{selection.courtName}</p>
+          <p className="truncate tabular-nums text-muted-foreground">
+            {formatVenueDate(selection.date)} · {timeSlotLabel(selection.startsAt, selection.endsAt)} · {formatTND(price.total)}
+          </p>
+        </div>
+        <Button type="button" variant="ghost" className="h-12 min-w-12" aria-label="Clear selection" onClick={onClear}>
+          ✕
+        </Button>
+        <Button type="button" className="h-12 px-5 text-base" onClick={onBook}>
+          Réserver maintenant
+        </Button>
+      </div>
     </div>
   )
 }

@@ -1,5 +1,7 @@
 import QRCode from 'qrcode'
 
+import { bookingCalendarEvent, icsContent } from '@/lib/calendar'
+import { bookingWhatsappLink } from '@/lib/whatsapp'
 import { checkInQrPayload } from '@/lib/check-in-input'
 import { formatVenueDate, formatVenueTime, venueDateString } from '@/lib/court-time'
 import { deliver, emailEnabled, type DeliverResult } from '@/lib/notifications/mailer'
@@ -66,7 +68,7 @@ export async function loadBookingContext(admin: Admin, bookingId: string): Promi
   if (!b) return null
 
   const [org, court, payment, shares, profile, guest] = await Promise.all([
-    admin.from('organizations').select('name').eq('id', b.org_id).maybeSingle(),
+    admin.from('organizations').select('name, address, city, whatsapp_number').eq('id', b.org_id).maybeSingle(),
     b.court_id ? admin.from('courts').select('name').eq('id', b.court_id).maybeSingle() : Promise.resolve({ data: null }),
     admin.from('payment_records').select('amount, status, provider').eq('booking_id', b.id).maybeSingle(),
     admin.from('booking_shares').select('amount, status').eq('booking_id', b.id),
@@ -80,6 +82,34 @@ export async function loadBookingContext(admin: Admin, bookingId: string): Promi
     email = data.user?.email ?? null
   }
 
+  const clubName = org.data?.name ?? 'the club'
+  const courtName = court.data?.name ?? 'Court'
+  const date = formatVenueDate(venueDateString(new Date(b.starts_at)))
+  const time = `${formatVenueTime(b.starts_at)} – ${formatVenueTime(b.ends_at)}`
+  const reference = b.id.replace(/-/g, '').slice(0, 8).toUpperCase()
+  const facts: BookingFacts = {
+    clubName,
+    courtName,
+    sport: b.sport,
+    date,
+    time,
+    reference,
+    amount: Number(payment.data?.amount ?? 0),
+    playerCount: b.player_count,
+    // The slot's club number, else the platform support number (null hides the button).
+    whatsappUrl: bookingWhatsappLink(org.data?.whatsapp_number, { clubName, date, time, courtName, reference }),
+    calendar: bookingCalendarEvent({
+      bookingId: b.id,
+      clubName,
+      courtName,
+      sport: b.sport,
+      startsAt: b.starts_at,
+      endsAt: b.ends_at,
+      address: [org.data?.address, org.data?.city].filter(Boolean).join(', ') || null,
+      reference,
+    }),
+  }
+
   const shareRows = shares.data ?? []
   const state: PaymentState = b.status === 'confirmed' ? 'confirmed' : shareRows.length ? 'awaiting_shares' : 'pay_at_club'
 
@@ -89,16 +119,7 @@ export async function loadBookingContext(admin: Admin, bookingId: string): Promi
     startsAt: b.starts_at,
     cancellationReason: b.cancellation_reason,
     checkInCode: b.check_in_code,
-    facts: {
-      clubName: org.data?.name ?? 'the club',
-      courtName: court.data?.name ?? 'Court',
-      sport: b.sport,
-      date: formatVenueDate(venueDateString(new Date(b.starts_at))),
-      time: `${formatVenueTime(b.starts_at)} – ${formatVenueTime(b.ends_at)}`,
-      reference: b.id.replace(/-/g, '').slice(0, 8).toUpperCase(),
-      amount: Number(payment.data?.amount ?? 0),
-      playerCount: b.player_count,
-    },
+    facts,
     state,
     paymentStatus: payment.data?.status ?? null,
     paymentProvider: payment.data?.provider ?? null,
@@ -243,6 +264,13 @@ export async function notifyBookingCreated(input: BookingCreatedInput): Promise<
       if (checkInCode) {
         const png = await QRCode.toBuffer(checkInQrPayload(checkInCode), { type: 'png', margin: 1, width: 320 })
         rendered.attachments = [{ filename: 'check-in-qr.png', content: png, cid: CHECK_IN_QR_CID, contentType: 'image/png' }]
+      }
+      // Apple Calendar / Outlook: a normal .ics attachment (Gmail and iOS Mail offer "add to calendar" for it).
+      if (ctx.facts.calendar && ctx.status !== 'cancelled') {
+        rendered.attachments = [
+          ...(rendered.attachments ?? []),
+          { filename: 'booking.ics', content: icsContent(ctx.facts.calendar), contentType: 'text/calendar; charset=utf-8; method=PUBLISH' },
+        ]
       }
       confirmation = await sendRecorded(admin, {
         kind: 'booking_confirmation',

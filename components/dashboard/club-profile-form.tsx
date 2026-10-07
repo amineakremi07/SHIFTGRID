@@ -27,6 +27,7 @@ const LocationPickerMap = dynamic(() => import('@/components/auth/location-picke
 export type ClubProfileInitial = {
   name: string
   description: string | null
+  whatsappNumber: string | null
   address: string | null
   city: string | null
   latitude: number | null
@@ -34,7 +35,7 @@ export type ClubProfileInitial = {
   galleryUrls: string[]
 }
 
-type Errors = Partial<Record<'name' | 'description' | 'address' | 'city' | 'location', string>>
+type Errors = Partial<Record<'name' | 'description' | 'whatsappNumber' | 'address' | 'city' | 'location', string>>
 
 function Section({ id, title, hint, children }: { id: string; title: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -58,6 +59,7 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
   const router = useRouter()
   const [name, setName] = React.useState(initial.name)
   const [description, setDescription] = React.useState(initial.description ?? '')
+  const [whatsappNumber, setWhatsappNumber] = React.useState(initial.whatsappNumber ?? '')
   const [address, setAddress] = React.useState(initial.address ?? '')
   const [city, setCity] = React.useState(initial.city ?? '')
   const [pin, setPin] = React.useState<MarkerPosition | null>(
@@ -128,6 +130,7 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
     const payload = {
       name,
       description,
+      whatsappNumber,
       address,
       city,
       latitude: pin ? Number(pin.latitude.toFixed(6)) : null,
@@ -140,6 +143,7 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
       setErrors({
         name: f.name?.[0],
         description: f.description?.[0],
+        whatsappNumber: f.whatsappNumber?.[0],
         address: f.address?.[0],
         city: f.city?.[0],
         location: f.latitude?.[0] ?? f.longitude?.[0],
@@ -155,6 +159,7 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
         setErrors({
           name: result.fieldErrors.name,
           description: result.fieldErrors.description,
+          whatsappNumber: result.fieldErrors.whatsappNumber,
           address: result.fieldErrors.address,
           city: result.fieldErrors.city,
           location: result.fieldErrors.latitude ?? result.fieldErrors.longitude,
@@ -196,6 +201,22 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
                 {description.length} / {BIO_MAX}
               </span>
             </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="cp-whatsapp">WhatsApp number</Label>
+            <Input
+              id="cp-whatsapp"
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              value={whatsappNumber}
+              onChange={(e) => setWhatsappNumber(e.target.value)}
+              placeholder="+216 98 123 456"
+              error={Boolean(errors.whatsappNumber)}
+            />
+            <p className="text-xs text-[#645757]">
+              {errors.whatsappNumber ? <span role="alert" className="text-destructive">{errors.whatsappNumber}</span> : 'Players get a "Contact the club on WhatsApp" button on their confirmation and reminder.'}
+            </p>
           </div>
         </Section>
 

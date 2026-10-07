@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { stripHtml } from '@/lib/sanitize-text'
 
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM (24h)')
 
@@ -18,7 +19,7 @@ const tnd = (label: string) =>
     )
 
 export const courtFormSchema = z.object({
-  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(80, 'Name is too long'),
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(80, 'Name is too long').transform(stripHtml),
   sport: z.enum(['padel', 'tennis', 'football']),
   pricePerSlot: tnd('Slot price'),
   nightSurchargePerHour: tnd('Surcharge'),

@@ -5,6 +5,7 @@ import * as React from 'react'
 import { CourtSlotMatrix, type MatrixCourt, type MatrixSelection } from '@/components/courts/court-slot-matrix'
 import { DayPicker } from '@/components/courts/day-picker'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { InfoTip } from '@/components/ui/info-tip'
 import { BUFFER_MIN, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { cn } from '@/lib/utils'
@@ -93,13 +94,22 @@ export function SlotPicker({
         </p>
       )}
 
-      <div className={cn('transition-opacity', pending && 'opacity-60')} aria-busy={pending}>
+      {/* A new day is loading: show the shape of the grid at once instead of stale slots. */}
+      {pending && (
+        <div role="status" aria-label="Loading availability" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      )}
+      <div className={cn(pending && 'hidden')} aria-busy={pending}>
         <CourtSlotMatrix
           key={`${dateStr}-${matrixKey}`}
           courtData={courts}
           selectedDate={dateStr}
           onSlotSelect={onSelect}
           realtime={{ orgId, onChange: onRealtimeChange }}
+          hideSummaryOnMobile
         />
       </div>
 

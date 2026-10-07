@@ -12,6 +12,7 @@ import { GUEST_TOKEN_PATTERN } from '@/lib/guest-cancel'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { actionRateLimit } from '@/lib/rate-limit'
 import { captureAudit, timed } from '@/lib/telemetry'
+import { stripHtml } from '@/lib/sanitize-text'
 
 export type PaymentActionResult<T = object> = ({ ok: true } & T) | { ok: false; message: string }
 
@@ -32,7 +33,7 @@ function mapPaymentError(message: string | undefined): string {
 
 const payShareSchema = z.object({
   token: z.string().regex(SHARE_TOKEN_PATTERN),
-  payerName: z.string().trim().max(100).optional(),
+  payerName: z.string().trim().max(100).transform(stripHtml).optional(),
 })
 
 export async function payShareAction(...args: Parameters<typeof payShareActionImpl>): ReturnType<typeof payShareActionImpl> {

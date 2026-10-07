@@ -47,6 +47,7 @@ export function DayPicker({
       <Button
         variant="outline"
         size="icon"
+        className="max-md:size-12"
         aria-label="Previous day"
         disabled={dateStr <= minDate}
         onClick={() => onChange(addDays(dateStr, -1))}
@@ -56,7 +57,7 @@ export function DayPicker({
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="min-w-44 justify-center tabular-nums">
+          <Button variant="outline" className="min-w-44 justify-center tabular-nums max-md:h-12 max-md:flex-1">
             <CalendarDays aria-hidden />
             {formatVenueDate(dateStr)}
           </Button>
@@ -79,6 +80,7 @@ export function DayPicker({
       <Button
         variant="outline"
         size="icon"
+        className="max-md:size-12"
         aria-label="Next day"
         disabled={dateStr >= maxDate}
         onClick={() => onChange(addDays(dateStr, 1))}
@@ -87,7 +89,7 @@ export function DayPicker({
       </Button>
 
       {dateStr !== minDate && (
-        <Button variant="ghost" onClick={() => onChange(minDate)}>
+        <Button variant="ghost" className="max-md:h-12 max-md:px-4" onClick={() => onChange(minDate)}>
           Today
         </Button>
       )}

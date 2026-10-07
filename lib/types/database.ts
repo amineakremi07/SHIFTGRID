@@ -51,6 +51,8 @@ export type Database = {
           deleted_at: string | null
           /** The club's bio, shown on its public page (max 1000 characters). */
           description: string | null
+          /** WhatsApp contact, digits in international form (e.g. 21698123456). Null = fall back to the platform contact. */
+          whatsapp_number: string | null
           /** Public URLs of the club's photos in the `club-assets` bucket, in display order (max 12). */
           gallery_urls: string[]
           /** Per-weekday hours (lib/operating-hours.ts). Null = use each court's own hours. */
@@ -75,6 +77,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           description?: string | null
+          whatsapp_number?: string | null
           deleted_at?: string | null
           gallery_urls?: string[]
           weekly_hours?: Json | null

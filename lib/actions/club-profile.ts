@@ -76,6 +76,7 @@ export async function saveClubProfile(input: ClubProfileInput): Promise<ProfileR
     .update({
       name: p.name,
       description: p.description,
+      whatsapp_number: p.whatsappNumber,
       address: p.address,
       city: p.city,
       latitude: p.latitude,

@@ -1,4 +1,5 @@
 import { formatTND } from '@/lib/payments'
+import { googleCalendarUrl, type CalendarEvent } from '@/lib/calendar'
 import type { EmailAttachment } from '@/lib/notifications/mailer'
 
 /**
@@ -30,6 +31,10 @@ export type BookingFacts = {
   /** Total price in TND. */
   amount: number
   playerCount: number
+  /** Real slot instants + venue + booking id: lets the email offer "Add to calendar". Optional. */
+  calendar?: CalendarEvent | null
+  /** `https://wa.me/...` link to the club (or the platform fallback), with the booking pre-filled. Optional. */
+  whatsappUrl?: string | null
 }
 
 export type PaymentState = 'confirmed' | 'pay_at_club' | 'awaiting_shares'
@@ -60,6 +65,28 @@ function sportLabel(sport: string): string {
 
 function button(label: string, url: string): string {
   return `<p style="margin:24px 0 0"><a href="${esc(safeUrl(url))}" style="display:inline-block;background:${FOREST};color:${BONE};text-decoration:none;font-weight:600;padding:12px 22px;border-radius:8px">${esc(label)}</a></p>`
+}
+
+/** WhatsApp + Google Calendar links under the main button. The .ics file is attached by the sender. */
+function contactBlock(f: BookingFacts, opts: { icsAttached: boolean }): string {
+  const links: string[] = []
+  if (f.whatsappUrl) {
+    links.push(`<a href="${esc(safeUrl(f.whatsappUrl))}" style="display:inline-block;border:1px solid ${FOREST};color:${FOREST};text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px;margin:0 8px 8px 0">Contact the club on WhatsApp</a>`)
+  }
+  if (f.calendar) {
+    links.push(`<a href="${esc(safeUrl(googleCalendarUrl(f.calendar)))}" style="display:inline-block;border:1px solid ${FOREST};color:${FOREST};text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px;margin:0 8px 8px 0">Add to Google Calendar</a>`)
+  }
+  if (links.length === 0) return ''
+  const ics = f.calendar && opts.icsAttached ? `<p style="margin:0;font-size:13px;color:${ASH}">Apple Calendar / Outlook: open the attached <strong>booking.ics</strong> file.</p>` : ''
+  return `<div style="margin:20px 0 0">${links.join('')}${ics}</div>`
+}
+
+function contactText(f: BookingFacts, opts: { icsAttached: boolean }): (string | false | null | undefined)[] {
+  return [
+    f.whatsappUrl && `Contact the club on WhatsApp: ${f.whatsappUrl}`,
+    f.calendar && `Add to Google Calendar: ${googleCalendarUrl(f.calendar)}`,
+    f.calendar && opts.icsAttached && 'Apple Calendar / Outlook: open the attached booking.ics file.',
+  ]
 }
 
 function factsTable(f: BookingFacts, extra: [string, string][] = []): string {
@@ -156,7 +183,7 @@ export function confirmationEmail(p: ConfirmationProps): Rendered {
     `${factsTable(p, [['Total', formatTND(p.amount)], ['Players', String(p.playerCount)]])}
 <p style="margin:0;line-height:1.6">${esc(payment)}</p>
 ${p.checkInCode ? checkInBlock(p.checkInCode) : ''}
-${button('View your booking pass', p.passUrl)}${cancel}`
+${button('View your booking pass', p.passUrl)}${contactBlock(p, { icsAttached: true })}${cancel}`
   )
 
   const text = textOf([
@@ -172,6 +199,7 @@ ${button('View your booking pass', p.passUrl)}${cancel}`
     p.checkInCode && CHECK_IN_INSTRUCTION,
     p.checkInCode && '',
     `Your pass: ${p.passUrl}`,
+    ...contactText(p, { icsAttached: true }),
     p.cancelUrl && `Cancel (private link): ${p.cancelUrl}`,
   ])
   return { subject, html, text }
@@ -270,7 +298,7 @@ export function reminderEmail(p: ReminderProps): Rendered {
     `Hi ${esc(p.recipientName)}, a quick reminder that your game starts in about two hours.`,
     `${factsTable(p)}
 <p style="margin:0;line-height:1.6">${esc(note)}</p>
-${p.passUrl ? button('View your booking pass', p.passUrl) : `<p style="margin:16px 0 0;font-size:14px;color:${ASH}">Quote reference ${esc(p.reference)} at the club.</p>`}`
+${p.passUrl ? button('View your booking pass', p.passUrl) : `<p style="margin:16px 0 0;font-size:14px;color:${ASH}">Quote reference ${esc(p.reference)} at the club.</p>`}${contactBlock(p, { icsAttached: false })}`
   )
   const text = textOf([
     `Reminder: you play today at ${start}`,
@@ -280,6 +308,7 @@ ${p.passUrl ? button('View your booking pass', p.passUrl) : `<p style="margin:16
     '',
     note,
     p.passUrl ? `Your pass: ${p.passUrl}` : `Quote reference ${p.reference} at the club.`,
+    ...contactText(p, { icsAttached: false }),
   ])
   return { subject, html, text }
 }

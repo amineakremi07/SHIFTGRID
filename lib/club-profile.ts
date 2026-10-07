@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { stripHtml } from '@/lib/sanitize-text'
+import { normalizeWhatsapp } from '@/lib/whatsapp'
 
 /**
  * The club's public profile ("vitrine"): name, bio, address, map pin and photo gallery.
@@ -24,10 +26,22 @@ const blankToNull = (value: unknown) => (typeof value === 'string' && value.trim
 
 export const clubProfileSchema = z
   .object({
-    name: z.string().trim().min(2, 'Enter the club name (2 characters minimum)').max(100, 'The name is too long (100 characters maximum)'),
-    description: z.preprocess(blankToNull, z.string().trim().max(BIO_MAX, `The bio is limited to ${BIO_MAX} characters`).nullable()),
-    address: z.preprocess(blankToNull, z.string().trim().max(200, 'The address is too long (200 characters maximum)').nullable()),
-    city: z.preprocess(blankToNull, z.string().trim().max(80, 'The city name is too long').nullable()),
+    name: z.string().trim().min(2, 'Enter the club name (2 characters minimum)').max(100, 'The name is too long (100 characters maximum)').transform(stripHtml),
+    description: z.preprocess(blankToNull, z.string().trim().max(BIO_MAX, `The bio is limited to ${BIO_MAX} characters`).transform(stripHtml).nullable()),
+    address: z.preprocess(blankToNull, z.string().trim().max(200, 'The address is too long (200 characters maximum)').transform(stripHtml).nullable()),
+    city: z.preprocess(blankToNull, z.string().trim().max(80, 'The city name is too long').transform(stripHtml).nullable()),
+    /** Stored as digits in international form (216XXXXXXXX); typed with spaces, +216 or 8 local digits. */
+    whatsappNumber: z
+      .preprocess((v) => (v === undefined ? null : blankToNull(v)), z.string().trim().max(30, 'That number is too long').nullable())
+      .transform((value, ctx) => {
+        if (value === null) return null
+        const normalized = normalizeWhatsapp(value)
+        if (!normalized) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter a valid number, e.g. +216 98 123 456' })
+          return z.NEVER
+        }
+        return normalized
+      }),
     latitude: z.number().finite().nullable(),
     longitude: z.number().finite().nullable(),
   })

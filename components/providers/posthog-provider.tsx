@@ -87,7 +87,9 @@ function loadPostHog(): Promise<PostHog | null> {
     .then(({ default: posthog }) => {
       if (!posthog.__loaded) {
         posthog.init(KEY, {
-          api_host: HOST,
+          // Same-origin reverse proxy (rewrites in next.config.ts); ui_host keeps toolbar/replay links on PostHog EU.
+          api_host: '/ingest',
+          ui_host: 'https://eu.posthog.com',
           person_profiles: 'identified_only',
           capture_pageview: false,
           capture_pageleave: false,
@@ -97,7 +99,10 @@ function loadPostHog(): Promise<PostHog | null> {
           opt_out_persistence_by_default: true,
           // Recording starts only through startSessionRecording() (see the provider).
           disable_session_recording: true,
-          enable_recording_console_log: false,
+          // Console output (error/warn survive production builds) is recorded with replays, which need their own consent.
+          enable_recording_console_log: true,
+          // Unhandled errors and promise rejections become `$exception` events (still behind the analytics consent).
+          capture_exceptions: true,
           capture_performance: false,
           session_recording: {
             maskAllInputs: true,

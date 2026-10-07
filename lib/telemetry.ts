@@ -17,7 +17,7 @@ import { after } from 'next/server'
 type Primitive = string | number | boolean | null | undefined
 export type TelemetryProps = Record<string, Primitive>
 
-export type TelemetryEvent = 'rate_limit_exceeded' | 'api_request_perf' | 'audit_log_event' | 'booking.created' | 'booking.cancelled' | 'email.sent' | 'email.failed'
+export type TelemetryEvent = 'rate_limit_exceeded' | 'api_request_perf' | 'audit_log_event' | 'booking.created' | 'booking.cancelled' | 'email.sent' | 'email.failed' | 'email.skipped'
 
 const SERVER_DISTINCT_ID = 'shiftgrid-server'
 const TIMEOUT_MS = 3000
@@ -91,6 +91,16 @@ export function captureServerEvent(event: TelemetryEvent, props: TelemetryProps)
     // No request scope (e.g. a script or the proxy): plain fire-and-forget.
     void send(event, props)
   }
+}
+
+/**
+ * Send an event and wait for it. For code that already runs inside `after()` / a cron run (e.g. the
+ * mailer): no nested `after()`, and the serverless instance stays alive until the request completes.
+ * Never throws.
+ */
+export async function captureServerEventAwaited(event: TelemetryEvent, props: TelemetryProps): Promise<void> {
+  if (!config()) return
+  await send(event, props)
 }
 
 /* ------------------------------ typed helpers ------------------------------ */

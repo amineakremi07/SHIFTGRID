@@ -67,6 +67,18 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: sentryUpload,
   poweredByHeader: false,
 
+  // PostHog reverse proxy (EU): the browser talks to our own origin, so ad blockers and CSP
+  // `connect-src 'self'` do not get in the way. Order matters: static assets first, then the rest.
+  async rewrites() {
+    return [
+      { source: '/ingest/static/:path*', destination: 'https://eu-assets.i.posthog.com/static/:path*' },
+      { source: '/ingest/decide', destination: 'https://eu.i.posthog.com/decide' },
+      { source: '/ingest/:path*', destination: 'https://eu.i.posthog.com/:path*' },
+    ];
+  },
+  // PostHog API paths end with a slash (`/capture/`); without this Next would redirect them and break the proxy.
+  skipTrailingSlashRedirect: true,
+
   // Standalone output is only for self-hosting (`node .next/standalone/server.js`). On Vercel,
   // Next 16 builds through a deployment adapter (NEXT_ADAPTER_PATH), which does its own packaging
   // and does not write `.next/next-server.js.nft.json`; the standalone step then fails reading it

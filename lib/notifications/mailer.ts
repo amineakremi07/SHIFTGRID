@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 
-import { captureServerEvent } from '@/lib/telemetry'
+import { captureServerEventAwaited } from '@/lib/telemetry'
 
 /**
  * The only place that talks to the email provider. Every email in the app goes through `deliver()`.
@@ -23,7 +23,8 @@ import { captureServerEvent } from '@/lib/telemetry'
  *                    provider does not slow the user's request
  */
 
-export type EmailAttachment = { filename: string; content: Buffer; cid: string; contentType: string }
+/** `cid` makes it an inline image (`<img src="cid:...">`); without it the file is a normal attachment (e.g. an .ics). */
+export type EmailAttachment = { filename: string; content: Buffer | string; cid?: string; contentType: string }
 
 export type DeliverResult = { status: 'sent' | 'skipped' | 'failed'; id?: string; error?: string }
 
@@ -90,25 +91,27 @@ export async function deliver(message: {
   if (!emailEnabled()) {
     const delay = Number(process.env.EMAIL_DRY_RUN_DELAY_MS ?? 0)
     if (delay > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 30_000)))
+    const reason = smtpHost() ? 'dry_run' : 'smtp_not_configured'
+    await captureServerEventAwaited('email.skipped', { template: message.type ?? 'unspecified', recipient_domain: recipientDomain(message.to), reason })
     return { status: 'skipped', error: smtpHost() ? 'dry run' : 'SMTP_USER / SMTP_HOST is not set' }
   }
 
   const started = performance.now()
   let transporter: ReturnType<typeof createTransporter> | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
-  const finish = (result: DeliverResult, errorCode?: string): DeliverResult => {
+  const finish = async (result: DeliverResult, errorCode?: string): Promise<DeliverResult> => {
     const duration_ms = Math.round(performance.now() - started)
-    captureServerEvent('api_request_perf', {
+    await captureServerEventAwaited('api_request_perf', {
       endpoint: 'email.deliver',
       duration_ms,
       status: result.status === 'failed' ? `failed:${errorCode ?? 'unknown'}` : result.status,
     })
     const common = { template: message.type ?? 'unspecified', recipient_domain: recipientDomain(message.to), duration_ms }
-    if (result.status === 'sent') captureServerEvent('email.sent', common)
+    if (result.status === 'sent') await captureServerEventAwaited('email.sent', common)
     // Provider messages can quote the recipient ("550 jane@x.com rejected"): strip addresses before analytics.
     else if (result.status === 'failed') {
       const safeError = result.error?.replace(/[^\s<>@,;]+@[^\s<>@,;]+/g, '[redacted]').slice(0, 200)
-      captureServerEvent('email.failed', { ...common, error: safeError, error_code: errorCode ?? 'rejected' })
+      await captureServerEventAwaited('email.failed', { ...common, error: safeError, error_code: errorCode ?? 'rejected' })
     }
     return result
   }
@@ -131,9 +134,9 @@ export async function deliver(message: {
     ])
     // SMTP can accept a message for some recipients and refuse it for others.
     if (info.rejected.length > 0 && info.accepted.length === 0) {
-      return finish({ status: 'failed', error: `rejected by the SMTP server: ${info.response ?? 'no response'}`.slice(0, 500) }, 'rejected')
+      return await finish({ status: 'failed', error: `rejected by the SMTP server: ${info.response ?? 'no response'}`.slice(0, 500) }, 'rejected')
     }
-    return finish({ status: 'sent', id: info.messageId })
+    return await finish({ status: 'sent', id: info.messageId })
   } catch (e) {
     const code = (e as { code?: unknown } | null)?.code
     const errorCode = typeof code === 'string' ? code : e instanceof Error && e.message.includes('timed out') ? 'ETIMEDOUT' : 'unknown'
@@ -142,7 +145,7 @@ export async function deliver(message: {
     // A provider failure is an expected operational problem (bad key, unverified sender, outage), not an
     // application bug, so it is logged (console.warn) and counted in PostHog, never sent to Sentry.
     console.error('email delivery failed', { type: message.type, code: errorCode, hint: smtpHint(e, errorCode), message: error })
-    return finish({ status: 'failed', error }, errorCode)
+    return await finish({ status: 'failed', error }, errorCode)
   } finally {
     clearTimeout(timer)
     transporter?.close()

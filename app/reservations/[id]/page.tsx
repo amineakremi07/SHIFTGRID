@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
 import { ArrowLeft, CalendarDays, Clock, ScanLine, Settings2, Users } from 'lucide-react'
 
+import { BookingActions } from '@/components/booking/booking-actions'
 import { PassShares } from '@/components/booking/pass-shares'
 import { Badge } from '@/components/ui/badge'
 import { formatVenueDate, formatVenueTime, venueDateString } from '@/lib/court-time'
@@ -193,6 +194,22 @@ export default async function PassPage({
                 </div>
               )}
             </section>
+
+            {active && pass.viewer !== 'staff' && (
+              <BookingActions
+                bookingId={pass.id}
+                clubName={pass.clubName}
+                courtName={pass.courtName}
+                sport={pass.sport}
+                date={day}
+                time={`${formatVenueTime(pass.startsAt)} – ${formatVenueTime(pass.endsAt)}`}
+                startsAt={pass.startsAt}
+                endsAt={pass.endsAt}
+                reference={pass.reference}
+                address={pass.clubAddress}
+                whatsappNumber={pass.clubWhatsapp}
+              />
+            )}
 
             {/* ---- manage: every way to change the booking, in one row ---- */}
             {active && ((pass.viewer === 'guest' && pass.guestToken) || pass.viewer === 'pass' || pass.viewer === 'owner') && (

@@ -78,7 +78,7 @@ export default async function ClubPage({
   const [{ data: org }, { data: courts, error: courtsError }, member] = await Promise.all([
     supabase
       .from('organizations')
-      .select('id, name, address, city, weekly_hours, description, latitude, longitude, gallery_urls')
+      .select('id, name, address, city, whatsapp_number, weekly_hours, description, latitude, longitude, gallery_urls')
       .eq('id', orgId)
       .eq('status', 'approved')
       .is('deleted_at', null)
@@ -214,6 +214,8 @@ export default async function ClubPage({
           closedNotice={closedToday ? `${org.name} is closed on ${WEEKDAY_LABELS[weekdayKey(day)]}s.` : null}
           orgId={org.id}
           orgName={org.name}
+          orgAddress={[org.address, org.city].filter(Boolean).join(', ') || null}
+          orgWhatsapp={org.whatsapp_number}
           dateStr={day}
           minDate={today}
           maxDate={maxDate}
