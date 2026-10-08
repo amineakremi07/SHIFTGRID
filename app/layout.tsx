@@ -6,6 +6,7 @@ import { SPLASH_SKIP_SCRIPT } from "@/lib/splash";
 import { ConsentBanner } from "@/components/consent/consent-banner";
 import { PostHogProvider } from "@/components/providers/posthog-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <PostHogProvider>{children}</PostHogProvider>
         <Toaster position="top-center" />
         <ConsentBanner />
+        <Analytics />
       </body>
     </html>
   );
