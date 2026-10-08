@@ -481,6 +481,10 @@ export type Database = {
     Views: Record<never, never>
 
     Functions: {
+      club_demand_counts: {
+        Args: { p_org_id: string; p_since: string; p_until: string }
+        Returns: { weekday: number; hour: number; n: number; first_start: string | null }[]
+      }
       create_booking: {
         Args: {
           p_amount: number

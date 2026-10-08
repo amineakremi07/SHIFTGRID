@@ -1,88 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
 import { reportServerError } from '@/lib/observability'
-import { recordMetric, getAggregatedMetrics } from '@/lib/utils/performance'
+import { recordMetric } from '@/lib/utils/performance'
 
 /**
  * POST /api/analytics/web-vitals
- * Receive Web Vitals metrics from client-side
- * Callers: Client-side reportWebVitals function, browser sendBeacon/fetch
- * Affected API: POST /api/analytics/web-vitals, GET /api/analytics/web-vitals
- * Data schemas: WebVitals metric {name, value, url, timestamp, userAgent}
+ * Receives Web Vitals from the browser (sendBeacon / fetch). There is deliberately no GET: the
+ * aggregates were readable by anyone and lived in per-instance memory. Read vitals in Sentry/PostHog.
  */
+const webVitalSchema = z
+  .object({
+    name: z.enum(['CLS', 'FID', 'LCP', 'FCP', 'TTFB', 'INP']),
+    value: z.number().finite().min(0).max(120_000),
+    url: z.string().max(200).optional(),
+    timestamp: z.number().finite().optional(),
+  })
+  .strip()
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-
-    const { name, value, url, timestamp, userAgent } = body
-
-    // Validate required fields
-    if (!name || typeof value !== 'number') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid payload: name and value are required' },
-        { status: 400 }
-      )
+    const parsed = webVitalSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: 'Invalid payload' }, { status: 400 })
     }
+    const { name, value, url, timestamp } = parsed.data
 
-    // Record the metric
-    recordMetric(`web-vital:${name}`, value, 'ms', {
+    recordMetric(`web-vital:${name.toLowerCase()}`, value, 'ms', {
       type: 'web-vital',
-      url: url || 'unknown',
-      userAgent: userAgent || 'unknown',
-      clientTimestamp: timestamp?.toString() || 'unknown',
+      // Path only: query strings can carry secret tokens.
+      url: (url ?? 'unknown').split(/[?#]/)[0],
+      userAgent: request.headers.get('user-agent')?.slice(0, 200) ?? 'unknown',
+      clientTimestamp: timestamp?.toString() ?? 'unknown',
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Web Vitals error:', error)
-    reportServerError('api.web-vitals.post', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to record metric' },
-      { status: 500 }
-    )
-  }
-}
-
-/**
- * GET /api/analytics/web-vitals
- * Get aggregated Web Vitals metrics (admin only)
- * Callers: Admin analytics dashboard
- * Affected API: GET /api/analytics/web-vitals
- * Data schemas: Aggregated metrics {count, avg, min, max, p50, p95, p99}
- */
-export async function GET(request: NextRequest) {
-  try {
-    // In production, add auth check here
-    // const session = await getServerSession()
-    // if (!session || session.user.role !== 'platform_admin') {
-    //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    // }
-
-    const { searchParams } = new URL(request.url)
-    const since = searchParams.get('since')
-      ? parseInt(searchParams.get('since')!)
-      : Date.now() - 24 * 60 * 60 * 1000 // Last 24 hours
-
-    const vitals = ['cls', 'fid', 'lcp', 'fcp', 'ttfb', 'inp']
-    const results: Record<string, unknown> = {}
-
-    for (const vital of vitals) {
-      const aggregated = getAggregatedMetrics(`web-vital:${vital}`, since)
-      if (aggregated) {
-        results[vital] = aggregated
-      }
+    // Malformed JSON is the caller's fault, not a server error.
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ success: false, error: 'Invalid payload' }, { status: 400 })
     }
-
-    return NextResponse.json({
-      success: true,
-      data: results,
-      period: { since, until: Date.now() },
-    })
-  } catch (error) {
-    console.error('Get Web Vitals error:', error)
-    reportServerError('api.web-vitals.get', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch metrics' },
-      { status: 500 }
-    )
+    console.error('Web Vitals error:', error instanceof Error ? error.message : error)
+    reportServerError('api.web-vitals.post', error)
+    return NextResponse.json({ success: false, error: 'Failed to record metric' }, { status: 500 })
   }
 }

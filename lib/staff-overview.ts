@@ -19,13 +19,15 @@ export async function loadStaffOverview(orgId: string): Promise<
       .select('id, display_name, created_at')
       .eq('org_id', orgId)
       .eq('role', 'staff')
-      .order('created_at'),
+      .order('created_at')
+      .limit(200),
     admin
       .from('staff_invites')
       .select('id, email, expires_at, created_at')
       .eq('org_id', orgId)
       .is('accepted_at', null)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(200),
   ])
   if (staffRes.error || inviteRes.error) {
     console.error('loadStaffOverview failed', { staff: staffRes.error?.message, invites: inviteRes.error?.message })

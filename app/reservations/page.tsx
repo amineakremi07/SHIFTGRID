@@ -36,7 +36,7 @@ export default async function ReservationsPage() {
       .eq('booker_profile_id', user.id)
       .order('starts_at', { ascending: false })
       .limit(100),
-    supabase.from('courts').select('id, name'),
+    supabase.from('courts').select('id, name').limit(200),
   ])
   const profile = profileRes.data
   if (profile?.role === 'org_admin' || profile?.role === 'staff') redirect('/dashboard/org/bookings')

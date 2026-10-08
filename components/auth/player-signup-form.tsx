@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { Controller, useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import type { z } from 'zod'
@@ -65,8 +65,8 @@ export function PlayerSignupForm({
     mode: 'onTouched',
   })
   const { errors } = form.formState
-  const watchedOrgId = form.watch('orgId')
-  const acceptedTerms = !!form.watch('acceptTerms')
+  const watchedOrgId = useWatch({ control: form.control, name: 'orgId' })
+  const acceptedTerms = !!useWatch({ control: form.control, name: 'acceptTerms' })
 
   const onSubmit = async (values: FormOutput) => {
     setSubmitting(true)

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -27,7 +28,7 @@ import { cn } from '@/lib/utils'
  */
 
 type AlertKind = 'new' | 'paid' | 'cancelled'
-type Alert = { id: string; kind: AlertKind; title: string; detail: string; at: number; read: boolean }
+type Alert = { id: string; kind: AlertKind; title: string; detail: string; at: number; read: boolean; href: string | null }
 
 const MAX_ALERTS = 20
 
@@ -38,6 +39,18 @@ const TITLE: Record<AlertKind, string> = {
 }
 
 type Row = Record<string, unknown>
+
+/** The schedule on the booking's day, asking the board to scroll to and highlight that court's slot. */
+function scheduleHref(row: Row): string | null {
+  if (!row.court_id || !row.starts_at) return null
+  const start = new Date(String(row.starts_at))
+  const params = new URLSearchParams({
+    date: venueDateString(start),
+    courtId: String(row.court_id),
+    time: formatVenueTime(start),
+  })
+  return `/dashboard/org/bookings?${params.toString()}`
+}
 
 export function Notifications({ orgId }: { orgId: string }) {
   const [alerts, setAlerts] = React.useState<Alert[]>([])
@@ -109,7 +122,7 @@ export function Notifications({ orgId }: { orgId: string }) {
 
       const detail = await describe(row)
       if (cancelled) return
-      push({ id: `${id}:${kind}`, kind, title: TITLE[kind], detail, at: Date.now(), read: false })
+      push({ id: `${id}:${kind}`, kind, title: TITLE[kind], detail, at: Date.now(), read: false, href: scheduleHref(row) })
     }
 
     // Fallback when events do not arrive (socket down, blocked, or dropped under load):
@@ -215,17 +228,35 @@ export function Notifications({ orgId }: { orgId: string }) {
           </p>
         ) : (
           <ul aria-live="polite" className="max-h-80 divide-y divide-border overflow-y-auto">
-            {alerts.map((a) => (
-              <li key={a.id} className="px-4 py-3 text-sm" data-testid="alert-item">
-                <p className="flex items-center justify-between gap-2 font-medium">
-                  <span className={a.kind === 'cancelled' ? 'text-destructive' : undefined}>{a.title}</span>
-                  <time className="text-xs font-normal text-muted-foreground" dateTime={new Date(a.at).toISOString()}>
-                    {formatVenueTime(new Date(a.at))}
-                  </time>
-                </p>
-                <p className="mt-0.5 text-muted-foreground">{a.detail}</p>
-              </li>
-            ))}
+            {alerts.map((a) => {
+              const content = (
+                <>
+                  <p className="flex items-center justify-between gap-2 font-medium">
+                    <span className={a.kind === 'cancelled' ? 'text-destructive' : undefined}>{a.title}</span>
+                    <time className="text-xs font-normal text-muted-foreground" dateTime={new Date(a.at).toISOString()}>
+                      {formatVenueTime(new Date(a.at))}
+                    </time>
+                  </p>
+                  <p className="mt-0.5 text-muted-foreground">{a.detail}</p>
+                </>
+              )
+              return (
+                <li key={a.id} className="text-sm" data-testid="alert-item">
+                  {a.href ? (
+                    <Link
+                      href={a.href}
+                      onClick={() => setOpen(false)}
+                      className="block px-4 py-3 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+                      aria-label={`${a.title}: ${a.detail}. Show on the schedule`}
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div className="px-4 py-3">{content}</div>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         )}
       </PopoverContent>

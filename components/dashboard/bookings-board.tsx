@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Banknote, CheckCircle2, Loader2, Phone, PhoneCall, Plus, ScanLine, User, UserRound, UserX, X } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -87,6 +87,21 @@ const STATUS_VARIANT: Record<BookingStatus, 'success' | 'warning' | 'destructive
   no_show: 'destructive',
 }
 
+const SPORT_FILTERS = ['all', 'padel', 'football', 'tennis'] as const
+type SportFilter = (typeof SPORT_FILTERS)[number]
+
+/** One slot of one court: what the alert links carry as `courtId` + `time` ("HH:MM", venue time). */
+const slotKey = (courtId: string, startsAt: string) => `${courtId}|${formatVenueTime(startsAt)}`
+
+/** Left bar + fill per status, so booked / pending / checked in / no-show read apart at a glance. */
+const ROW_STYLE: Record<BookingStatus, string> = {
+  confirmed: 'border-l-[#0e634f] bg-white',
+  pending_payment: 'border-l-amber-500 bg-amber-50',
+  completed: 'border-l-[#645757] bg-[#e4e0d9]',
+  no_show: 'border-l-destructive bg-destructive/10',
+  cancelled: 'border-l-destructive bg-destructive/5 opacity-70',
+}
+
 const tnd = (n: number) => `${n.toFixed(2)} TND`
 const isOpen = (b: BoardBooking) => b.status === 'pending_payment' || b.status === 'confirmed'
 
@@ -119,6 +134,14 @@ export function BookingsBoard({
   const [toCancel, setToCancel] = React.useState<BoardBooking | null>(null)
   const [toNoShow, setToNoShow] = React.useState<BoardBooking | null>(null)
   const [checkInOpen, setCheckInOpen] = React.useState(false)
+  const [sportFilter, setSportFilter] = React.useState<SportFilter>('all')
+  const [highlightKey, setHighlightKey] = React.useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const targetCourt = searchParams.get('courtId')
+  const targetTime = searchParams.get('time')
+  const handledTarget = React.useRef<string | null>(null)
+  const highlightTimer = React.useRef<number | undefined>(undefined)
+  React.useEffect(() => () => window.clearTimeout(highlightTimer.current), [])
   // The buttons that depend on "now" are re-evaluated every 30 s (the render itself stays pure).
   const [now, setNow] = React.useState(() => Date.now())
   React.useEffect(() => {
@@ -137,6 +160,30 @@ export function BookingsBoard({
     return () => window.clearInterval(id)
   }, [router])
 
+  // An alert link (?courtId=&time=): scroll that slot into view and pulse it for 3 s. The slot may not be
+  // rendered yet (the day is still refreshing), so this re-runs as the data changes until it is found.
+  React.useEffect(() => {
+    if (!targetCourt || !targetTime) return
+    const key = `${targetCourt}|${targetTime}`
+    if (handledTarget.current === key) return
+    const court = courts.find((c) => c.id === targetCourt)
+    if (court && sportFilter !== 'all' && court.sport !== sportFilter) {
+      // The slot is on a court the active filter hides: show every sport, then this effect runs again.
+      window.requestAnimationFrame(() => setSportFilter('all'))
+      return
+    }
+    const el = document.querySelector(`[data-slot-key="${CSS.escape(key)}"]`)
+    if (!el) return
+    handledTarget.current = key
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' })
+    window.requestAnimationFrame(() => setHighlightKey(key))
+    window.clearTimeout(highlightTimer.current)
+    highlightTimer.current = window.setTimeout(() => setHighlightKey(null), 3000)
+    // Drop the params so clicking the same alert again navigates (and highlights) again.
+    router.replace(`${pathname}?date=${dateStr}`, { scroll: false })
+  }, [targetCourt, targetTime, courts, bookings, sportFilter, router, pathname, dateStr])
+
   const changeDate = (next: string) =>
     startTransition(() => router.push(`${pathname}?date=${next}`, { scroll: false }))
 
@@ -145,6 +192,11 @@ export function BookingsBoard({
   // Checked-in and no-show bookings stay on the schedule (they still occupy their slot).
   const onSchedule = bookings.filter((b) => b.status !== 'cancelled')
   const revenue = open.reduce((sum, b) => sum + (b.amount ?? 0), 0)
+  const shownCourts = courts.filter(
+    (c) => (sportFilter === 'all' || c.sport === sportFilter) && (!c.archived || onSchedule.some((b) => b.courtId === c.id))
+  )
+  const shownCourtIds = new Set(shownCourts.map((c) => c.id))
+  const shownCancelled = cancelled.filter((b) => sportFilter === 'all' || (b.courtId && shownCourtIds.has(b.courtId)))
   const courtName = (id: string | null) => courts.find((c) => c.id === id)?.name ?? 'Removed court'
 
   return (
@@ -185,13 +237,40 @@ export function BookingsBoard({
             <p className="mt-1 text-sm text-[#645757]">Add courts under Courts to start taking bookings.</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5">
-            {courts
-              .filter((c) => !c.archived || onSchedule.some((b) => b.courtId === c.id))
-              .map((court) => (
+          <>
+          <div role="group" aria-label="Filter courts by sport" className="flex flex-wrap gap-2">
+            {SPORT_FILTERS.map((sport) => {
+              const count = sport === 'all' ? courts.length : courts.filter((c) => c.sport === sport).length
+              const active = sportFilter === sport
+              return (
+                <button
+                  key={sport}
+                  type="button"
+                  aria-pressed={active}
+                  data-testid={`sport-filter-${sport}`}
+                  onClick={() => setSportFilter(sport)}
+                  className={cn(
+                    'rounded-full border px-4 py-1.5 text-sm font-medium capitalize outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50',
+                    active
+                      ? 'border-[#1d3023] bg-[#1d3023] text-[#f7f5f2]'
+                      : 'border-[#d7d2cc] bg-[#f7f5f2] text-[#2a1a1d] hover:border-[#1d3023]'
+                  )}
+                >
+                  {sport === 'all' ? 'All' : sport}
+                  <span className={cn('ml-1.5 text-xs tabular-nums', active ? 'text-[#f7f5f2]/70' : 'text-[#645757]')}>{count}</span>
+                </button>
+              )
+            })}
+          </div>
+          {shownCourts.length === 0 && (
+            <p className="rounded-xl bg-[#eae6df] px-6 py-8 text-center text-sm text-[#645757]">No {sportFilter} courts at this club.</p>
+          )}
+          <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5">
+            {shownCourts.map((court) => (
               <CourtColumn
                 key={court.id}
                 court={court}
+                highlightKey={highlightKey}
                 bookings={onSchedule.filter((b) => b.courtId === court.id)}
                 now={now}
                 onWalkIn={(slot) => {
@@ -203,15 +282,16 @@ export function BookingsBoard({
               />
             ))}
           </div>
+          </>
         )}
 
-        {cancelled.length > 0 && (
+        {shownCancelled.length > 0 && (
           <section aria-labelledby="cancelled-heading" className="rounded-xl bg-[#eae6df] p-5">
             <h3 id="cancelled-heading" className="text-sm font-semibold">
-              Cancelled ({cancelled.length})
+              Cancelled ({shownCancelled.length})
             </h3>
             <ul className="mt-3 divide-y divide-[#d7d2cc] text-sm">
-              {cancelled.map((b) => (
+              {shownCancelled.map((b) => (
                 <li key={b.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2 text-[#645757]">
                   <span className="tabular-nums">
                     {formatVenueTime(b.startsAt)}–{formatVenueTime(b.endsAt)}
@@ -278,6 +358,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function CourtColumn({
   court,
+  highlightKey,
   bookings,
   now,
   onWalkIn,
@@ -285,6 +366,7 @@ function CourtColumn({
   onNoShow,
 }: {
   court: BoardCourt
+  highlightKey: string | null
   bookings: BoardBooking[]
   now: number
   onWalkIn: (slot: BoardSlot) => void
@@ -298,7 +380,8 @@ function CourtColumn({
 
   return (
     <section className="rounded-xl bg-[#eae6df] p-4" aria-label={court.name}>
-      <header className="mb-3 flex items-start justify-between gap-2">
+      {/* Sticky: the court's name stays in view while its slots scroll past. */}
+      <header className="sticky top-0 z-10 -mx-4 -mt-4 mb-3 flex items-start justify-between gap-2 rounded-t-xl border-b border-[#d7d2cc] bg-[#eae6df] px-4 pb-3 pt-4">
         <div className="min-w-0">
           <h3 className="truncate font-semibold">{court.name}</h3>
           <p className="text-xs capitalize text-[#645757]">
@@ -314,14 +397,15 @@ function CourtColumn({
       ) : (
         <ul className="space-y-2">
           {offGrid.map((b) => (
-            <BookingRow key={b.id} booking={b} now={now} onCancel={onCancel} onNoShow={onNoShow} />
+            <BookingRow key={b.id} booking={b} slotId={slotKey(court.id, b.startsAt)} highlightKey={highlightKey} now={now} onCancel={onCancel} onNoShow={onNoShow} />
           ))}
           {court.slots.map((slot) => {
             const booking = byStart.get(Date.parse(slot.start))
-            if (booking) return <BookingRow key={slot.start} booking={booking} now={now} onCancel={onCancel} onNoShow={onNoShow} />
+            const id = slotKey(court.id, slot.start)
+            if (booking) return <BookingRow key={slot.start} booking={booking} slotId={id} highlightKey={highlightKey} now={now} onCancel={onCancel} onNoShow={onNoShow} />
             const blocked = slot.past || court.status !== 'active' || court.archived
             return (
-              <li key={slot.start}>
+              <li key={slot.start} data-slot-key={id} className={cn('rounded-lg', highlightKey === id && 'sg-slot-highlight')}>
                 <button
                   type="button"
                   disabled={blocked}
@@ -362,11 +446,15 @@ function paymentLabel(b: BoardBooking): { text: string; paid: boolean } | null {
 
 function BookingRow({
   booking,
+  slotId,
+  highlightKey,
   now,
   onCancel,
   onNoShow,
 }: {
   booking: BoardBooking
+  slotId: string
+  highlightKey: string | null
   now: number
   onCancel: (b: BoardBooking) => void
   onNoShow: (b: BoardBooking) => void
@@ -406,7 +494,16 @@ function BookingRow({
   }
 
   return (
-    <li className="rounded-lg bg-[#f7f5f2] px-3 py-2.5 text-sm">
+    <li
+      data-slot-key={slotId}
+      data-status={booking.status}
+      className={cn(
+        'rounded-lg border-l-4 px-3 py-2.5 text-sm shadow-[inset_0_0_0_1px_rgb(215_210_204)]',
+        ROW_STYLE[booking.status],
+        booking.source !== 'online' && 'shadow-[inset_0_0_0_1px_#1d3023]',
+        highlightKey === slotId && 'sg-slot-highlight'
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium tabular-nums">
           {formatVenueTime(booking.startsAt)}–{formatVenueTime(booking.endsAt)}
@@ -414,9 +511,9 @@ function BookingRow({
         <Badge variant={STATUS_VARIANT[booking.status]}>{STATUS_LABEL[booking.status]}</Badge>
       </div>
       <p className="mt-1 flex items-center gap-1.5">
-        {booking.isMember ? <User className="size-3.5" aria-hidden /> : <UserRound className="size-3.5" aria-hidden />}
-        <span className="truncate">{booking.bookerName}</span>
-        <span className="text-[#645757]">· {booking.playerCount} players</span>
+        {booking.isMember ? <User className="size-4 shrink-0" aria-hidden /> : <UserRound className="size-4 shrink-0" aria-hidden />}
+        <span className="truncate text-base font-semibold" data-testid="booking-player-name">{booking.bookerName}</span>
+        <span className="shrink-0 text-xs text-[#645757]">· {booking.playerCount} players</span>
       </p>
       {booking.note && <p className="mt-1 truncate text-xs italic text-[#645757]" title={booking.note}>“{booking.note}”</p>}
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-[#645757]">
@@ -429,7 +526,7 @@ function BookingRow({
           )}
           <span className="font-mono">{booking.reference}</span>
           {booking.source !== 'online' && (
-            <span className="rounded-sm bg-[#1d3023]/10 px-1 font-medium text-[#1d3023]">{booking.source === 'phone' ? 'Phone' : 'Desk'}</span>
+            <span className="rounded-sm bg-[#1d3023] px-1.5 font-medium text-[#f7f5f2]">{booking.source === 'phone' ? 'Phone' : 'Walk-in'}</span>
           )}
           {booking.checkedInAt && <span className="font-medium text-[#0e634f]">· in at {formatVenueTime(booking.checkedInAt)}</span>}
           {booking.noShowCount !== null && booking.noShowCount > 0 && (

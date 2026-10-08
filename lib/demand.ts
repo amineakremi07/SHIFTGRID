@@ -42,6 +42,23 @@ export function fallbackDemand(weekday: number, hour: number): DemandLevel {
   return 'normal'
 }
 
+/** Same profile from counts the database already grouped by venue weekday + hour (see `club_demand_counts`). */
+export function demandProfileFromCounts(
+  rows: readonly { weekday: number; hour: number; n: number }[],
+  courtCount: number,
+  weeksObserved: number
+): DemandProfile {
+  const capacity = Math.max(1, courtCount) * Math.max(1, weeksObserved)
+  const ratios: Record<string, number> = {}
+  let sample = 0
+  for (const { weekday, hour, n } of rows) {
+    sample += n
+    // One row per (weekday, hour): the database already grouped them.
+    ratios[demandKey(weekday, hour)] = Math.min(1, n / capacity)
+  }
+  return { sample, ratios }
+}
+
 export function buildDemandProfile(startsAt: readonly string[], courtCount: number, weeksObserved: number): DemandProfile {
   const counts: Record<string, number> = {}
   for (const iso of startsAt) {

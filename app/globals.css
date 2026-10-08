@@ -281,3 +281,25 @@ html[data-splash='off'] .sg-splash {
     opacity: 0.7;
   }
 }
+
+/* Bookings board: the slot an alert pointed at pulses for 3 s (a static ring when motion is reduced). */
+.sg-slot-highlight {
+  position: relative;
+  z-index: 1;
+  animation: sg-slot-pulse 1s ease-in-out 3;
+}
+@keyframes sg-slot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px #26d862;
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgb(38 216 98 / 0.35), 0 0 18px 4px rgb(38 216 98 / 0.45);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-slot-highlight {
+    animation: none;
+    box-shadow: 0 0 0 3px #26d862;
+  }
+}

@@ -1,4 +1,4 @@
-import { buildDemandProfile, DEMAND_WINDOW_WEEKS, type DemandProfile } from '@/lib/demand'
+import { demandProfileFromCounts, DEMAND_WINDOW_WEEKS, type DemandProfile } from '@/lib/demand'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 
 /**
@@ -12,20 +12,17 @@ const DAY_MS = 24 * 60 * 60 * 1000
 export async function loadClubDemand(orgId: string, courtCount: number, now = new Date()): Promise<DemandProfile | null> {
   try {
     const since = new Date(now.getTime() - DEMAND_WINDOW_WEEKS * 7 * DAY_MS).toISOString()
-    const { data, error } = await getSupabaseAdmin()
-      .from('bookings')
-      .select('starts_at')
-      .eq('org_id', orgId)
-      .neq('status', 'cancelled')
-      .gte('starts_at', since)
-      .lte('starts_at', now.toISOString())
-      .order('starts_at')
-      .limit(5000)
+    // Grouped in the database (at most 7 x 24 rows come back), not counted from raw booking rows.
+    const { data, error } = await getSupabaseAdmin().rpc('club_demand_counts', {
+      p_org_id: orgId,
+      p_since: since,
+      p_until: now.toISOString(),
+    })
     if (error || !data) return null
-    const starts = data.map((b) => b.starts_at)
-    const first = starts[0] ? Date.parse(starts[0]) : now.getTime()
+    const firstStart = data[0]?.first_start
+    const first = firstStart ? Date.parse(firstStart) : now.getTime()
     const weeks = Math.min(DEMAND_WINDOW_WEEKS, Math.max(1, Math.ceil((now.getTime() - first) / (7 * DAY_MS))))
-    return buildDemandProfile(starts, courtCount, weeks)
+    return demandProfileFromCounts(data, courtCount, weeks)
   } catch {
     return null
   }
