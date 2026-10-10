@@ -1,63 +1,47 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+import { getSessionProfile, requireOrgAction } from '@/lib/org-access'
+import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
+import { captureAudit } from '@/lib/telemetry'
 import { createApiKeySchema, CreateApiKeyInput } from '@/lib/validations/api'
 
-// Create a new API key using database function
+/**
+ * API keys of the caller's own club. The key RPCs are service-role only (they are not callable
+ * through the REST API), so every call here first proves the caller with `requireOrgAction`, then
+ * passes the club and creator explicitly: both come from the verified session, never from input.
+ * Keys are verified on the API side by `validateApiKey` in lib/middleware/api-auth.ts.
+ */
+
+// Create a new API key. Owner only; the full key is returned once.
 export async function createApiKey(input: CreateApiKeyInput) {
   try {
     const parsed = createApiKeySchema.safeParse(input)
     if (!parsed.success) {
-      return {
-        success: false,
-        error: 'Invalid input',
-        fieldErrors: parsed.error.flatten().fieldErrors,
-      }
+      return { success: false, error: 'Invalid input', fieldErrors: parsed.error.flatten().fieldErrors }
     }
     const validatedInput = parsed.data
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const auth = await requireOrgAction(['org_admin'])
+    if (!auth.ok) return { success: false, error: auth.message }
 
-    if (!user) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
-    // Get user's organization
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('org_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile?.org_id) {
-      return { success: false, error: 'No organization found for user' }
-    }
-
-    // Check permissions - only org_admin can create API keys
-    if (profile.role !== 'org_admin' && profile.role !== 'platform_admin') {
-      return { success: false, error: 'Insufficient permissions to create API keys' }
-    }
-
-    // Call database function to generate API key
-    const { data, error } = await supabase.rpc('generate_api_key', {
-      p_organization_id: profile.org_id,
+    const { data, error } = await getSupabaseAdmin().rpc('generate_api_key', {
+      p_organization_id: auth.ctx.orgId,
       p_name: validatedInput.name,
       p_permissions: validatedInput.permissions,
       p_rate_limit: validatedInput.rate_limit,
       p_expires_at: validatedInput.expires_at || null,
+      p_created_by: auth.ctx.userId,
     })
 
-    if (error) {
-      console.error('Create API key error:', error)
-      return { success: false, error: 'Failed to create API key' }
-    }
-
-    if (!data || data.length === 0) {
+    if (error || !data || data.length === 0) {
+      console.error('Create API key error:', error?.message)
       return { success: false, error: 'Failed to create API key' }
     }
 
     const result = data[0]
+    captureAudit({ action: 'api_key.create', status: 'created', org_id: auth.ctx.orgId, actor: auth.ctx.role })
 
     // Return the full key only once - it cannot be retrieved again
     return {
@@ -72,132 +56,53 @@ export async function createApiKey(input: CreateApiKeyInput) {
       },
     }
   } catch (error) {
-    console.error('Create API key error:', error)
+    console.error('Create API key error:', error instanceof Error ? error.message : error)
     return { success: false, error: 'An unexpected error occurred' }
   }
 }
 
-// List API keys for organization
+// List API keys (metadata only) of the caller's club. RLS is the second lock.
 export async function listApiKeys() {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const auth = await requireOrgAction(['org_admin'])
+    if (!auth.ok) return { success: false, error: auth.message }
 
-    if (!user) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('org_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile?.org_id) {
-      return { success: false, error: 'No organization found for user' }
-    }
-
-    // Check permissions
-    if (profile.role !== 'org_admin' && profile.role !== 'platform_admin' && profile.role !== 'staff') {
-      return { success: false, error: 'Insufficient permissions' }
-    }
-
+    const { supabase } = await getSessionProfile() // same request client as the access check: no second getUser()
     const { data: apiKeys, error } = await supabase
       .from('api_keys')
       .select('id, name, prefix, permissions, rate_limit, expires_at, last_used_at, is_active, created_at')
-      .eq('organization_id', profile.org_id)
+      .eq('organization_id', auth.ctx.orgId)
       .order('created_at', { ascending: false })
 
     if (error) {
-      return { success: false, error: error.message }
+      console.error('List API keys error:', error.message)
+      return { success: false, error: 'Could not load API keys' }
     }
-
     return { success: true, data: apiKeys }
   } catch (error) {
-    console.error('List API keys error:', error)
+    console.error('List API keys error:', error instanceof Error ? error.message : error)
     return { success: false, error: 'An unexpected error occurred' }
   }
 }
 
-// Revoke/Delete API key using database function
+// Revoke one of the caller's own club's keys. Owner only.
 export async function revokeApiKey(apiKeyId: string) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    if (!z.string().uuid().safeParse(apiKeyId).success) return { success: false, error: 'Invalid key' }
 
-    if (!user) {
-      return { success: false, error: 'Unauthorized' }
-    }
+    const auth = await requireOrgAction(['org_admin'])
+    if (!auth.ok) return { success: false, error: auth.message }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('org_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile?.org_id) {
-      return { success: false, error: 'No organization found' }
-    }
-
-    // Check permissions
-    if (profile.role !== 'org_admin' && profile.role !== 'platform_admin') {
-      return { success: false, error: 'Insufficient permissions' }
-    }
-
-    // Call database function to revoke API key
-    const { error } = await supabase.rpc('revoke_api_key', {
+    const { error } = await getSupabaseAdmin().rpc('revoke_api_key', {
       p_key_id: apiKeyId,
+      p_organization_id: auth.ctx.orgId,
     })
+    if (error) return { success: false, error: 'API key not found' }
 
-    if (error) {
-      return { success: false, error: error.message }
-    }
-
+    captureAudit({ action: 'api_key.revoke', status: 'revoked', org_id: auth.ctx.orgId, actor: auth.ctx.role })
     return { success: true }
   } catch (error) {
-    console.error('Revoke API key error:', error)
+    console.error('Revoke API key error:', error instanceof Error ? error.message : error)
     return { success: false, error: 'An unexpected error occurred' }
-  }
-}
-
-// Validate API key (for API route authentication) using database function
-export async function validateApiKey(key: string): Promise<{
-  valid: boolean
-  organizationId?: string
-  permissions?: string[]
-  rateLimit?: number
-  error?: string
-}> {
-  try {
-    if (!key || !key.startsWith('sg_live_')) {
-      return { valid: false, error: 'Invalid API key format' }
-    }
-
-    const supabase = await createClient()
-
-    const { data, error } = await supabase.rpc('verify_api_key', {
-      input_key: key,
-    })
-
-    if (error) {
-      console.error('Validate API key error:', error)
-      return { valid: false, error: 'Validation failed' }
-    }
-
-    if (!data || data.length === 0) {
-      return { valid: false, error: 'Invalid API key' }
-    }
-
-    const result = data[0]
-    return {
-      valid: result.valid,
-      organizationId: result.organization_id ?? undefined,
-      permissions: result.permissions,
-      rateLimit: result.rate_limit,
-      error: result.error ?? undefined,
-    }
-  } catch (error) {
-    console.error('Validate API key error:', error)
-    return { valid: false, error: 'Validation failed' }
   }
 }

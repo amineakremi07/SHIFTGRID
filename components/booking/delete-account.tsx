@@ -46,7 +46,7 @@ export function DeleteAccount({ upcomingCount }: { upcomingCount: number }) {
     setError(null)
     const result = await deleteMyAccountAction({ password, confirmation })
     setBusy(false)
-    if (!result.ok) return void setError(result.message)
+    if (!result.success) return void setError(result.error)
     toast.success('Your account was deleted. Your personal data has been erased.')
     router.push('/')
     router.refresh()

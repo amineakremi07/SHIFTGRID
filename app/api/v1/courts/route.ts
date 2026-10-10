@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiCourtCreateSchema } from '@/lib/validations/court'
 import { withApiKeyAuth } from '@/lib/middleware/api-auth'
 import { reportServerError } from '@/lib/observability'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
+import type { CourtStatus, Database, Sport } from '@/lib/types/database'
+
+type CourtInsert = Database['public']['Tables']['courts']['Insert']
 
 // Columns of public.courts (CHECK: sport in padel|tennis|football, status in active|maintenance)
 const SPORTS = ['padel', 'tennis', 'football'] as const
 const STATUSES = ['active', 'maintenance'] as const
-const TIME = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/
-
-// Create service client for database operations
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 const fail = (error: string, status: number) =>
   NextResponse.json({ success: false, error }, { status })
@@ -61,8 +56,8 @@ export const GET = withApiKeyAuth(async (request: NextRequest, context) => {
       .is('deleted_at', null) // archived courts are not listed
       .order('created_at', { ascending: false })
 
-    if (sport) query = query.eq('sport', sport)
-    if (status) query = query.eq('status', status)
+    if (sport) query = query.eq('sport', sport as Sport)
+    if (status) query = query.eq('status', status as CourtStatus)
 
     const from = (page - 1) * limit
     query = query.range(from, from + limit - 1)
@@ -89,7 +84,7 @@ export const GET = withApiKeyAuth(async (request: NextRequest, context) => {
     reportServerError('api.v1.courts.list', error)
     return fail('An unexpected error occurred', 500)
   }
-})
+}, { permission: 'read' })
 
 /**
  * POST /api/v1/courts
@@ -103,11 +98,6 @@ export const POST = withApiKeyAuth(async (request: NextRequest, context) => {
     const organizationId = context.organizationId
     if (!organizationId) return fail('API key is not linked to an organization', 400)
 
-    // Check for write permission
-    if (!context.permissions.includes('write') && !context.permissions.includes('admin')) {
-      return fail('Write permission required', 403)
-    }
-
     let body: Record<string, unknown>
     try {
       const parsed = await request.json()
@@ -117,45 +107,31 @@ export const POST = withApiKeyAuth(async (request: NextRequest, context) => {
       return fail('Request body must be a JSON object', 400)
     }
 
-    const name = typeof body.name === 'string' ? body.name.trim() : ''
-    const sport = body.sport ?? body.sport_type
-    const price = body.price_per_hour
-
-    if (!name || sport == null || price == null) {
-      return fail('Missing required fields: name, sport, price_per_hour', 400)
+    const parsed = apiCourtCreateSchema.safeParse(body)
+    if (!parsed.success) {
+      const first = parsed.error.issues[0]
+      return NextResponse.json(
+        { success: false, error: `${first.path.join('.') || 'body'}: ${first.message}`, issues: parsed.error.issues },
+        { status: 400 }
+      )
     }
-    if (typeof sport !== 'string' || !(SPORTS as readonly string[]).includes(sport)) {
-      return fail(`Invalid sport. Allowed: ${SPORTS.join(', ')}`, 400)
-    }
-    if (typeof price !== 'number' || !Number.isFinite(price) || price < 0) {
-      return fail('price_per_hour must be a non-negative number', 400)
-    }
+    const v = parsed.data
 
-    let status: string = 'active'
-    if (body.status !== undefined) status = String(body.status)
-    else if (body.is_active === false) status = 'maintenance'
-    if (!(STATUSES as readonly string[]).includes(status)) {
-      return fail(`Invalid status. Allowed: ${STATUSES.join(', ')}`, 400)
+    const row: CourtInsert = {
+      org_id: organizationId,
+      name: v.name,
+      sport: (v.sport ?? v.sport_type) as Sport,
+      price_per_hour: v.price_per_hour,
+      status: (v.status ?? (v.is_active === false ? 'maintenance' : 'active')) as CourtStatus,
     }
-
-    const row: Record<string, unknown> = { org_id: organizationId, name, sport, price_per_hour: price, status }
-
     for (const key of ['open_time', 'close_time', 'night_starts_at'] as const) {
-      if (body[key] === undefined || body[key] === null) continue
-      if (typeof body[key] !== 'string' || !TIME.test(body[key])) return fail(`${key} must be HH:MM`, 400)
-      row[key] = body[key]
+      if (v[key]) row[key] = v[key]
     }
-    if (body.night_surcharge_per_hour !== undefined && body.night_surcharge_per_hour !== null) {
-      const s = body.night_surcharge_per_hour
-      if (typeof s !== 'number' || !Number.isFinite(s) || s < 0) {
-        return fail('night_surcharge_per_hour must be a non-negative number', 400)
-      }
-      row.night_surcharge_per_hour = s
-    }
+    if (v.night_surcharge_per_hour != null) row.night_surcharge_per_hour = v.night_surcharge_per_hour
 
     const { data: court, error } = await getSupabaseAdmin()
       .from('courts')
-      .insert(row as never)
+      .insert(row)
       .select()
       .single()
 
@@ -170,4 +146,4 @@ export const POST = withApiKeyAuth(async (request: NextRequest, context) => {
     reportServerError('api.v1.courts.create', error)
     return fail('An unexpected error occurred', 500)
   }
-})
+}, { permission: 'write' })

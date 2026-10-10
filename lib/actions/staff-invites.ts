@@ -1,5 +1,7 @@
 'use server'
 
+import { createHash } from 'node:crypto'
+
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -27,6 +29,9 @@ import { stripHtml } from '@/lib/sanitize-text'
 
 const INVITE_DAYS = 7
 const TOKEN = /^[0-9a-f]{64}$/
+
+/** Only this hash is stored; the token itself exists in the emailed link and on the owner's screen. */
+const hashInviteToken = (token: string) => createHash('sha256').update(token).digest('hex')
 
 export type StaffResult = { ok: true } | { ok: false; message: string }
 export type InviteActionResult =
@@ -118,7 +123,7 @@ export async function inviteStaff(input: { email: string }): Promise<InviteActio
     email,
     role: 'staff',
     invited_by: auth.ctx.userId,
-    token,
+    token_hash: hashInviteToken(token),
     expires_at: new Date(Date.now() + INVITE_DAYS * 86_400_000).toISOString(),
   })
   if (error) {
@@ -148,7 +153,7 @@ export async function resendStaffInvite(inviteId: string): Promise<InviteActionR
 
   const { data, error } = await admin
     .from('staff_invites')
-    .update({ token, expires_at: new Date(Date.now() + INVITE_DAYS * 86_400_000).toISOString() })
+    .update({ token_hash: hashInviteToken(token), expires_at: new Date(Date.now() + INVITE_DAYS * 86_400_000).toISOString() })
     .eq('id', inviteId)
     .eq('org_id', auth.ctx.orgId)
     .is('accepted_at', null) // an accepted invite must never become usable again
@@ -236,7 +241,7 @@ async function loadUsableInvite(token: string) {
   const { data: invite } = await getSupabaseAdmin()
     .from('staff_invites')
     .select('id, org_id, email, role, expires_at, accepted_at')
-    .eq('token', token)
+    .eq('token_hash', hashInviteToken(token))
     .maybeSingle()
   return invite ?? null
 }
@@ -291,7 +296,7 @@ export async function acceptStaffInvite(input: {
   const { data: claimed } = await admin
     .from('staff_invites')
     .update({ accepted_at: new Date().toISOString() })
-    .eq('token', token)
+    .eq('token_hash', hashInviteToken(token))
     .is('accepted_at', null)
     .select('id, org_id, email')
   const invite = claimed?.[0]

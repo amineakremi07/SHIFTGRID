@@ -49,6 +49,10 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
   const linkProblem = searchParams.get('error') === 'link_invalid'
   // Google sign-in found no account and no club to join (the button on a club page knows the club).
   const googleNoClub = searchParams.get('error') === 'google_no_club'
+  // Google would not vouch for the address, so nothing was signed in or linked.
+  const googleUnverified = searchParams.get('error') === 'google_unverified'
+  // /register just emailed a confirmation link.
+  const justRegistered = searchParams.get('registered') === '1'
 
   const [error, setError] = useState<React.ReactNode>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -141,6 +145,20 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
                   create an account
                 </Link>
                 .
+              </div>
+            )}
+            {googleUnverified && !error && (
+              <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive" data-testid="google-unverified">
+                Google could not confirm that email address, so we did not sign you in. Use your password, or{' '}
+                <Link href="/forgot-password" className="font-medium underline underline-offset-2">
+                  reset it
+                </Link>
+                .
+              </div>
+            )}
+            {justRegistered && !error && (
+              <div role="status" className="rounded-md border border-[#0e634f]/30 bg-[#0e634f]/10 p-3 text-sm text-[#0e634f]" data-testid="check-your-email">
+                Almost there: we emailed you a confirmation link. Open it to activate your account, then sign in here.
               </div>
             )}
             {passwordWasReset && !error && (

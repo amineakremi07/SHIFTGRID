@@ -16,6 +16,7 @@ export default async function OrgDashboardLayout({ children }: { children: React
   const access = await getOrgAccess()
 
   if (access.kind === 'signed_out') redirect('/login-owner?redirect=/dashboard/org/bookings')
+  if (access.kind === 'mfa_required') redirect('/auth/mfa-verify?redirect=/dashboard/org/bookings')
   if (access.kind === 'platform_admin') redirect('/admin/verification')
   if (access.kind === 'not_staff') redirect('/register?role=owner')
 

@@ -12,6 +12,7 @@ import { getMemberships, hasMultipleMemberships } from '@/lib/org-memberships'
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const access = await getAdminAccess()
   if (access.kind === 'signed_out') redirect('/login-owner?redirect=/admin/verification')
+  if (access.kind === 'mfa_required') redirect('/auth/mfa-verify?redirect=/admin/verification')
   if (access.kind === 'forbidden') redirect('/')
   // A platform admin sees ONLY the clubs they were explicitly added to; there is no list of all clubs here.
   const memberships = await getMemberships()
@@ -27,6 +28,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
           <div className="flex items-center gap-5 text-sm">
             {canSwitch && <OrgSwitcher items={memberships.items} activeOrgId={memberships.activeOrgId} />}
+            <Link href="/admin/security" className="text-[#f7f5f2]/80 underline-offset-4 hover:underline">
+              Security
+            </Link>
             <Link href="/" className="text-[#f7f5f2]/80 underline-offset-4 hover:underline">
               View public site
             </Link>

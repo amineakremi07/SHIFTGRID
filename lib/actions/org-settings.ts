@@ -2,13 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { actionFail, actionFailFromZod, actionOk, type ActionResult } from '@/lib/actions/result'
 import { requireOrgAction } from '@/lib/org-access'
 import { weeklyHoursSchema, type WeeklyHours } from '@/lib/operating-hours'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 
-export type SettingsResult =
-  | { ok: true }
-  | { ok: false; message: string; fieldErrors?: Record<string, string> }
+export type SettingsResult = ActionResult
 
 /**
  * Save the club's weekly hours.
@@ -20,13 +19,11 @@ export type SettingsResult =
  */
 export async function saveWeeklyHours(input: WeeklyHours): Promise<SettingsResult> {
   const auth = await requireOrgAction(['org_admin'])
-  if (!auth.ok) return auth
+  if (!auth.ok) return actionFail(auth.message)
 
   const parsed = weeklyHoursSchema.safeParse(input)
   if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {}
-    for (const issue of parsed.error.issues) fieldErrors[issue.path.join('.')] = issue.message
-    return { ok: false, message: 'Please fix the highlighted days.', fieldErrors }
+    return actionFailFromZod('Please fix the highlighted days.', parsed.error)
   }
 
   const { error } = await getSupabaseAdmin()
@@ -35,10 +32,10 @@ export async function saveWeeklyHours(input: WeeklyHours): Promise<SettingsResul
     .eq('id', auth.ctx.orgId)
   if (error) {
     console.error('saveWeeklyHours failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not save the hours. Please try again.' }
+    return actionFail('Could not save the hours. Please try again.')
   }
 
   revalidatePath('/dashboard/org/settings')
   revalidatePath(`/courts/${auth.ctx.orgId}`)
-  return { ok: true }
+  return actionOk()
 }

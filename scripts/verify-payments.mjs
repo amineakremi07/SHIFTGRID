@@ -43,6 +43,7 @@ const slot = (day, hour, minute = 0) => {
   d.setUTCHours(hour - 1, minute, 0, 0)
   return d.toISOString()
 }
+const randomPhone = () => '+21698' + String(Math.floor(Math.random() * 900000) + 100000)
 const book = (startsAt, who = 'A') =>
   admin.rpc('create_booking', {
     p_org_id: org.id,
@@ -52,7 +53,7 @@ const book = (startsAt, who = 'A') =>
     p_player_count: 4,
     p_amount: 90,
     p_guest_name: `Verify ${who}`,
-    p_guest_phone: '+21698111222',
+    p_guest_phone: randomPhone(), // one phone per booking: a guest may hold only 2 unpaid bookings per club
   })
 const fresh = async (startsAt) => {
   const r = await book(startsAt)

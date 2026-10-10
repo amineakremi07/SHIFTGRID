@@ -10,7 +10,8 @@ import { captureAudit, captureBooking, timed } from '@/lib/telemetry'
 import { GUEST_TOKEN_PATTERN, hashGuestToken } from '@/lib/guest-cancel'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { notifyCancellation } from '@/lib/notifications/service'
-import { createClient } from '@/lib/supabase/server'
+import { sessionNeedsSecondFactor } from '@/lib/mfa-guard'
+import { getSessionProfile } from '@/lib/org-access'
 
 export type CancelBookingResult = { ok: true } | { ok: false; message: string }
 
@@ -62,17 +63,8 @@ async function cancelBookingActionImpl(input: CancelBookingInput): Promise<Cance
     return cancelAsGuest(bookingId, guestToken, reason)
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
   if (!user) return { ok: false, message: 'Please sign in to cancel a booking.' }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, org_id')
-    .eq('id', user.id)
-    .maybeSingle()
 
   // RLS already limits this to the caller's own bookings or their club's.
   const { data: booking } = await supabase
@@ -86,6 +78,10 @@ async function cancelBookingActionImpl(input: CancelBookingInput): Promise<Cance
   const isStaff =
     (profile?.role === 'org_admin' || profile?.role === 'staff') && profile.org_id === booking.org_id
   if (!isOwner && !isStaff) return { ok: false, message: 'You cannot cancel this booking.' }
+  // Acting for a club needs the second factor, wherever this action was posted from.
+  if (isStaff && !isOwner && (await sessionNeedsSecondFactor(supabase, user))) {
+    return { ok: false, message: 'Enter your two-factor code to continue.' }
+  }
 
   if (!(OPEN as readonly string[]).includes(booking.status)) {
     return { ok: false, message: 'This booking is already cancelled or finished.' }

@@ -41,11 +41,11 @@ export function HoursForm({ initial, configured }: { initial: WeeklyHours; confi
     setSaving(true)
     const result = await saveWeeklyHours(hours)
     setSaving(false)
-    if (!result.ok) {
-      if (result.fieldErrors) {
-        setErrors(Object.fromEntries(Object.entries(result.fieldErrors).map(([k, v]) => [k.split('.')[0], v])))
+    if (!result.success) {
+      if (result.issues) {
+        setErrors(Object.fromEntries(result.issues.map((i) => [String(i.path[0]), i.message])))
       }
-      return void toast.error(result.message)
+      return void toast.error(result.error)
     }
     toast.success('Operating hours saved')
     router.refresh()

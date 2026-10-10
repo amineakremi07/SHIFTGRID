@@ -211,12 +211,23 @@ try {
     check(Boolean(rpc.error), 'player cannot call create_booking() directly', rpc.error?.code)
     const mk = await player.sb.rpc('mark_cash_paid', { p_booking_id: foreign.booking })
     check(Boolean(mk.error), 'player cannot call mark_cash_paid()', mk.error?.code)
-    const gk = await player.sb.rpc('generate_api_key', { p_organization_id: home.id, p_name: 'probe', p_permissions: ['read'], p_rate_limit: 10, p_expires_at: null })
-    check(Boolean(gk.error), 'player cannot generate an API key', gk.error?.code)
-    const gx = await staff.sb.rpc('generate_api_key', { p_organization_id: home.id, p_name: 'probe', p_permissions: ['read'], p_rate_limit: 10, p_expires_at: null })
-    check(Boolean(gx.error), 'staff cannot generate an API key', gx.error?.code)
-    const gf = await owner.sb.rpc('generate_api_key', { p_organization_id: foreign.org, p_name: 'probe', p_permissions: ['read'], p_rate_limit: 10, p_expires_at: null })
-    check(Boolean(gf.error), "org_admin cannot generate an API key for another club", gf.error?.code)
+    // The API-key RPCs are service-role only: no signed-in user (not even the club owner) may call them over REST.
+    const keyArgs = (org, by) => ({ p_organization_id: org, p_name: 'probe', p_permissions: ['read'], p_rate_limit: 10, p_expires_at: null, p_created_by: by })
+    for (const [name, u, org] of [['player', player, home.id], ['staff', staff, home.id], ['org_admin', owner, home.id], ['org_admin (foreign club)', owner, foreign.org]]) {
+      const g = await u.sb.rpc('generate_api_key', keyArgs(org, u.id))
+      check(g.error?.code === '42501', `${name} cannot call generate_api_key over REST`, g.error?.code)
+    }
+    const vk = await player.sb.rpc('verify_api_key', { input_key: 'sg_live_' + '0'.repeat(64) })
+    check(vk.error?.code === '42501', 'player cannot call verify_api_key over REST (no unmetered key oracle)', vk.error?.code)
+    const rk = await owner.sb.rpc('revoke_api_key', { p_key_id: '00000000-0000-0000-0000-000000000000', p_organization_id: home.id })
+    check(rk.error?.code === '42501', 'org_admin cannot call revoke_api_key over REST', rk.error?.code)
+    const anonVk = await anon.rpc('verify_api_key', { input_key: 'sg_live_' + '0'.repeat(64) })
+    check(anonVk.error?.code === '42501', 'anon cannot call verify_api_key', anonVk.error?.code)
+    // Invite tokens are stored hashed and the hash is not readable by clients.
+    const tok = await owner.sb.from('staff_invites').select('token_hash').limit(1)
+    check(Boolean(tok.error), 'org_admin cannot read staff_invites.token_hash', tok.error?.code)
+    const oldTok = await owner.sb.from('staff_invites').select('token').limit(1)
+    check(Boolean(oldTok.error), 'plaintext staff_invites.token no longer exists', oldTok.error?.code)
   }
 
   // ---- privilege escalation on profiles ---------------------------------------------------
@@ -236,14 +247,23 @@ try {
     check(Boolean(mk.error), 'a client cannot insert a profile (no self-made platform_admin)', mk.error?.code)
   }
 
-  // ---- platform admin: sees everything, cannot be impersonated ---------------------------
+  // ---- platform admin: no blanket read access to any club's data -------------------------
   {
     const orgs = await adminUser.sb.from('organizations').select('id').in('id', [home.id, foreign.org])
-    check(!orgs.error && orgs.data.length === 2, 'platform_admin sees every organization')
+    check(!orgs.error && orgs.data.length === 0, 'platform_admin session cannot read other clubs organizations through the API')
     const bk = await adminUser.sb.from('bookings').select('id').eq('id', foreign.booking)
-    check(!bk.error && bk.data.length === 1, 'platform_admin reads bookings across clubs')
+    check(!bk.error && bk.data.length === 0, 'platform_admin session cannot read bookings of any club')
+    const inv = await adminUser.sb.from('staff_invites').select('id').limit(5)
+    check(!inv.error && inv.data.length === 0, 'platform_admin session cannot read staff_invites')
+    const keys = await adminUser.sb.from('api_keys').select('id').limit(5)
+    check(!keys.error && keys.data.length === 0, 'platform_admin session cannot read api_keys')
     const n = await adminUser.sb.from('notifications').select('id').limit(1)
     check(Boolean(n.error) || n.data.length === 0, 'even platform_admin cannot read the outbox from the client', n.error?.code)
+    // The club owner still reads their own club's API-key metadata and organization row.
+    const own = await owner.sb.from('organizations').select('id').eq('id', home.id)
+    check(!own.error && own.data.length === 1, 'org_admin still reads their own organization')
+    const stale = await owner.sb.rpc('release_stale_bookings')
+    check(stale.error?.code === '42501', 'org_admin cannot call release_stale_bookings over REST', stale.error?.code)
   }
 } catch (e) {
   console.error('Security test crashed:', e.message ?? e)

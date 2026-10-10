@@ -419,7 +419,8 @@ export type Database = {
           email: string
           role: InviteRole
           invited_by: string
-          token: string
+          /** SHA-256 of the emailed token; the token itself is never stored. */
+          token_hash: string
           expires_at: string
           accepted_at: string | null
           created_at: string
@@ -431,7 +432,8 @@ export type Database = {
           email: string
           role: InviteRole
           invited_by: string
-          token: string
+          /** SHA-256 of the emailed token; the token itself is never stored. */
+          token_hash: string
           expires_at: string
           accepted_at?: string | null
           created_at?: string
@@ -576,6 +578,7 @@ export type Database = {
           p_permissions: string[]
           p_rate_limit: number
           p_expires_at?: string | null
+          p_created_by: string
         }
         Returns: {
           id: string
@@ -597,7 +600,7 @@ export type Database = {
         }[]
       }
       revoke_api_key: {
-        Args: { p_key_id: string }
+        Args: { p_key_id: string; p_organization_id: string }
         Returns: undefined
       }
     }

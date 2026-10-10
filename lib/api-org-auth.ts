@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { validateApiKey } from '@/lib/middleware/api-auth'
+import { sessionNeedsSecondFactor } from '@/lib/mfa-guard'
 import { getOrgAccess } from '@/lib/org-access'
+import { createClient } from '@/lib/supabase/server'
+import { tooManyRequests } from '@/lib/rate-limit'
 
 /**
  * Who is calling a club-scoped `/api/v1` route, and for which club.
@@ -18,6 +21,7 @@ export const apiFail = (error: string, status: number, code?: string, extra: Rec
 export async function resolveApiOrg(request: NextRequest): Promise<{ orgId: string } | NextResponse> {
   if (request.headers.get('authorization')) {
     const key = await validateApiKey(request)
+    if (key.limited) return tooManyRequests(key.limited)
     if (!key.valid || !key.organizationId) return apiFail(key.error || 'Unauthorized', 401)
     const perms = key.permissions ?? []
     if (!perms.includes('write') && !perms.includes('admin')) return apiFail('Write permission required', 403)
@@ -27,6 +31,12 @@ export async function resolveApiOrg(request: NextRequest): Promise<{ orgId: stri
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
     return apiFail('Content-Type must be application/json', 415)
   }
+  // A session that has not used its authenticator yet gets no dashboard-level API access either.
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (user && (await sessionNeedsSecondFactor(supabase, user))) return apiFail('Two-factor verification required.', 403, 'mfa_required')
   const access = await getOrgAccess()
   if (access.kind === 'signed_out') return apiFail('Please sign in again.', 401)
   if (access.kind !== 'ok') return apiFail('You do not have access to a club dashboard.', 403)

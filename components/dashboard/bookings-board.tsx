@@ -646,8 +646,8 @@ function NoShowDialog({
     setBusy(true)
     const result = await markNoShowAction(booking.id)
     setBusy(false)
-    if (!result.ok) toast.error(result.message)
-    else toast.success(result.message)
+    if (!result.success) toast.error(result.error)
+    else toast.success(result.data.message)
     onDone()
   }
 

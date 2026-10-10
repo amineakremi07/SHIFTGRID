@@ -55,3 +55,63 @@ export function bookingWhatsappLink(
   const contact = resolveContactNumber(clubNumber)
   return contact ? whatsappUrl(contact.number, bookingWhatsappMessage(facts)) : null
 }
+
+/* ------------------------- reminders sent TO the player ------------------------- */
+
+export type ReminderLocale = 'fr' | 'en' | 'ar'
+
+export type ReminderFacts = {
+  playerName: string
+  clubName: string
+  sport: 'padel' | 'tennis' | 'football'
+  courtName: string
+  /** Venue-time date and time range, already formatted (see lib/court-time.ts). */
+  date: string
+  time: string
+  /** The club's WhatsApp / phone number, any format `normalizeWhatsapp` accepts. */
+  clubContact?: string | null
+  reference?: string
+}
+
+const SPORT_LABEL: Record<ReminderLocale, Record<ReminderFacts['sport'], string>> = {
+  fr: { padel: 'padel', tennis: 'tennis', football: 'football' },
+  en: { padel: 'padel', tennis: 'tennis', football: 'football' },
+  ar: { padel: 'بادل', tennis: 'تنس', football: 'كرة القدم' },
+}
+
+/** The reminder text, to be sent about two hours before the slot. Plain text: no markup, no secret links. */
+export function reminderWhatsappMessage(f: ReminderFacts, locale: ReminderLocale = 'fr'): string {
+  const sport = SPORT_LABEL[locale][f.sport]
+  const contact = normalizeWhatsapp(f.clubContact)
+  const ref = f.reference
+    ? { fr: `Référence : ${f.reference}.`, en: `Reference: ${f.reference}.`, ar: `المرجع: ${f.reference}.` }[locale]
+    : null
+  const reach = contact
+    ? { fr: `Pour nous joindre : +${contact}.`, en: `To reach the club: +${contact}.`, ar: `للاتصال بالنادي: +${contact}.` }[locale]
+    : null
+  const body = {
+    fr: `Bonjour ${f.playerName}, rappel : votre match de ${sport} à ${f.clubName} (${f.courtName}) a lieu le ${f.date}, de ${f.time}. À tout à l'heure !`,
+    en: `Hello ${f.playerName}, a reminder: your ${sport} game at ${f.clubName} (${f.courtName}) is on ${f.date}, ${f.time}. See you soon!`,
+    ar: `مرحبا ${f.playerName}، تذكير: مباراة ${sport} في ${f.clubName} (${f.courtName}) يوم ${f.date}، من ${f.time}. إلى اللقاء!`,
+  }[locale]
+  return [body, ref, reach].filter(Boolean).join(' ')
+}
+
+/** Reminders go out two hours before the start. */
+export const REMINDER_LEAD_MINUTES = 120
+
+/**
+ * Link that opens WhatsApp on the PLAYER's number with the reminder pre-filled, so the club's front desk can
+ * send it with one tap. It is click-to-chat, not an automated send (that needs the WhatsApp Business API).
+ * Null when the player's phone is unusable.
+ */
+export function reminderWhatsappLink(playerPhone: string | null | undefined, facts: ReminderFacts, locale: ReminderLocale = 'fr'): string | null {
+  const number = normalizeWhatsapp(playerPhone)
+  return number ? whatsappUrl(number, reminderWhatsappMessage(facts, locale)) : null
+}
+
+/** True once the slot is within the reminder window and has not started. */
+export function isReminderDue(startsAt: Date, now: Date = new Date()): boolean {
+  const minutes = (startsAt.getTime() - now.getTime()) / 60_000
+  return minutes > 0 && minutes <= REMINDER_LEAD_MINUTES
+}

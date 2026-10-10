@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { actionFail, actionFailFromZod, actionOk, type ActionResult } from '@/lib/actions/result'
 import { hourlyFromSlotPrice } from '@/lib/pricing'
 import { requireOrgAction } from '@/lib/org-access'
 import { captureAudit } from '@/lib/telemetry'
@@ -10,9 +11,7 @@ import { SPORT_DURATION_MIN } from '@/lib/slot-duration'
 import { createClient } from '@/lib/supabase/server'
 import { courtFormSchema, type CourtFormInput } from '@/lib/validations/court'
 
-export type CourtActionResult =
-  | { ok: true }
-  | { ok: false; message: string; fieldErrors?: Record<string, string[] | undefined> }
+export type CourtActionResult = ActionResult
 
 /**
  * Court writes go through the caller's own session (not the service role), so
@@ -21,15 +20,11 @@ export type CourtActionResult =
  */
 export async function saveCourt(courtId: string | null, input: CourtFormInput): Promise<CourtActionResult> {
   const auth = await requireOrgAction(['org_admin'])
-  if (!auth.ok) return auth
+  if (!auth.ok) return actionFail(auth.message)
 
   const parsed = courtFormSchema.safeParse(input)
   if (!parsed.success) {
-    return {
-      ok: false,
-      message: 'Please fix the highlighted fields.',
-      fieldErrors: parsed.error.flatten().fieldErrors,
-    }
+    return actionFailFromZod('Please fix the highlighted fields.', parsed.error)
   }
   const v = parsed.data
   const supabase = await createClient()
@@ -53,27 +48,27 @@ export async function saveCourt(courtId: string | null, input: CourtFormInput): 
       .select('id')
     if (error) {
       console.error('saveCourt update failed', { code: error.code, message: error.message })
-      return { ok: false, message: 'Could not save the court. Please try again.' }
+      return actionFail('Could not save the court. Please try again.')
     }
-    if (!data?.length) return { ok: false, message: 'That court no longer exists.' }
+    if (!data?.length) return actionFail('That court no longer exists.')
   } else {
     const { error } = await supabase.from('courts').insert({ ...fields, org_id: auth.ctx.orgId })
     if (error) {
       console.error('saveCourt insert failed', { code: error.code, message: error.message })
-      return { ok: false, message: 'Could not add the court. Please try again.' }
+      return actionFail('Could not add the court. Please try again.')
     }
   }
 
   revalidatePath('/dashboard/org/courts')
   revalidatePath(`/courts/${auth.ctx.orgId}`)
-  return { ok: true }
+  return actionOk()
 }
 
 /** Quick Active <-> Maintenance switch from the court list. */
 export async function setCourtStatus(courtId: string, status: 'active' | 'maintenance'): Promise<CourtActionResult> {
   const auth = await requireOrgAction(['org_admin'])
-  if (!auth.ok) return auth
-  if (status !== 'active' && status !== 'maintenance') return { ok: false, message: 'Invalid status.' }
+  if (!auth.ok) return actionFail(auth.message)
+  if (status !== 'active' && status !== 'maintenance') return actionFail('Invalid status.')
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -84,14 +79,14 @@ export async function setCourtStatus(courtId: string, status: 'active' | 'mainte
     .select('id')
   if (error) {
     console.error('setCourtStatus failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not update the court. Please try again.' }
+    return actionFail('Could not update the court. Please try again.')
   }
-  if (!data?.length) return { ok: false, message: 'That court no longer exists.' }
+  if (!data?.length) return actionFail('That court no longer exists.')
 
   captureAudit({ action: 'court.set_status', status, court_id: courtId, org_id: auth.ctx.orgId, actor: 'org_admin' })
   revalidatePath('/dashboard/org/courts')
   revalidatePath(`/courts/${auth.ctx.orgId}`)
-  return { ok: true }
+  return actionOk()
 }
 
 /**
@@ -103,8 +98,8 @@ export async function setCourtStatus(courtId: string, status: 'active' | 'mainte
  */
 export async function archiveCourtAction(courtId: string): Promise<CourtActionResult> {
   const auth = await requireOrgAction(['org_admin'])
-  if (!auth.ok) return auth
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courtId)) return { ok: false, message: 'Invalid court.' }
+  if (!auth.ok) return actionFail(auth.message)
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courtId)) return actionFail('Invalid court.')
 
   const { data, error } = await getSupabaseAdmin()
     .from('courts')
@@ -117,12 +112,12 @@ export async function archiveCourtAction(courtId: string): Promise<CourtActionRe
     const upcoming = error.message.match(/has_upcoming_bookings:(\d+)/)
     if (upcoming) {
       const n = Number(upcoming[1])
-      return { ok: false, message: `This court has ${n} upcoming booking${n === 1 ? '' : 's'}. Cancel or move ${n === 1 ? 'it' : 'them'} first, then archive the court.` }
+      return actionFail(`This court has ${n} upcoming booking${n === 1 ? '' : 's'}. Cancel or move ${n === 1 ? 'it' : 'them'} first, then archive the court.`)
     }
     console.error('archiveCourt failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not archive the court. Please try again.' }
+    return actionFail('Could not archive the court. Please try again.')
   }
-  if (!data?.length) return { ok: false, message: 'That court no longer exists.' }
+  if (!data?.length) return actionFail('That court no longer exists.')
 
   captureAudit({ action: 'court.archive', status: 'archived', court_id: courtId, org_id: auth.ctx.orgId, actor: 'org_admin' })
   revalidatePath('/dashboard/org/courts')
@@ -130,14 +125,14 @@ export async function archiveCourtAction(courtId: string): Promise<CourtActionRe
   revalidatePath(`/courts/${auth.ctx.orgId}`)
   revalidatePath('/courts')
   revalidatePath('/')
-  return { ok: true }
+  return actionOk()
 }
 
 /** Bring an archived court back, exactly as it was (its status and prices are untouched). */
 export async function restoreCourtAction(courtId: string): Promise<CourtActionResult> {
   const auth = await requireOrgAction(['org_admin'])
-  if (!auth.ok) return auth
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courtId)) return { ok: false, message: 'Invalid court.' }
+  if (!auth.ok) return actionFail(auth.message)
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courtId)) return actionFail('Invalid court.')
 
   const { data, error } = await getSupabaseAdmin()
     .from('courts')
@@ -148,9 +143,9 @@ export async function restoreCourtAction(courtId: string): Promise<CourtActionRe
     .select('id')
   if (error) {
     console.error('restoreCourt failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not restore the court. Please try again.' }
+    return actionFail('Could not restore the court. Please try again.')
   }
-  if (!data?.length) return { ok: false, message: 'That court is not archived.' }
+  if (!data?.length) return actionFail('That court is not archived.')
 
   captureAudit({ action: 'court.restore', status: 'active', court_id: courtId, org_id: auth.ctx.orgId, actor: 'org_admin' })
 
@@ -159,5 +154,5 @@ export async function restoreCourtAction(courtId: string): Promise<CourtActionRe
   revalidatePath(`/courts/${auth.ctx.orgId}`)
   revalidatePath('/courts')
   revalidatePath('/')
-  return { ok: true }
+  return actionOk()
 }

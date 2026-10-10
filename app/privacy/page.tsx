@@ -29,34 +29,37 @@ export default function PrivacyPage() {
   return (
     <LegalDocument
       title="Privacy Policy"
-      intro="ShiftGrid lets players book padel, tennis and football courts at sports clubs in Tunisia. This policy explains what personal data we process to do that, why, who sees it, and how you can exercise your rights under Loi organique n° 2004-63 du 27 juillet 2004 portant sur la protection des données à caractère personnel (the Tunisian Data Protection Law)."
+      intro="ShiftGrid is a booking platform for padel, tennis and football courts in Tunisia. This policy sets out what personal data we collect from players, guests and club staff, why we collect it, who receives it, and how you can exercise your rights under Loi organique n° 2004-63 du 27 juillet 2004 portant sur la protection des données à caractère personnel (the Tunisian Data Protection Law)."
       toc={TOC}
     >
       <Section id="controller" title="1. Who is responsible for your data">
         <P>
-          {LEGAL_ENTITY} operates ShiftGrid and is the data controller (« responsable du traitement ») for the data described
+          {LEGAL_ENTITY}, a société unipersonnelle à responsabilité limitée (SUARL) organised under the laws of the Republic of
+          Tunisia, operates ShiftGrid and is the data controller (« responsable du traitement ») for the data described
           below.{LEGAL_ENTITY_DETAILS ? ` ${LEGAL_ENTITY_DETAILS}.` : ''}
         </P>
         <P>
-          When you book a court, the club you book at also receives and uses your booking details to run its venue (for example to
-          know who is coming and to collect payment). Each club is responsible for its own use of that data.
+          This policy applies to players and guests who book courts, and to the owners and staff of the clubs that use the
+          management dashboard. When you book, the club you book at also receives your booking details and uses them to run its
+          venue. For the data it receives, that club is a controller in its own right and answers for its own use of it.
         </P>
       </Section>
 
       <Section id="data" title="2. What we collect">
         <UL>
           <li>
-            <strong>Players with an account:</strong> full name, email address, Tunisian mobile number, password (stored only as a
+            <strong>Players with an account:</strong> full name, email address, Tunisian mobile number (+216XXXXXXXX), password (stored only as a
             salted hash by our authentication provider), the club your account is linked to, and the time you accepted our Terms
             and this policy.
           </li>
           <li>
-            <strong>Guests (no account):</strong> full name, mobile number and, optionally, an email address. A secret link lets
+            <strong>Guests (no account):</strong> full name, mobile number (in the form +216XXXXXXXX) and, optionally, an email address. A secret link lets
             you view or cancel the booking; we store only a hash of it.
           </li>
           <li>
             <strong>Bookings:</strong> club, court, date and time, number of players, price in TND, status (awaiting payment,
-            confirmed, cancelled, completed), payment method and payment status, cancellation reason and time, and booking history.
+            confirmed, cancelled, completed, no-show), payment method and payment status, cancellation reason and time, your
+            check-in status at the venue (whether and when you were checked in on arrival), and your booking history.
           </li>
           <li>
             <strong>Split payments:</strong> for each other player, the amount and whether it was paid; an email address only if
@@ -68,10 +71,10 @@ export default function PrivacyPage() {
             only to ShiftGrid administrators who verify clubs); staff invitation email addresses.
           </li>
           <li>
-            <strong>Technical data:</strong> IP address and request details used to limit abuse and secure the service, and error
-            reports. If a page crashes, a recording of that session may be sent to our error-monitoring provider with all text,
-            form fields and images masked. We do not collect payment card numbers: where online payment is offered, it is handled by the payment
-            provider.
+            <strong>Technical data:</strong> IP address and device metadata (browser, operating system and device type), used to limit
+            abuse, secure the service and diagnose problems, and error reports. If a page crashes, a recording of that session may be sent to our error-monitoring provider with all text,
+            form fields and images masked. We never see or store card numbers: online payments are entered on the pages of the payment gateway
+            (such as Konnect or Flouci), which tells us only whether the payment succeeded.
           </li>
           <li>
             <strong>Notification records:</strong> which email was sent, when, and whether it was delivered (without the secret
@@ -88,14 +91,15 @@ export default function PrivacyPage() {
             cancellation or refund notices. We use email today; we may also contact you by phone or SMS about a booking if needed.
             We do not send marketing messages without separate consent.
           </li>
-          <li>To let clubs run their venue and to let us verify that clubs are genuine.</li>
+          <li>To let clubs run their venue, verify arrivals at the front desk and record attendance, and to let us verify that clubs are genuine.</li>
           <li>To prevent fraud, slot hogging and abuse, to keep the service secure and to diagnose errors.</li>
           <li>To meet legal, accounting and tax obligations, and to establish or defend legal claims.</li>
         </UL>
         <P>
           Where the law requires your consent, we rely on the consent you give when you tick the box on the registration or booking
           form. You may withdraw it at any time (see Your rights); this does not affect processing already carried out, and we may
-          not be able to provide the booking without the data it needs.
+          not be able to provide the booking without the data it needs. Name and mobile number are required to book; everything marked
+          optional is left to you.
         </P>
       </Section>
 
@@ -103,11 +107,13 @@ export default function PrivacyPage() {
         <P>We do not sell personal data. We share it only with:</P>
         <UL>
           <li>
-            <strong>The club you book at</strong> (and its staff): your name, phone, email if given, booking and payment status.
+            <strong>The club you book at</strong> (and its staff), and only that club: your name, phone number, email if given, and
+            the details of your booking, its payment status and your check-in status, so that it can verify you for the court. We
+            do not pass your data to other clubs.
           </li>
           <li>
             <strong>Service providers acting on our instructions (processors):</strong> database, authentication, file storage and
-            realtime updates (Supabase); hosting (Vercel); transactional email (our SMTP email provider); rate limiting (Upstash); error monitoring
+            realtime updates (Supabase); hosting (Vercel); online payment processing (Konnect or Flouci, where enabled); transactional email (our SMTP email provider); rate limiting (Upstash); error monitoring
             (Sentry) and product analytics (PostHog), the last two only when enabled, with personal data filtered out of error
             reports.
           </li>

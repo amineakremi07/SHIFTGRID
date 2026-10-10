@@ -458,7 +458,7 @@ export type Database = {
           invited_by: string
           org_id: string
           role: string
-          token: string
+          token_hash: string
           updated_at: string
         }
         Insert: {
@@ -470,7 +470,7 @@ export type Database = {
           invited_by: string
           org_id: string
           role: string
-          token: string
+          token_hash: string
           updated_at?: string
         }
         Update: {
@@ -482,7 +482,7 @@ export type Database = {
           invited_by?: string
           org_id?: string
           role?: string
-          token?: string
+          token_hash?: string
           updated_at?: string
         }
         Relationships: [
@@ -523,6 +523,7 @@ export type Database = {
       }
       generate_api_key: {
         Args: {
+          p_created_by: string
           p_expires_at?: string
           p_name: string
           p_organization_id: string
@@ -540,7 +541,7 @@ export type Database = {
       }
       generate_invite_token: { Args: never; Returns: string }
       get_sport_duration: { Args: { sport_type: string }; Returns: string }
-      revoke_api_key: { Args: { p_key_id: string }; Returns: undefined }
+      revoke_api_key: { Args: { p_key_id: string; p_organization_id: string }; Returns: undefined }
       user_org_id: { Args: never; Returns: string }
       user_role: { Args: never; Returns: string }
       verify_api_key: {

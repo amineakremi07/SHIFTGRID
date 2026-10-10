@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, CalendarDays, LayoutGrid, Settings, Users } from 'lucide-react'
+import { BarChart3, CalendarDays, LayoutGrid, Settings, ShieldCheck, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -12,6 +12,7 @@ const ITEMS = [
   { href: '/dashboard/org/courts', label: 'Courts', icon: LayoutGrid, ownerOnly: true },
   { href: '/dashboard/org/settings', label: 'Settings', icon: Settings, ownerOnly: true },
   { href: '/dashboard/org/staff', label: 'Team', icon: Users, ownerOnly: true },
+  { href: '/dashboard/org/settings/security', label: 'Security', icon: ShieldCheck, ownerOnly: false },
 ]
 
 export function OrgNav({ role }: { role: 'org_admin' | 'staff' }) {

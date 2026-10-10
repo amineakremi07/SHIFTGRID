@@ -54,6 +54,7 @@ const track = (r) => {
   return r
 }
 
+const randomPhone = () => '+21698' + String(Math.floor(Math.random() * 900000) + 100000)
 const rpcBook = (startsAt, who, courtId = court.id, sport = 'padel') =>
   admin
     .rpc('create_booking', {
@@ -64,7 +65,7 @@ const rpcBook = (startsAt, who, courtId = court.id, sport = 'padel') =>
       p_player_count: sport === 'padel' ? 4 : 2,
       p_amount: 90,
       p_guest_name: `Race ${who}`,
-      p_guest_phone: '+21698777000',
+      p_guest_phone: randomPhone(), // a guest may hold only 2 unpaid bookings per club, so every call is a different person
     })
     .then(track)
 
@@ -169,6 +170,45 @@ try {
     // A player cannot read other people's bookings either.
     const peek = await player.from('bookings').select('id, booker_profile_id').eq('court_id', court.id).eq('starts_at', t)
     check(!peek.error && (peek.data ?? []).every((r) => r.booker_profile_id === playerId), 'a player only ever sees their own bookings')
+  }
+
+  // ---- anti-griefing: a guest phone may hold at most 2 unpaid bookings per club -------------
+  {
+    const phone = randomPhone()
+    const book = (startsAt, extra = {}) =>
+      admin
+        .rpc('create_booking', {
+          p_org_id: org.id, p_court_id: court.id, p_sport: 'padel', p_starts_at: startsAt, p_player_count: 4, p_amount: 90,
+          p_guest_name: 'Race cap', p_guest_phone: phone, ...extra,
+        })
+        .then(track)
+    const b1 = await book(slot(57, 9))
+    const b2 = await book(slot(57, 12))
+    const b3 = await book(slot(57, 15))
+    check(!b1.error && !b2.error, 'a guest phone can hold 2 unpaid bookings')
+    check(b3.error?.message?.includes('too_many_pending'), 'a 3rd unpaid booking from the same phone is refused (too_many_pending)', b3.error?.message)
+    const parallel = await Promise.all([book(slot(58, 9)), book(slot(58, 12)), book(slot(58, 15))])
+    check(parallel.every((r) => r.error?.message?.includes('too_many_pending')), 'simultaneous requests cannot slip past the cap while 2 are open')
+    const other = await admin
+      .rpc('create_booking', { p_org_id: org.id, p_court_id: court.id, p_sport: 'padel', p_starts_at: slot(57, 18), p_player_count: 4, p_amount: 90, p_guest_name: 'Race cap 2', p_guest_phone: randomPhone() })
+      .then(track)
+    check(!other.error, 'another phone is not affected')
+    const desk = await book(slot(57, 21), { p_source: 'phone' })
+    check(!desk.error, 'staff (desk/phone) bookings are not capped')
+    await admin.from('bookings').update({ status: 'cancelled', cancellation_reason: 'cap test' }).eq('id', b1.data.booking_id)
+    const again = await book(slot(57, 15))
+    check(!again.error, 'cancelling one frees a place under the cap', again.error?.message)
+
+    // release_stale_bookings(): pay-at-venue guests are left alone by default; with the flag an old unpaid one lapses.
+    await admin.from('bookings').update({ created_at: new Date(Date.now() - 3600_000).toISOString() }).eq('id', b2.data.booking_id)
+    const keep = await admin.rpc('release_stale_bookings')
+    check(!keep.error && !(keep.data ?? []).some((r) => r.booking_id === b2.data.booking_id), 'release_stale_bookings leaves pay-at-venue bookings alone by default', keep.error?.message)
+    const lapse = await admin.rpc('release_stale_bookings', { p_include_guest_cash: true })
+    check((lapse.data ?? []).some((r) => r.booking_id === b2.data.booking_id), 'with the guest flag an old unpaid guest booking is released', lapse.error?.message)
+    const { data: st } = await admin.from('bookings').select('status').eq('id', b2.data.booking_id).single()
+    check(st?.status === 'cancelled', 'the released booking is cancelled (its slot lock is freed by the existing trigger)')
+    const { data: lockLeft } = await admin.from('court_slot_locks').select('booking_id').eq('booking_id', b2.data.booking_id)
+    check((lockLeft ?? []).length === 0, 'and its slot lock is gone')
   }
 } catch (e) {
   console.error('Verify crashed:', e.message ?? e)

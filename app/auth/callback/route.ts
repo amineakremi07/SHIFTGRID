@@ -2,9 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { CALLBACK_ERROR_PATH, decideCallback, OAUTH_COOKIE, parseOAuthCookie, pathAfterVerify } from '@/lib/auth-callback'
 import { landingPathFor } from '@/lib/auth-landing'
-import { createGooglePlayerProfile, isGoogleUser } from '@/lib/google-signup'
+import { assessGoogleSignIn, createGooglePlayerProfile, isGoogleUser, neutraliseUnprovenPassword } from '@/lib/google-signup'
 import { reportServerError } from '@/lib/observability'
-import { captureServerEvent } from '@/lib/telemetry'
+import { captureAudit, captureServerEvent } from '@/lib/telemetry'
 import { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/types/database'
 
@@ -59,6 +59,18 @@ export async function GET(request: NextRequest) {
 
     // "Continue with Google": an existing account just signs in; a new one needs a club to belong to.
     if (isGoogleUser(user)) {
+      // Never link or trust a Google identity blindly: it must come with a verified address, and an
+      // unconfirmed password someone else set on that address is invalidated (see assessGoogleSignIn).
+      const verdict = assessGoogleSignIn(user)
+      if (verdict === 'refuse') {
+        await supabase.auth.signOut()
+        return go('/login?error=google_unverified')
+      }
+      if (verdict === 'reset-password') {
+        await neutraliseUnprovenPassword(user.id)
+        await supabase.auth.signOut({ scope: 'others' })
+        captureAudit({ action: 'oauth.unproven_password_reset', status: 'reset' })
+      }
       let signedUp = false
       if (!profile) {
         const club = oauth.club

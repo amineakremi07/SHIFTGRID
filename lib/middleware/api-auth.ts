@@ -1,15 +1,8 @@
-import 'server-only' // build error if a Client Component ever imports this (it holds the service-role key)
+import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { reportServerError } from '@/lib/observability'
-
-// Create a service client for server-side operations
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { rateLimit, tooManyRequests, type RateResult } from '@/lib/rate-limit'
+import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 
 export interface ApiKeyValidationResult {
   valid: boolean
@@ -17,7 +10,13 @@ export interface ApiKeyValidationResult {
   permissions?: string[]
   rateLimit?: number
   error?: string
+  /** Set when the key is valid but over its own limit: answer 429 with these hints. */
+  limited?: RateResult
 }
+
+/** A key's stored `rate_limit` is requests per hour. */
+const KEY_WINDOW_SEC = 3600
+
 
 /**
  * Validate an API key from the Authorization header
@@ -54,12 +53,22 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
     }
 
     const result = data[0]
+    if (!result.valid) return { valid: false, error: result.error ?? 'Invalid API key' }
+
+    // The key's own stored limit (per hour), counted per key prefix so every IP shares it.
+    const limited = await rateLimit('api', `key:${apiKey.slice(0, 12)}`, '/api/v1', {
+      max: Math.max(1, result.rate_limit || 1000),
+      windowSec: KEY_WINDOW_SEC,
+    })
+    if (!limited.ok) {
+      return { valid: false, error: 'API key rate limit exceeded', limited }
+    }
+
     return {
-      valid: result.valid,
-      organizationId: result.organization_id,
+      valid: true,
+      organizationId: result.organization_id ?? undefined,
       permissions: result.permissions,
       rateLimit: result.rate_limit,
-      error: result.error,
     }
   } catch (error) {
     console.error('API key validation error:', error)
@@ -69,88 +78,28 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
 }
 
 /**
- * Create a middleware wrapper for API routes that require API key authentication
+ * Wrap an API route that requires an API key. Pass the permission the route needs explicitly
+ * (`withApiKeyAuth(handler, { permission: 'write' })`); a key holding `admin` passes every check.
+ * The club comes from the key, never from the request.
  */
 export function withApiKeyAuth(
-  handler: (request: NextRequest, context: { organizationId: string; permissions: string[] }) => Promise<NextResponse>
+  handler: (request: NextRequest, context: { organizationId: string; permissions: string[] }) => Promise<NextResponse>,
+  options: { permission?: string } = {}
 ) {
   return async (request: NextRequest): Promise<NextResponse> => {
     const validation = await validateApiKey(request)
 
+    if (validation.limited) return tooManyRequests(validation.limited)
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: validation.error || 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: validation.error || 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if the required permission is present
-    const requiredPermission = request.headers.get('x-required-permission')
-    if (requiredPermission && validation.permissions && !validation.permissions.includes(requiredPermission)) {
-      return NextResponse.json(
-        { error: `Insufficient permissions. Required: ${requiredPermission}` },
-        { status: 403 }
-      )
+    const permissions = validation.permissions ?? []
+    const required = options.permission
+    if (required && !permissions.includes(required) && !permissions.includes('admin')) {
+      return NextResponse.json({ error: `Insufficient permissions. Required: ${required}` }, { status: 403 })
     }
 
-    // Add organization context to request headers for downstream use
-    const requestHeaders = new Headers(request.headers)
-    requestHeaders.set('x-organization-id', validation.organizationId!)
-    requestHeaders.set('x-api-permissions', JSON.stringify(validation.permissions || []))
-
-    // Create new request with updated headers
-    const authenticatedRequest = new NextRequest(request.url, {
-      method: request.method,
-      headers: requestHeaders,
-      body: request.body,
-      signal: request.signal,
-    })
-
-    return handler(authenticatedRequest, {
-      organizationId: validation.organizationId!,
-      permissions: validation.permissions || [],
-    })
-  }
-}
-
-/**
- * Create a middleware for checking specific permissions
- */
-export function requirePermission(permission: string) {
-  return (request: NextRequest): { valid: boolean; error?: string } => {
-    const permissionsHeader = request.headers.get('x-api-permissions')
-    if (!permissionsHeader) {
-      return { valid: false, error: 'Missing permissions context' }
-    }
-
-    try {
-      const permissions = JSON.parse(permissionsHeader)
-      if (!permissions.includes(permission)) {
-        return { valid: false, error: `Permission '${permission}' required` }
-      }
-      return { valid: true }
-    } catch {
-      return { valid: false, error: 'Invalid permissions format' }
-    }
-  }
-}
-
-/**
- * Get organization ID from authenticated request
- */
-export function getOrganizationId(request: NextRequest): string | null {
-  return request.headers.get('x-organization-id')
-}
-
-/**
- * Get API permissions from authenticated request
- */
-export function getApiPermissions(request: NextRequest): string[] {
-  const permissionsHeader = request.headers.get('x-api-permissions')
-  if (!permissionsHeader) return []
-  try {
-    return JSON.parse(permissionsHeader)
-  } catch {
-    return []
+    return handler(request, { organizationId: validation.organizationId!, permissions })
   }
 }

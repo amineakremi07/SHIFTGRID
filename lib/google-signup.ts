@@ -1,10 +1,18 @@
+import { randomBytes } from 'node:crypto'
+
 import type { User } from '@supabase/supabase-js'
 
 import { consentMetadata } from '@/lib/legal'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 
-/** True for an account whose sign-in went through Google. */
-export const isGoogleUser = (user: Pick<User, 'app_metadata'>): boolean => user.app_metadata?.provider === 'google'
+export { assessGoogleSignIn, isGoogleUser } from '@/lib/google-identity'
+
+/** Replace the password with an unguessable one, so whoever set the old (unconfirmed) one can no longer sign in. */
+export async function neutraliseUnprovenPassword(userId: string): Promise<boolean> {
+  const { error } = await getSupabaseAdmin().auth.admin.updateUserById(userId, { password: randomBytes(32).toString('hex') })
+  if (error) console.error('google sign-in: could not reset the unproven password', error.message)
+  return !error
+}
 
 /**
  * First Google sign-in at a club: create the player profile (a player belongs to ONE club, and no

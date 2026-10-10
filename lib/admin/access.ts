@@ -1,9 +1,11 @@
 import { cache } from 'react'
 
-import { createClient } from '@/lib/supabase/server'
+import { sessionNeedsSecondFactor } from '@/lib/mfa-guard'
+import { getSessionProfile } from '@/lib/org-access'
 
 export type AdminAccess =
   | { kind: 'signed_out' }
+  | { kind: 'mfa_required' }
   | { kind: 'forbidden' }
   | { kind: 'ok'; userId: string; displayName: string }
 
@@ -13,17 +15,10 @@ export type AdminAccess =
  * `super_admin` value, the profiles CHECK would reject it.)
  */
 export const getAdminAccess = cache(async (): Promise<AdminAccess> => {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getSessionProfile()
   if (!user) return { kind: 'signed_out' }
+  if (await sessionNeedsSecondFactor(supabase, user)) return { kind: 'mfa_required' }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, display_name')
-    .eq('id', user.id)
-    .maybeSingle()
   if (profile?.role !== 'platform_admin') return { kind: 'forbidden' }
 
   return { kind: 'ok', userId: user.id, displayName: profile.display_name }
@@ -35,6 +30,7 @@ export type AdminActionAuth = { ok: true; userId: string } | { ok: false; messag
 export async function requireAdmin(): Promise<AdminActionAuth> {
   const access = await getAdminAccess()
   if (access.kind === 'signed_out') return { ok: false, message: 'Please sign in again.' }
+  if (access.kind === 'mfa_required') return { ok: false, message: 'Enter your two-factor code to continue.' }
   if (access.kind !== 'ok') return { ok: false, message: 'Platform admin access required.' }
   return { ok: true, userId: access.userId }
 }

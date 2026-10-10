@@ -80,6 +80,15 @@ export function PlayerSignupForm({
         return
       }
 
+      if (result.needsEmailConfirmation) {
+        toast.info('Check your email', {
+          description: 'We sent you a confirmation link. Open it to activate your account, then sign in.',
+          duration: 12000,
+        })
+        router.push('/login?registered=1')
+        router.refresh()
+        return
+      }
       if (result.signedIn) {
         toast.success('Welcome to ShiftGrid', { description: 'Your player account is ready.' })
       } else {

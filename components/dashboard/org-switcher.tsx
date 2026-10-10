@@ -36,12 +36,12 @@ export function OrgSwitcher({ items, activeOrgId }: { items: SwitcherItem[]; act
     setBusy(true)
     startTransition(async () => {
       const result = await switchOrganizationAction(orgId)
-      if (!result.ok) {
+      if (!result.success) {
         setBusy(false)
-        toast.error(result.message)
+        toast.error(result.error)
         return
       }
-      router.push(result.path)
+      router.push(result.data.path)
       router.refresh()
       setBusy(false)
     })

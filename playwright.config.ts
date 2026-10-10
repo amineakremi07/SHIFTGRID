@@ -4,6 +4,11 @@ import { join } from 'node:path'
 
 import { defineConfig } from '@playwright/test'
 
+import { applyTestDatabaseEnv, usesDedicatedTestDatabase } from './tests/helpers/test-env'
+
+// A dedicated test project (TEST_SUPABASE_*) replaces the .env.local one for the runner, workers and dev server.
+applyTestDatabaseEnv()
+
 /**
  * End-to-end tests. They drive a real browser against the dev server and the
  * hosted Supabase project in .env.local (there is no local Supabase here), using
@@ -53,7 +58,8 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: true,
+    // A server already running was started against .env.local's database, not the dedicated test project.
+    reuseExistingServer: !usesDedicatedTestDatabase(),
     timeout: 180_000,
     // Tests never contact the email provider (whatever key .env holds): emails are
     // rendered and recorded in the outbox as "skipped". A server you start yourself and

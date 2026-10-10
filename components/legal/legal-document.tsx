@@ -2,7 +2,7 @@ import * as React from 'react'
 import Link from 'next/link'
 
 import { CookieSettingsButton } from '@/components/consent/consent-banner'
-import { LEGAL_VERSION } from '@/lib/legal'
+import { LEGAL_UPDATED, LEGAL_VERSION } from '@/lib/legal'
 
 /** Shared shell for /terms and /privacy: server-rendered; the only client piece is the cookie-settings button. */
 export function LegalDocument({
@@ -36,7 +36,9 @@ export function LegalDocument({
 
       <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Version {LEGAL_VERSION}</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Last updated: {LEGAL_UPDATED} · Version {LEGAL_VERSION}
+        </p>
         <p className="mt-6 text-base leading-relaxed text-foreground">{intro}</p>
 
         <nav aria-label="Contents" className="mt-8 rounded-lg bg-secondary p-4">

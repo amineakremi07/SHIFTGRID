@@ -2,11 +2,11 @@
 
 import { AUTH_PATHS } from '@/lib/auth-urls'
 import { requestOrigin } from '@/lib/notifications/origin'
+import { loadProfile } from '@/lib/org-access'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/optimized-client'
 import { actionRateLimit } from '@/lib/rate-limit'
 import { revalidatePath } from 'next/cache'
-import { cookies } from 'next/headers'
 import { consentMetadata } from '@/lib/legal'
 import {
   playerSignInSchema,
@@ -24,8 +24,6 @@ import {
  * Affected tables: profiles, anonymous_bookers, auth.users
  * Data schemas: playerSignInSchema, playerSignUpSchema, anonymousBookerSchema
  */
-
-const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60
 
 export async function signInPlayer(
   email: string,
@@ -57,14 +55,11 @@ export async function signInPlayer(
     return { success: false, error: 'Authentication failed' }
   }
 
-  // Get user profile to verify they're a player (not staff/owner)
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, role, org_id')
-    .eq('id', authData.user.id)
-    .single()
+  // Get user profile to verify they're a player (not staff/owner). Read directly, not through the per-request
+  // session cache: this request has just changed who is signed in.
+  const profile = await loadProfile(supabase, authData.user.id)
 
-  if (profileError || !profile) {
+  if (!profile) {
     // Sign out if no profile exists
     await supabase.auth.signOut()
     return { success: false, error: 'Account not found. Please contact support.' }
@@ -76,20 +71,6 @@ export async function signInPlayer(
     return { success: false, error: 'This account cannot sign in as a player.' }
   }
 
-  // If rememberMe, we need to set a long-lived session cookie
-  // Supabase handles this via the session, but we can extend cookie lifetime
-  // by updating the auth cookie options
-  if (rememberMe && authData.session) {
-    const cookieStore = await cookies()
-    cookieStore.set('sb-auth-token', authData.session.access_token, {
-      maxAge: THIRTY_DAYS_SECONDS,
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    })
-  }
-
   return { success: true, userId: authData.user.id }
 }
 
@@ -99,20 +80,21 @@ export async function signUpPlayer(
   const limited = await actionRateLimit('auth')
   if (limited) return { success: false, error: limited }
 
-  const supabase = await createClient()
-  const supabaseAdmin = getSupabaseAdmin()
-
-  // Validate input
+  // Validate first, then use ONLY the validated output (trimmed, lower-cased, canonical phone, HTML stripped).
   const validation = playerSignUpSchema.safeParse(data)
   if (!validation.success) {
     return { success: false, error: validation.error.errors[0].message }
   }
+  const input = validation.data
+
+  const supabase = await createClient()
+  const supabaseAdmin = getSupabaseAdmin()
 
   // Check if organization exists and is approved
   const { data: org, error: orgError } = await supabase
     .from('organizations')
     .select('id, status, deleted_at')
-    .eq('id', data.orgId)
+    .eq('id', input.orgId)
     .single()
 
   if (orgError || !org) {
@@ -125,12 +107,12 @@ export async function signUpPlayer(
 
   // Create auth user
   const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: data.email,
-    password: data.password,
+    email: input.email,
+    password: input.password,
     options: {
       data: {
-        full_name: data.displayName,
-        phone: data.phone,
+        full_name: input.displayName,
+        phone: input.phone,
         ...consentMetadata(),
       },
       emailRedirectTo: `${await requestOrigin()}${AUTH_PATHS.callback}`, // must be on the Supabase Redirect URLs list (lib/auth-urls.ts)
@@ -149,28 +131,31 @@ export async function signUpPlayer(
     return { success: false, error: 'Failed to create account' }
   }
 
+  // With "confirm email" on, signing up an address that already has an account does not error: Supabase
+  // returns a look-alike user with NO identities (and an id that is not a real account). Never create a
+  // profile for it, and never delete anything on its behalf.
+  if (authData.user.identities?.length === 0) {
+    return { success: false, error: 'An account with this email already exists' }
+  }
+
   // Create profile with player role
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
     .insert({
       id: authData.user.id,
-      org_id: data.orgId,
+      org_id: input.orgId,
       role: 'player',
-      display_name: data.displayName,
+      display_name: input.displayName,
       // NOTE: no `email` column on profiles — it lives on auth.users.
-      phone: data.phone,
+      phone: input.phone,
     })
 
   if (profileError) {
-    // If profile creation fails, we should clean up the auth user
-    // Note: In production, use a transaction or queue for cleanup
-    console.error('Profile creation failed:', profileError)
+    // The user we just made (it has identities, so it is ours) must not be left without a profile.
+    console.error('Profile creation failed:', profileError.message)
     await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
     return { success: false, error: 'Failed to create player profile' }
   }
-
-  // Send welcome email (optional - can be added later)
-  // await sendWelcomeEmail(data.email, data.displayName)
 
   revalidatePath('/dashboard')
 
@@ -178,18 +163,23 @@ export async function signUpPlayer(
 }
 
 export type RegisterPlayerResult =
-  | { success: true; /** False if the account exists but automatic sign-in failed. */ signedIn: boolean }
+  | {
+      success: true
+      /** The session is open (only when the project does not require email confirmation). */
+      signedIn: boolean
+      /** A confirmation link was emailed: the account works only after it is opened. */
+      needsEmailConfirmation?: boolean
+    }
   | { success: false; error: string }
 
 /**
- * Register a player from `/register`: create the account, the `player` profile,
- * and sign them in.
+ * Register a player from `/register`: create the account and the `player` profile.
  *
- * The auth user is created already-confirmed (as owner signup does) so the
- * immediate sign-in works regardless of the project's email-confirmation
- * setting; there is also no `/auth/callback` route for confirmation links yet.
- * The trade-off is that the email is not verified. Add verification (with a real
- * callback route) before relying on the address.
+ * The email address is NOT trusted until it is confirmed. The account used to be created already
+ * confirmed, which let anyone register `victim@example.com` with their own password and wait for the
+ * victim to arrive (a classic pre-account takeover, worse once "Continue with Google" can link to the
+ * same address). Now Supabase emails a confirmation link (`/auth/callback`) and refuses to sign the
+ * account in until it is opened; the dashboard setting "Confirm email" must stay ON.
  */
 export async function registerPlayer(input: PlayerRegisterInput): Promise<RegisterPlayerResult> {
   const limited = await actionRateLimit('auth')
@@ -212,23 +202,30 @@ export async function registerPlayer(input: PlayerRegisterInput): Promise<Regist
     return { success: false, error: 'That club is not available for registration.' }
   }
 
-  const { data: created, error: createError } = await admin.auth.admin.createUser({
+  const supabase = await createClient()
+  const { data: created, error: createError } = await supabase.auth.signUp({
     email,
     password,
-    email_confirm: true,
-    user_metadata: { full_name: fullName, phone, ...consentMetadata() },
+    options: {
+      data: { full_name: fullName, phone, ...consentMetadata() },
+      emailRedirectTo: `${await requestOrigin()}${AUTH_PATHS.callback}`,
+    },
   })
 
+  const alreadyExists = 'An account with this email already exists. Try signing in instead.'
   if (createError || !created.user) {
     if (
+      createError?.code === 'user_already_exists' ||
       createError?.code === 'email_exists' ||
       /already (been )?registered|already exists/i.test(createError?.message ?? '')
     ) {
-      return { success: false, error: 'An account with this email already exists. Try signing in instead.' }
+      return { success: false, error: alreadyExists }
     }
     console.error('registerPlayer: could not create user:', createError?.message)
     return { success: false, error: 'We could not create your account. Please try again.' }
   }
+  // An address that already has an account comes back as a look-alike user with no identities.
+  if (created.user.identities?.length === 0) return { success: false, error: alreadyExists }
 
   const { error: profileError } = await admin.from('profiles').insert({
     id: created.user.id,
@@ -240,16 +237,14 @@ export async function registerPlayer(input: PlayerRegisterInput): Promise<Regist
 
   if (profileError) {
     console.error('registerPlayer: could not create profile:', profileError.message)
-    // No orphaned auth user without a profile.
+    // No orphaned auth user without a profile (it has identities, so it is the one we just made).
     await admin.auth.admin.deleteUser(created.user.id)
     return { success: false, error: 'We could not create your player profile. Please try again.' }
   }
 
-  // Sets the session cookies (and re-checks that this is a player account).
-  const signIn = await signInPlayer(email, password, true)
   revalidatePath('/')
-
-  return { success: true, signedIn: signIn.success }
+  if (created.session) return { success: true, signedIn: true }
+  return { success: true, signedIn: false, needsEmailConfirmation: true }
 }
 
 export async function createAnonymousBooker(
@@ -260,17 +255,18 @@ export async function createAnonymousBooker(
 
   const supabaseAdmin = getSupabaseAdmin()
 
-  // Validate input
+  // Validate input; from here on use only the validated output (phone is canonical +216XXXXXXXX).
   const validation = anonymousBookerSchema.safeParse(data)
   if (!validation.success) {
     return { success: false, error: validation.error.errors[0].message }
   }
+  const input = validation.data
 
   // Check if organization exists and is approved
   const { data: org, error: orgError } = await supabaseAdmin
     .from('organizations')
     .select('id, status, deleted_at')
-    .eq('id', data.orgId)
+    .eq('id', input.orgId)
     .single()
 
   if (orgError || !org) {
@@ -281,30 +277,23 @@ export async function createAnonymousBooker(
     return { success: false, error: 'This sports complex is not yet available for bookings' }
   }
 
-  // Normalize phone number for consistent lookup
-  const normalizedPhone = data.phone.replace(/[\s\-\.\(\)]/g, '').replace(/^(\+216|00216)/, '')
-
-  // Upsert anonymous booker (prevent duplicates by org_id + phone)
-  const { data: booker, error: upsertError } = await supabaseAdmin
+  // Create the guest if new. An existing guest (same club + phone) is left exactly as it is: this endpoint
+  // is anonymous, so letting it overwrite the stored name would let anyone who knows a number rename that guest.
+  const { error: insertError } = await supabaseAdmin
     .from('anonymous_bookers')
-    .upsert(
-      {
-        org_id: data.orgId,
-        name: data.name,
-        phone: normalizedPhone,
-      },
-      {
-        onConflict: 'org_id,phone',
-        ignoreDuplicates: false,
-      }
-    )
-    .select('id')
-    .single()
-
-  if (upsertError) {
-    console.error('Anonymous booker upsert failed:', upsertError)
+    .upsert({ org_id: input.orgId, name: input.name, phone: input.phone }, { onConflict: 'org_id,phone', ignoreDuplicates: true })
+  if (insertError) {
+    console.error('Anonymous booker upsert failed:', insertError.message)
     return { success: false, error: 'Failed to create booking profile' }
   }
+
+  const { data: booker } = await supabaseAdmin
+    .from('anonymous_bookers')
+    .select('id')
+    .eq('org_id', input.orgId)
+    .eq('phone', input.phone)
+    .maybeSingle()
+  if (!booker) return { success: false, error: 'Failed to create booking profile' }
 
   return { success: true, bookerId: booker.id }
 }

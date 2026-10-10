@@ -1,8 +1,10 @@
 'use server'
 
+import { createHash } from 'node:crypto'
+
 import { after } from 'next/server'
 
-import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/org-access'
 import { reportServerError } from '@/lib/observability'
 import { actionRateLimit } from '@/lib/rate-limit'
 import { assessBookingRisk } from '@/lib/risk-loader'
@@ -28,6 +30,7 @@ export type BookingErrorCode =
   | 'slot_in_past'
   | 'payment_unavailable'
   | 'payment_failed'
+  | 'too_many_pending'
   | 'rate_limited'
   | 'unknown'
 
@@ -77,6 +80,9 @@ function mapDatabaseError(error: { code?: string; message?: string }): BookingRe
     return fail('slot_taken', 'This slot was just taken by another player. Please select another time.')
   }
   const message = error.message ?? ''
+  if (message.includes('too_many_pending')) {
+    return fail('too_many_pending', 'You already have 2 unpaid bookings at this club. Please pay or cancel one before booking again.')
+  }
   if (message.includes('slot_in_past')) {
     return fail('slot_in_past', 'That time has already passed. Please select another slot.')
   }
@@ -92,6 +98,37 @@ function mapDatabaseError(error: { code?: string; message?: string }): BookingRe
   console.error('create_booking failed', { code: error.code, message })
   reportServerError('booking.create', new Error(`create_booking failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
   return fail('unknown', 'Something went wrong while booking. Please try again.')
+}
+
+/**
+ * Release a slot held for a booking whose payment step failed. The booking is cancelled (the existing trigger
+ * frees the slot lock). A failed or empty update is retried, and the real state is read back, so a held slot is
+ * never silently left behind:
+ *   'released'  the booking is cancelled
+ *   'confirmed' it turned out to be paid after all (the payment call committed but its answer was lost): left alone
+ *   'failed'    still held after every attempt: the caller logs it and tells the player
+ */
+async function releaseHeldSlot(admin: ReturnType<typeof getSupabaseAdmin>, bookingId: string): Promise<'released' | 'confirmed' | 'failed'> {
+  const waits = [0, 150, 500]
+  for (const wait of waits) {
+    if (wait) await new Promise((resolve) => setTimeout(resolve, wait))
+    const { data, error } = await admin
+      .from('bookings')
+      .update({ status: 'cancelled', cancellation_reason: 'Payment could not be completed' })
+      .eq('id', bookingId)
+      .eq('status', 'pending_payment')
+      .select('id')
+    if (error) {
+      console.error('releaseHeldSlot: update failed', { bookingId, code: error.code, message: error.message })
+      continue
+    }
+    if (data?.length) return 'released'
+    // No row changed: someone else already moved it. Read what it is now.
+    const { data: now } = await admin.from('bookings').select('status').eq('id', bookingId).maybeSingle()
+    if (now?.status === 'cancelled') return 'released'
+    if (now?.status === 'confirmed' || now?.status === 'completed') return 'confirmed'
+  }
+  return 'failed'
 }
 
 /**
@@ -144,28 +181,43 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
     }
   }
 
-  // Slot hogging guard: members are counted per account, guests per IP. Runs after
-  // validation (so junk is cheap to refuse) and before any database work.
-  let memberId: string | undefined
-  if (data.mode === 'member') {
-    const {
-      data: { user },
-    } = await (await createClient()).auth.getUser()
-    memberId = user?.id
-  }
-  const limited = await actionRateLimit('booking', memberId)
-  if (limited) return fail('rate_limited', limited)
-
   const admin = getSupabaseAdmin()
+  const isMember = data.mode === 'member'
+  const guestPhone = data.mode === 'guest' ? data.guest.phone : undefined
 
-  // --- court, slot, hours, player count and price: one shared check ---------
-  const checked = await checkBookableSlot(admin, {
+  // Everything below is independent, so it runs together instead of one round trip after another:
+  //  - who is booking (members only: ONE getUser + profile read, shared with the rest of the request),
+  //  - the court / hours / price check,
+  //  - the slot-hogging limits: guests are counted twice (this phone from this IP, and the IP as a whole, looser,
+  //    as the backstop for someone who keeps changing the number; a bucket on phone + IP alone is dodged by
+  //    rotating numbers, one on the IP alone locks out everyone sharing a mobile-carrier address); members are
+  //    counted per account, which needs the account id, so that one starts the moment the session is known,
+  //  - the no-show risk score: advisory (it only warns, it never refuses) and it never throws, so it starts as
+  //    soon as the booker is known and is only awaited once the booking exists.
+  const guestPhoneKey = guestPhone ? createHash('sha256').update(guestPhone).digest('hex').slice(0, 16) : undefined
+  const sessionP = isMember ? getSessionProfile() : Promise.resolve(null)
+  const checkedP = checkBookableSlot(admin, {
     orgId: data.orgId,
     courtId: data.courtId,
     date: data.date,
     startsAt: data.startsAt,
     playerCount: data.playerCount,
   })
+  const guestLimitedP = isMember
+    ? Promise.resolve(null)
+    : actionRateLimit('guest_ip').then((hit) => hit ?? actionRateLimit('booking', undefined, guestPhoneKey))
+  const memberLimitedP = sessionP.then((session) => (isMember ? actionRateLimit('booking', session?.user?.id) : null))
+  const riskP = sessionP.then((session) =>
+    isMember && !session?.user
+      ? null
+      : assessBookingRisk({ profileId: session?.user?.id, guestPhone, startsAt: data.startsAt })
+  )
+
+  const [session, checked, guestLimited, memberLimited] = await Promise.all([sessionP, checkedP, guestLimitedP, memberLimitedP])
+
+  // Decisions, in the order a caller should hear about them.
+  const limited = guestLimited ?? memberLimited
+  if (limited) return fail('rate_limited', limited)
   if (!checked.ok) return fail(checked.code, checked.message)
   const { sport, price } = checked
 
@@ -181,23 +233,13 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
 
   // --- who is booking --------------------------------------------------------
   let profileId: string | undefined
-  if (data.mode === 'member') {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      return fail('not_signed_in', 'Please sign in to book as a member, or continue as a guest.')
-    }
-    profileId = user.id
+  if (isMember) {
+    if (!session?.user) return fail('not_signed_in', 'Please sign in to book as a member, or continue as a guest.')
+    profileId = session.user.id
   }
 
-  // Anti no-show: score the booker's history. It only warns (and is counted in analytics), it never refuses.
-  const risk = await assessBookingRisk({
-    profileId,
-    guestPhone: data.mode === 'guest' ? data.guest.phone : undefined,
-    startsAt: data.startsAt,
-  })
+  // Anti no-show: it only warns (and is counted in analytics), it never refuses. Already running; usually done.
+  const risk = (await riskP) ?? { score: 0, level: 'low' as const, reasons: [] as string[] }
 
   const { data: booked, error } = await admin.rpc('create_booking', {
     p_org_id: data.orgId,
@@ -251,14 +293,21 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
           })
 
     if (paid.error) {
-      // Do not leave a held, unpaid slot behind a failed payment: release it.
+      // Do not leave a held, unpaid slot behind a failed payment: release it, and make sure it really happened.
       console.error('payment step failed', { code: paid.error.code, message: paid.error.message })
       reportServerError('booking.payment', new Error(`payment step failed: ${paid.error.code ?? 'unknown'}`), { code: paid.error.code ?? null, choice })
-      await admin
-        .from('bookings')
-        .update({ status: 'cancelled', cancellation_reason: 'Payment could not be completed' })
-        .eq('id', row.booking_id)
-      return fail('payment_failed', 'The payment could not be completed, so the slot was released. Please try again.')
+      const released = await releaseHeldSlot(admin, row.booking_id)
+      if (released === 'released') {
+        return fail('payment_failed', 'The payment could not be completed, so the slot was released. Please try again.')
+      }
+      captureAudit({ action: 'booking.release_failed', status: released, booking_id: row.booking_id, org_id: data.orgId, actor: data.mode })
+      reportServerError('booking.release', new Error(`held slot not released after payment failure: ${released}`), { booking_id: row.booking_id, state: released })
+      return fail(
+        'payment_failed',
+        released === 'confirmed'
+          ? `We could not confirm the payment status of booking ${row.reference}. Please check My reservations, or contact the club, before paying again.`
+          : `The payment could not be completed, and we could not release the slot automatically (reference ${row.reference}). Please contact the club or try again in a few minutes.`
+      )
     }
 
     if (choice === 'online_full') {

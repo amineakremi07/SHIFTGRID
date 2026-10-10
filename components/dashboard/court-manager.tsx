@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { archiveCourtAction, restoreCourtAction, saveCourt, setCourtStatus } from '@/lib/actions/org-courts'
+import { issuesToFieldErrors } from '@/lib/actions/result'
 import { slotHoursLabel, slotPrice } from '@/lib/pricing'
 import { BUFFER_MIN, SPORT_DURATION_MIN, type Sport } from '@/lib/slot-duration'
 import { courtFormSchema, type CourtFormInput } from '@/lib/validations/court'
@@ -61,8 +62,8 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
     setBusyId(toArchive.id)
     const result = await archiveCourtAction(toArchive.id)
     setBusyId(null)
-    if (!result.ok) {
-      toast.error(result.message)
+    if (!result.success) {
+      toast.error(result.error)
       setToArchive(null) // the message says why (e.g. upcoming bookings); nothing more to confirm
       return
     }
@@ -75,7 +76,7 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
     setBusyId(court.id)
     const result = await restoreCourtAction(court.id)
     setBusyId(null)
-    if (!result.ok) return void toast.error(result.message)
+    if (!result.success) return void toast.error(result.error)
     toast.success(`${court.name} is back`)
     router.refresh()
   }
@@ -84,7 +85,7 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
     setBusyId(court.id)
     const result = await setCourtStatus(court.id, active ? 'active' : 'maintenance')
     setBusyId(null)
-    if (!result.ok) return void toast.error(result.message)
+    if (!result.success) return void toast.error(result.error)
     toast.success(active ? `${court.name} is bookable again` : `${court.name} is in maintenance`)
     router.refresh()
   }
@@ -270,9 +271,9 @@ function CourtDialog({
     setSaving(true)
     const result = await saveCourt(existing?.id ?? null, form)
     setSaving(false)
-    if (!result.ok) {
-      if (result.fieldErrors) setErrors(result.fieldErrors)
-      return void toast.error(result.message)
+    if (!result.success) {
+      if (result.issues) setErrors(issuesToFieldErrors(result.issues))
+      return void toast.error(result.error)
     }
     toast.success(existing ? 'Court updated' : 'Court added')
     onSaved()
