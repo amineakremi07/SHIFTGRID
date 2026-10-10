@@ -46,7 +46,7 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
       return false
     }
     setLink({ url: result.inviteUrl, emailSent: result.emailSent, to })
-    toast.success(result.emailSent ? `Invitation emailed to ${to}` : 'Invitation created. Share the link below.')
+    toast.success(result.emailSent ? `Invitation envoyée par e-mail à ${to}` : 'Invitation créée. Partagez le lien ci-dessous.')
     router.refresh()
     return true
   }
@@ -55,7 +55,7 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
     e.preventDefault()
     setEmailError(null)
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-      setEmailError('Enter a valid email address')
+      setEmailError('Saisissez une adresse e-mail valide')
       return
     }
     setInviting(true)
@@ -81,7 +81,7 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
     const result = await revokeStaffInvite(invite.id)
     setBusyId(null)
     if (!result.ok) return void toast.error(result.message)
-    toast.success('Invitation revoked')
+    toast.success('Invitation révoquée')
     router.refresh()
   }
 
@@ -91,7 +91,7 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
     const result = await removeStaffMember(toRemove.id)
     setRemoving(false)
     if (!result.ok) return void toast.error(result.message)
-    toast.success(`${toRemove.name} no longer has access`)
+    toast.success(`${toRemove.name} n\'a plus accès`)
     setToRemove(null)
     router.refresh()
   }
@@ -99,31 +99,30 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      toast.success('Link copied')
+      toast.success('Lien copié')
     } catch {
-      toast.error('Could not copy. Select the link and copy it by hand.')
+      toast.error('Copie impossible. Sélectionnez le lien et copiez-le manuellement.')
     }
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Team</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Équipe</h2>
         <p className="text-sm text-[#645757]">
-          Staff can manage bookings, walk-ins and cancellations. They cannot change courts, prices, opening hours or the
-          team.
+          L&apos;équipe peut gérer les réservations, les clients au guichet et les annulations. Elle ne peut pas modifier les terrains, les prix, les horaires d&apos;ouverture ni l&apos;équipe.
         </p>
       </div>
 
       <form onSubmit={submit} noValidate className="rounded-xl bg-[#eae6df] p-5">
-        <Label htmlFor="staff-email">Invite a staff member</Label>
+        <Label htmlFor="staff-email">Inviter un membre de l&apos;équipe</Label>
         <div className="mt-2 flex flex-wrap gap-2">
           <Input
             id="staff-email"
             type="email"
             inputMode="email"
             autoComplete="off"
-            placeholder="colleague@example.com"
+            placeholder="collegue@exemple.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={Boolean(emailError)}
@@ -132,7 +131,7 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
           />
           <Button type="submit" disabled={inviting} className="h-10 bg-[#1d3023] px-4 text-[#f7f5f2] hover:bg-[#1d3023]/90">
             {inviting ? <Loader2 className="animate-spin" aria-hidden /> : <UserPlus aria-hidden />}
-            Send invitation
+            Envoyer l&apos;invitation
           </Button>
         </div>
         {emailError && (
@@ -141,8 +140,7 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
           </p>
         )}
         <p className="mt-2 text-xs text-[#645757]">
-          They get a link valid for 7 days to set their name and password. Use an address that has no ShiftGrid account
-          yet.
+          Ils reçoivent un lien valable 7 jours pour définir leur nom et leur mot de passe. Utilisez une adresse qui n&apos;a pas encore de compte ShiftGrid.
         </p>
       </form>
 
@@ -151,31 +149,31 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
           <p className="flex items-center gap-2 font-medium">
             <Mail className="size-4" aria-hidden />
             {link.emailSent
-              ? `We emailed ${link.to}. You can also share this link:`
-              : `The email could not be sent. Share this link with ${link.to} yourself:`}
+              ? `Nous avons envoyé un e-mail à ${link.to}. Vous pouvez aussi partager ce lien :`
+              : `L\'e-mail n\'a pas pu être envoyé. Partagez vous-même ce lien avec ${link.to} :`}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
               readOnly
               value={link.url}
-              aria-label="Invitation link"
+              aria-label="Lien d'invitation"
               onFocus={(e) => e.currentTarget.select()}
               className="ph-no-capture min-w-64 flex-1 rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
             />
             <Button type="button" variant="outline" size="sm" onClick={() => copy(link.url)}>
-              <Copy aria-hidden /> Copy
+              <Copy aria-hidden /> Copier
             </Button>
           </div>
-          <p className="mt-2 text-xs text-[#645757]">This link is shown only now. To get a new one, use Resend.</p>
+          <p className="mt-2 text-xs text-[#645757]">Ce lien n&apos;est affiché qu&apos;une seule fois. Pour en obtenir un nouveau, utilisez Renvoyer.</p>
         </div>
       )}
 
       <section aria-labelledby="active-staff" className="space-y-3">
         <h3 id="active-staff" className="text-lg font-semibold">
-          Active staff ({staff.length})
+          Équipe active ({staff.length})
         </h3>
         {staff.length === 0 ? (
-          <p className="rounded-xl bg-[#eae6df] px-5 py-6 text-sm text-[#645757]">No staff yet.</p>
+          <p className="rounded-xl bg-[#eae6df] px-5 py-6 text-sm text-[#645757]">Aucun membre pour le moment.</p>
         ) : (
           <ul className="divide-y divide-[#d7d2cc] rounded-xl bg-[#eae6df]">
             {staff.map((m) => (
@@ -183,11 +181,11 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
                 <div className="min-w-0">
                   <p className="truncate font-medium">{m.name}</p>
                   <p className="truncate text-sm text-[#645757]">
-                    {m.email ?? 'No email'} · joined {day(m.joinedAt)}
+                    {m.email ?? 'Pas d\'e-mail'} · a rejoint le {day(m.joinedAt)}
                   </p>
                 </div>
                 <Button variant="destructive" size="sm" onClick={() => setToRemove(m)}>
-                  <Trash2 aria-hidden /> Remove
+                  <Trash2 aria-hidden /> Retirer
                 </Button>
               </li>
             ))}
@@ -197,10 +195,10 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
 
       <section aria-labelledby="pending-invites" className="space-y-3">
         <h3 id="pending-invites" className="text-lg font-semibold">
-          Pending invitations ({invites.length})
+          Invitations en attente ({invites.length})
         </h3>
         {invites.length === 0 ? (
-          <p className="rounded-xl bg-[#eae6df] px-5 py-6 text-sm text-[#645757]">No pending invitations.</p>
+          <p className="rounded-xl bg-[#eae6df] px-5 py-6 text-sm text-[#645757]">Aucune invitation en attente.</p>
         ) : (
           <ul className="divide-y divide-[#d7d2cc] rounded-xl bg-[#eae6df]">
             {invites.map((i) => (
@@ -208,19 +206,19 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
                 <div className="min-w-0">
                   <p className="flex items-center gap-2">
                     <span className="truncate font-medium">{i.email}</span>
-                    <Badge variant={i.expired ? 'destructive' : 'warning'}>{i.expired ? 'Expired' : 'Pending'}</Badge>
+                    <Badge variant={i.expired ? 'destructive' : 'warning'}>{i.expired ? 'Expirée' : 'En attente'}</Badge>
                   </p>
                   <p className="text-sm text-[#645757]">
-                    {i.expired ? 'Expired' : 'Expires'} {day(i.expiresAt)}
+                    {i.expired ? 'Expirée le' : 'Expire le'} {day(i.expiresAt)}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" disabled={busyId === i.id} onClick={() => resend(i)}>
                     {busyId === i.id ? <Loader2 className="animate-spin" aria-hidden /> : <RefreshCw aria-hidden />}
-                    Resend
+                    Renvoyer
                   </Button>
                   <Button variant="destructive" size="sm" disabled={busyId === i.id} onClick={() => revoke(i)}>
-                    Revoke
+                    Révoquer
                   </Button>
                 </div>
               </li>
@@ -232,19 +230,18 @@ export function StaffManager({ staff, invites }: { staff: StaffMember[]; invites
       <Dialog open={toRemove !== null} onOpenChange={(o) => !removing && !o && setToRemove(null)}>
         <DialogContent className="bg-[#eae6df] sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Remove {toRemove?.name}?</DialogTitle>
+            <DialogTitle>Retirer {toRemove?.name} ?</DialogTitle>
             <DialogDescription>
-              Their login is deleted and they lose access to the dashboard immediately. Bookings they handled are not
-              affected.
+              Leur identifiant est supprimé et ils perdent immédiatement l&apos;accès au tableau de bord. Les réservations qu&apos;ils ont traitées ne sont pas affectées.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setToRemove(null)} disabled={removing}>
-              Keep
+              Conserver
             </Button>
             <Button variant="destructive" onClick={confirmRemove} disabled={removing}>
               {removing && <Loader2 className="animate-spin" aria-hidden />}
-              Remove access
+              Retirer l&apos;accès
             </Button>
           </DialogFooter>
         </DialogContent>

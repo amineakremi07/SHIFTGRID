@@ -16,7 +16,7 @@ export type SwitcherItem = {
   archived?: boolean
 }
 
-const ROLE_LABEL = { org_admin: 'Owner', staff: 'Staff', platform_admin: 'Platform admin' } as const
+const ROLE_LABEL = { org_admin: 'Propriétaire', staff: 'Équipe', platform_admin: 'Administrateur' } as const
 
 /**
  * "Which organization am I acting as?" Rendered ONLY for an account that is explicitly a
@@ -52,27 +52,27 @@ export function OrgSwitcher({ items, activeOrgId }: { items: SwitcherItem[]; act
   return (
     <div data-testid="org-switcher" className="flex items-center gap-1.5">
       <label htmlFor="org-switcher-trigger" className="sr-only">
-        Switch organization
+        Changer d&apos;organisation
       </label>
       <Select value={activeOrgId ?? ''} onValueChange={choose} disabled={loading}>
         <SelectTrigger
           id="org-switcher-trigger"
           size="sm"
-          aria-label="Switch organization"
+          aria-label="Changer d'organisation"
           className="min-w-44 max-w-64 border-[#f7f5f2]/30 bg-[#f7f5f2]/10 text-[#f7f5f2] hover:bg-[#f7f5f2]/20 dark:bg-[#f7f5f2]/10"
         >
           {loading ? <Loader2 className="animate-spin" aria-hidden /> : <Building2 aria-hidden />}
-          <SelectValue placeholder="Choose an organization" />
+          <SelectValue placeholder="Choisissez une organisation" />
         </SelectTrigger>
         <SelectContent align="end">
           {items.map((item) => (
             <SelectItem key={item.orgId} value={item.orgId}>
               <span className="flex items-center gap-1.5">
                 {item.role === 'platform_admin' && <ShieldCheck className="size-3.5" aria-hidden />}
-                {item.role === 'platform_admin' ? 'Platform admin' : item.name}
+                {item.role === 'platform_admin' ? 'Administrateur' : item.name}
                 {item.role !== 'platform_admin' && <span className="text-xs text-muted-foreground">· {ROLE_LABEL[item.role]}</span>}
                 {item.role !== 'platform_admin' && (item.archived || item.status !== 'approved') && (
-                  <span className="text-xs text-muted-foreground">· {item.archived ? 'closed' : item.status}</span>
+                  <span className="text-xs text-muted-foreground">· {item.archived ? 'fermé' : item.status}</span>
                 )}
               </span>
             </SelectItem>

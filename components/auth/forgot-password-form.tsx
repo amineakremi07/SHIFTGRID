@@ -54,8 +54,8 @@ export function ForgotPasswordForm() {
       // Unknown addresses do not error, so what reaches here is a real problem, not a lookup.
       setError(
         authError.status === 429
-          ? 'Too many requests. Please wait a few minutes before trying again.'
-          : 'We could not send the email right now. Please try again in a few minutes.'
+          ? 'Trop de demandes. Veuillez patienter quelques minutes avant de réessayer.'
+          : 'Impossible d\'envoyer l\'e-mail pour le moment. Veuillez réessayer dans quelques minutes.'
       )
       if (authError.status === 429) setCooldown(COOLDOWN_S)
       return
@@ -65,18 +65,18 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <AuthCard title="Forgot your password?" subtitle="Enter your email and we will send you a link to choose a new one.">
+    <AuthCard title="Mot de passe oublié ?" subtitle="Saisissez votre adresse e-mail et nous vous enverrons un lien pour en choisir un nouveau.">
       {sentTo ? (
         <div role="status" className="space-y-4 text-sm" data-testid="reset-sent">
           <p className="flex items-start gap-2">
             <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-[#0e634f]" aria-hidden />
             <span>
-              If an account exists for <strong>{sentTo}</strong>, a reset link is on its way. It expires after a short time and works once.
-              Check your spam folder if you do not see it.
+              Si un compte existe pour <strong>{sentTo}</strong>, un lien de réinitialisation est en route. Il expire au bout
+              d&apos;un court délai et ne fonctionne qu&apos;une fois. Vérifiez vos courriers indésirables si vous ne le voyez pas.
             </span>
           </p>
           <Button type="button" variant="outline" className="w-full" onClick={() => setSentTo(null)} disabled={cooldown > 0}>
-            {cooldown > 0 ? `Send again in ${cooldown}s` : 'Send another link'}
+            {cooldown > 0 ? `Renvoyer dans ${cooldown} s` : 'Envoyer un autre lien'}
           </Button>
         </div>
       ) : (
@@ -87,12 +87,12 @@ export function ForgotPasswordForm() {
             </div>
           )}
           <div>
-            <Label htmlFor="fp-email">Email</Label>
+            <Label htmlFor="fp-email">E-mail</Label>
             <Input
               id="fp-email"
               type="email"
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder="vous@exemple.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={busy}
@@ -100,15 +100,15 @@ export function ForgotPasswordForm() {
             />
           </div>
           <Button type="submit" className="w-full" disabled={busy || cooldown > 0}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Sending" /> : cooldown > 0 ? `Try again in ${cooldown}s` : 'Send reset link'}
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Envoi en cours" /> : cooldown > 0 ? `Réessayer dans ${cooldown} s` : 'Envoyer le lien'}
           </Button>
         </form>
       )}
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Remembered it?{' '}
+        Vous vous en souvenez ?{' '}
         <Link href="/login" className="font-medium text-primary hover:underline">
-          Back to log in
+          Retour à la connexion
         </Link>
       </p>
     </AuthCard>

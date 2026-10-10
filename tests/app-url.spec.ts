@@ -34,7 +34,7 @@ test.describe('the app URL used in emails', () => {
   })
 })
 
-test.describe('the "View your booking pass" button', () => {
+test.describe('the "Voir votre pass de réservation" button', () => {
   test('is <app url>/reservations/<id>?token=<token> for a member and for a guest alike', () => {
     const url = bookingPassUrl(resolveAppUrl(undefined), ID, TOKEN)
     expect(url).toBe(`https://shiftgridtn.vercel.app/reservations/${ID}?token=${TOKEN}`)
@@ -42,8 +42,8 @@ test.describe('the "View your booking pass" button', () => {
       ...facts, recipientName: 'Sam', state: 'pay_at_club', paidNow: 0, passUrl: url, cancelUrl: null, invitesEmailed: 0, checkInCode: '782910',
     })
     expect(mail.html).toContain(`href="${url}"`)
-    expect(mail.html).toContain('View your booking pass')
-    expect(mail.text).toContain(`Your pass: ${url}`)
+    expect(mail.html).toContain('Voir votre pass de réservation')
+    expect(mail.text).toContain(`Votre pass : ${url}`)
   })
 
   test('without a token (old bookings, reminders) it is the plain sign-in link', () => {

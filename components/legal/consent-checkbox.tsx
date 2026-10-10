@@ -53,11 +53,11 @@ export function LegalLinks() {
   return (
     <>
       <Link href="/terms" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-primary">
-        Terms of Service
+        conditions d&apos;utilisation
       </Link>{' '}
-      and{' '}
+      et la{' '}
       <Link href="/privacy" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-primary">
-        Privacy Policy
+        politique de confidentialité
       </Link>
     </>
   )
@@ -66,7 +66,7 @@ export function LegalLinks() {
 export function TermsAndPrivacyText() {
   return (
     <>
-      I have read and accept the <LegalLinks />, and I consent to ShiftGrid processing my personal data as described there.
+      J&apos;ai lu et j&apos;accepte les <LegalLinks />, et je consens à ce que ShiftGrid traite mes données personnelles comme décrit.
     </>
   )
 }

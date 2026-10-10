@@ -18,12 +18,12 @@ export type PaymentActionResult<T = object> = ({ ok: true } & T) | { ok: false; 
 
 function mapPaymentError(message: string | undefined): string {
   const m = message ?? ''
-  if (m.includes('invalid_invite')) return 'This payment link is not valid.'
-  if (m.includes('already_paid')) return 'This share has already been paid.'
-  if (m.includes('booking_not_payable')) return 'This booking is no longer open for payment (it may have been cancelled).'
-  if (m.includes('nothing_to_pay')) return 'There is nothing left to collect on this booking.'
+  if (m.includes('invalid_invite')) return 'Ce lien de paiement n\'est pas valide.'
+  if (m.includes('already_paid')) return 'Cette part a déjà été payée.'
+  if (m.includes('booking_not_payable')) return 'Cette réservation n\'est plus ouverte au paiement (elle a peut-être été annulée).'
+  if (m.includes('nothing_to_pay')) return 'Il ne reste rien à encaisser sur cette réservation.'
   console.error('payment action failed', m)
-  return 'Something went wrong. Please try again.'
+  return 'Une erreur est survenue. Veuillez réessayer.'
 }
 
 /* ---------------------------------------------------------------------------
@@ -47,10 +47,10 @@ async function payShareActionImpl(
   if (limited) return { ok: false, message: limited }
 
   const parsed = payShareSchema.safeParse(input)
-  if (!parsed.success) return { ok: false, message: 'This payment link is not valid.' }
+  if (!parsed.success) return { ok: false, message: 'Ce lien de paiement n\'est pas valide.' }
 
   const provider = onlineProvider(onlinePaymentMode())
-  if (!provider) return { ok: false, message: 'Online payment is not available yet. Please pay the organizer or the club.' }
+  if (!provider) return { ok: false, message: 'Le paiement en ligne n\'est pas encore disponible. Veuillez payer l\'organisateur ou le club.' }
 
   const { data, error } = await getSupabaseAdmin().rpc('pay_booking_share', {
     p_token_hash: hashShareToken(parsed.data.token),
@@ -74,7 +74,7 @@ export async function markCashPaidAction(...args: Parameters<typeof markCashPaid
 }
 
 async function markCashPaidActionImpl(bookingId: string): Promise<PaymentActionResult> {
-  if (!z.string().uuid().safeParse(bookingId).success) return { ok: false, message: 'Invalid booking.' }
+  if (!z.string().uuid().safeParse(bookingId).success) return { ok: false, message: 'Réservation invalide.' }
 
   const auth = await requireOrgAction(['org_admin', 'staff'])
   if (!auth.ok) return { ok: false, message: auth.message }
@@ -108,13 +108,13 @@ export async function regenerateShareInviteAction(
   input: z.input<typeof regenerateSchema>
 ): Promise<PaymentActionResult<{ path: string }>> {
   const parsed = regenerateSchema.safeParse(input)
-  if (!parsed.success) return { ok: false, message: 'Invalid request.' }
+  if (!parsed.success) return { ok: false, message: 'Requête invalide.' }
   const { bookingId, shareNo, guestToken } = parsed.data
 
   const access = await resolveViewer(bookingId, guestToken)
   // Only the person who booked (or holds the guest link) manages invites; club staff do not.
   // A read-only pass link (`pass`) can look at the booking but never change it.
-  if (!access || access.viewer === 'staff' || access.viewer === 'pass') return { ok: false, message: 'You cannot change this booking.' }
+  if (!access || access.viewer === 'staff' || access.viewer === 'pass') return { ok: false, message: 'Vous ne pouvez pas modifier cette réservation.' }
 
   const token = randomBytes(24).toString('hex')
   const { data, error } = await getSupabaseAdmin()
@@ -125,7 +125,7 @@ export async function regenerateShareInviteAction(
     .eq('status', 'pending')
     .eq('is_organizer', false)
     .select('id')
-  if (error || !data?.length) return { ok: false, message: 'That share is already paid or does not exist.' }
+  if (error || !data?.length) return { ok: false, message: 'Cette part est déjà payée ou n\'existe pas.' }
 
   revalidatePath(`/reservations/${bookingId}`)
   return { ok: true, path: shareInvitePath(token) }

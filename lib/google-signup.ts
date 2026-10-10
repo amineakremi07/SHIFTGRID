@@ -32,7 +32,7 @@ export async function createGooglePlayerProfile(user: User, orgId: string): Prom
   if (!org) return false
 
   const meta = user.user_metadata ?? {}
-  const name = String(meta.full_name ?? meta.name ?? user.email?.split('@')[0] ?? 'Player')
+  const name = String(meta.full_name ?? meta.name ?? user.email?.split('@')[0] ?? 'Joueur')
     .replace(/[<>]/g, '')
     .trim()
     .slice(0, 100)
@@ -41,7 +41,7 @@ export async function createGooglePlayerProfile(user: User, orgId: string): Prom
     id: user.id,
     org_id: orgId,
     role: 'player',
-    display_name: name.length >= 2 ? name : 'Player',
+    display_name: name.length >= 2 ? name : 'Joueur',
   })
   if (error) {
     console.error('google sign-up: profile insert failed', { code: error.code, message: error.message })

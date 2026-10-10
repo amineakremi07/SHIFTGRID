@@ -22,12 +22,12 @@ const SPORT_NAME: Record<Sport, string> = { padel: 'Padel', tennis: 'Tennis', fo
 /** What the colours and tags on the grid mean. */
 export function SlotLegend({ hasPeak, nightStartsAt }: { hasPeak: boolean; nightStartsAt?: string }) {
   const items: { label: string; swatch: string }[] = [
-    { label: 'Available', swatch: 'border-success/40 bg-success/5' },
-    { label: 'Selected', swatch: 'border-primary bg-primary' },
-    { label: 'Booked or unavailable', swatch: 'border-border bg-muted opacity-60' },
+    { label: 'Disponible', swatch: 'border-success/40 bg-success/5' },
+    { label: 'Sélectionné', swatch: 'border-primary bg-primary' },
+    { label: 'Réservé ou indisponible', swatch: 'border-border bg-muted opacity-60' },
   ]
   return (
-    <ul aria-label="Legend" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+    <ul aria-label="Légende" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
       {items.map(({ label, swatch }) => (
         <li key={label} className="flex items-center gap-1.5">
           <span aria-hidden className={cn('size-3.5 rounded-sm border', swatch)} />
@@ -40,12 +40,12 @@ export function SlotLegend({ hasPeak, nightStartsAt }: { hasPeak: boolean; night
             aria-hidden
             className="rounded-sm bg-accent px-1 text-[0.65rem] font-medium uppercase tracking-wide text-accent-foreground"
           >
-            Peak
+            Pointe
           </span>
-          <span className="sr-only">Peak slots</span>
-          <InfoTip label="About peak slots">
-            Peak slots include the night surcharge{nightStartsAt ? ` (slots from ${nightStartsAt.slice(0, 5)})` : ''}; other
-            slots are off-peak.
+          <span className="sr-only">Créneaux de pointe</span>
+          <InfoTip label="À propos des créneaux de pointe">
+            Les créneaux de pointe incluent le supplément de soirée{nightStartsAt ? ` (créneaux à partir de ${nightStartsAt.slice(0, 5)})` : ''} ; les autres
+            créneaux sont en heures creuses.
           </InfoTip>
         </li>
       )}
@@ -96,7 +96,7 @@ export function SlotPicker({
 
       {/* A new day is loading: show the shape of the grid at once instead of stale slots. */}
       {pending && (
-        <div role="status" aria-label="Loading availability" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div role="status" aria-label="Chargement des disponibilités" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
@@ -116,7 +116,7 @@ export function SlotPicker({
       <div className="space-y-2">
         <SlotLegend hasPeak={Boolean(peakCourt)} nightStartsAt={peakCourt?.nightStartsAt} />
         {sports.length > 0 && (
-          <ul aria-label="Slot lengths" className="flex flex-wrap items-center gap-1.5">
+          <ul aria-label="Durées des créneaux" className="flex flex-wrap items-center gap-1.5">
             {sports.map((sp) => (
               <li key={sp}>
                 <Badge variant="outline" className="tabular-nums">
@@ -125,8 +125,8 @@ export function SlotPicker({
               </li>
             ))}
             <li>
-              <InfoTip label="About slot lengths and changeover">
-                Slot lengths are fixed per sport. A {BUFFER_MIN} min changeover is kept free between bookings.
+              <InfoTip label="À propos des durées et du battement">
+                La durée des créneaux est fixe selon le sport. Un battement de {BUFFER_MIN} min est laissé libre entre deux réservations.
               </InfoTip>
             </li>
           </ul>

@@ -17,7 +17,7 @@ export function MfaVerifyForm({ factorId, destination }: { factorId: string; des
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!normaliseTotp(code)) return setError('Enter the 6-digit code from your authenticator app.')
+    if (!normaliseTotp(code)) return setError('Saisissez le code à 6 chiffres de votre application d\'authentification.')
     setError(null)
     startTransition(async () => {
       const res = await verifyMFA(factorId, code)
@@ -31,7 +31,7 @@ export function MfaVerifyForm({ factorId, destination }: { factorId: string; des
     <div className="space-y-4">
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="mfa-code">Authentication code</Label>
+          <Label htmlFor="mfa-code">Code d&apos;authentification</Label>
           <Input
             id="mfa-code"
             autoFocus
@@ -51,12 +51,12 @@ export function MfaVerifyForm({ factorId, destination }: { factorId: string; des
         )}
         <Button type="submit" className="w-full" disabled={pending}>
           {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
-          Verify
+          Vérifier
         </Button>
       </form>
       <form action="/logout" method="post" className="text-center">
         <button type="submit" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
-          Sign out
+          Se déconnecter
         </button>
       </form>
     </div>

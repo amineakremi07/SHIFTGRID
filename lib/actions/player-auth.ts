@@ -52,7 +52,7 @@ export async function signInPlayer(
   }
 
   if (!authData.user) {
-    return { success: false, error: 'Authentication failed' }
+    return { success: false, error: 'Échec de l\'authentification' }
   }
 
   // Get user profile to verify they're a player (not staff/owner). Read directly, not through the per-request
@@ -62,13 +62,13 @@ export async function signInPlayer(
   if (!profile) {
     // Sign out if no profile exists
     await supabase.auth.signOut()
-    return { success: false, error: 'Account not found. Please contact support.' }
+    return { success: false, error: 'Compte introuvable. Veuillez contacter le support.' }
   }
 
   // Only allow player role (not org_admin or staff)
   if (profile.role !== 'player') {
     await supabase.auth.signOut()
-    return { success: false, error: 'This account cannot sign in as a player.' }
+    return { success: false, error: 'Ce compte ne peut pas se connecter en tant que joueur.' }
   }
 
   return { success: true, userId: authData.user.id }
@@ -98,11 +98,11 @@ export async function signUpPlayer(
     .single()
 
   if (orgError || !org) {
-    return { success: false, error: 'Invalid sports complex' }
+    return { success: false, error: 'Complexe sportif invalide' }
   }
 
   if (org.status !== 'approved' || org.deleted_at !== null) {
-    return { success: false, error: 'This sports complex is not yet available for bookings' }
+    return { success: false, error: 'Ce complexe sportif n\'est pas encore disponible à la réservation' }
   }
 
   // Create auth user
@@ -122,20 +122,20 @@ export async function signUpPlayer(
   if (authError) {
     // Handle specific error cases
     if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
-      return { success: false, error: 'An account with this email already exists' }
+      return { success: false, error: 'Un compte existe déjà avec cet e-mail' }
     }
     return { success: false, error: authError.message }
   }
 
   if (!authData.user) {
-    return { success: false, error: 'Failed to create account' }
+    return { success: false, error: 'Échec de la création du compte' }
   }
 
   // With "confirm email" on, signing up an address that already has an account does not error: Supabase
   // returns a look-alike user with NO identities (and an id that is not a real account). Never create a
   // profile for it, and never delete anything on its behalf.
   if (authData.user.identities?.length === 0) {
-    return { success: false, error: 'An account with this email already exists' }
+    return { success: false, error: 'Un compte existe déjà avec cet e-mail' }
   }
 
   // Create profile with player role
@@ -154,7 +154,7 @@ export async function signUpPlayer(
     // The user we just made (it has identities, so it is ours) must not be left without a profile.
     console.error('Profile creation failed:', profileError.message)
     await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-    return { success: false, error: 'Failed to create player profile' }
+    return { success: false, error: 'Échec de la création du profil joueur' }
   }
 
   revalidatePath('/dashboard')
@@ -199,7 +199,7 @@ export async function registerPlayer(input: PlayerRegisterInput): Promise<Regist
     .eq('id', orgId)
     .maybeSingle()
   if (org?.status !== 'approved' || org.deleted_at !== null) {
-    return { success: false, error: 'That club is not available for registration.' }
+    return { success: false, error: 'Ce club n\'est pas disponible pour l\'inscription.' }
   }
 
   const supabase = await createClient()
@@ -212,7 +212,7 @@ export async function registerPlayer(input: PlayerRegisterInput): Promise<Regist
     },
   })
 
-  const alreadyExists = 'An account with this email already exists. Try signing in instead.'
+  const alreadyExists = 'Un compte existe déjà avec cet e-mail. Essayez de vous connecter.'
   if (createError || !created.user) {
     if (
       createError?.code === 'user_already_exists' ||
@@ -222,7 +222,7 @@ export async function registerPlayer(input: PlayerRegisterInput): Promise<Regist
       return { success: false, error: alreadyExists }
     }
     console.error('registerPlayer: could not create user:', createError?.message)
-    return { success: false, error: 'We could not create your account. Please try again.' }
+    return { success: false, error: 'Impossible de créer votre compte. Veuillez réessayer.' }
   }
   // An address that already has an account comes back as a look-alike user with no identities.
   if (created.user.identities?.length === 0) return { success: false, error: alreadyExists }
@@ -239,7 +239,7 @@ export async function registerPlayer(input: PlayerRegisterInput): Promise<Regist
     console.error('registerPlayer: could not create profile:', profileError.message)
     // No orphaned auth user without a profile (it has identities, so it is the one we just made).
     await admin.auth.admin.deleteUser(created.user.id)
-    return { success: false, error: 'We could not create your player profile. Please try again.' }
+    return { success: false, error: 'Impossible de créer votre profil joueur. Veuillez réessayer.' }
   }
 
   revalidatePath('/')
@@ -270,11 +270,11 @@ export async function createAnonymousBooker(
     .single()
 
   if (orgError || !org) {
-    return { success: false, error: 'Invalid sports complex' }
+    return { success: false, error: 'Complexe sportif invalide' }
   }
 
   if (org.status !== 'approved' || org.deleted_at !== null) {
-    return { success: false, error: 'This sports complex is not yet available for bookings' }
+    return { success: false, error: 'Ce complexe sportif n\'est pas encore disponible à la réservation' }
   }
 
   // Create the guest if new. An existing guest (same club + phone) is left exactly as it is: this endpoint
@@ -284,7 +284,7 @@ export async function createAnonymousBooker(
     .upsert({ org_id: input.orgId, name: input.name, phone: input.phone }, { onConflict: 'org_id,phone', ignoreDuplicates: true })
   if (insertError) {
     console.error('Anonymous booker upsert failed:', insertError.message)
-    return { success: false, error: 'Failed to create booking profile' }
+    return { success: false, error: 'Échec de la création du profil de réservation' }
   }
 
   const { data: booker } = await supabaseAdmin
@@ -293,7 +293,7 @@ export async function createAnonymousBooker(
     .eq('org_id', input.orgId)
     .eq('phone', input.phone)
     .maybeSingle()
-  if (!booker) return { success: false, error: 'Failed to create booking profile' }
+  if (!booker) return { success: false, error: 'Échec de la création du profil de réservation' }
 
   return { success: true, bookerId: booker.id }
 }

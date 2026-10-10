@@ -37,7 +37,7 @@ export type CheckInOutcome =
  */
 export async function postCheckIn(raw: string): Promise<CheckInOutcome> {
   const key = parseCheckInInput(raw)
-  if (!key) return { ok: false, message: 'Enter the 6-digit check-in code, the booking reference or scan the QR code.' }
+  if (!key) return { ok: false, message: 'Saisissez le code d\'arrivée à 6 chiffres, la référence de la réservation ou scannez le QR code.' }
   const body =
     key.kind === 'code' ? { check_in_code: key.code } : key.kind === 'id' ? { booking_id: key.bookingId } : { reference: key.reference }
   try {
@@ -50,8 +50,8 @@ export async function postCheckIn(raw: string): Promise<CheckInOutcome> {
       | { success: true; data: { reference: string; booker: string; court: string; starts_at: string; ends_at: string; cash_due: number; payment_pending: boolean } }
       | { success: false; error?: string }
       | null
-    if (!json) return { ok: false, message: 'Unexpected answer from the server. Please try again.' }
-    if (!json.success) return { ok: false, message: json.error ?? 'Check-in failed.' }
+    if (!json) return { ok: false, message: 'Réponse inattendue du serveur. Veuillez réessayer.' }
+    if (!json.success) return { ok: false, message: json.error ?? 'L\'enregistrement de l\'arrivée a échoué.' }
     const d = json.data
     return {
       ok: true,
@@ -64,7 +64,7 @@ export async function postCheckIn(raw: string): Promise<CheckInOutcome> {
       paymentPending: d.payment_pending,
     }
   } catch {
-    return { ok: false, message: 'We could not reach the server. Please check your connection and try again.' }
+    return { ok: false, message: 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.' }
   }
 }
 
@@ -121,7 +121,7 @@ function QrScanner({ onResult, onProblem }: { onResult: (value: string) => void;
       } catch (e) {
         const denied = e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'SecurityError')
         handlers.current.onProblem(
-          denied ? 'Camera access was blocked. Allow it in the browser, or type the code instead.' : 'The camera could not be started. Type the code instead.'
+          denied ? 'L\'accès à la caméra a été bloqué. Autorisez-le dans le navigateur, ou saisissez le code.' : 'La caméra n\'a pas pu démarrer. Saisissez le code.'
         )
       }
     }
@@ -179,9 +179,9 @@ export function CheckInDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="bg-[#eae6df] sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Check in a player</DialogTitle>
+          <DialogTitle>Enregistrer l&apos;arrivée d&apos;un joueur</DialogTitle>
           <DialogDescription>
-            Type the 6-digit code from the player&apos;s email or pass, or scan their QR code. Check-in opens 60 minutes before the slot.
+            Saisissez le code à 6 chiffres de l&apos;e-mail ou du pass du joueur, ou scannez son QR code. L&apos;enregistrement ouvre 60 minutes avant le créneau.
           </DialogDescription>
         </DialogHeader>
 
@@ -193,7 +193,7 @@ export function CheckInDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           className="grid gap-3"
           noValidate
         >
-          <Label htmlFor="checkin-code">Check-in code or booking reference</Label>
+          <Label htmlFor="checkin-code">Code d&apos;arrivée ou référence de réservation</Label>
           <div className="flex gap-2">
             <Input
               id="checkin-code"
@@ -210,7 +210,7 @@ export function CheckInDialog({ open, onOpenChange }: { open: boolean; onOpenCha
               maxLength={60}
             />
             <Button type="submit" disabled={busy || value.trim() === ''} className="bg-[#1d3023] text-[#f7f5f2] hover:bg-[#1d3023]/90">
-              {busy ? <Loader2 className="animate-spin" aria-hidden /> : <CheckCircle2 aria-hidden />} Check in
+              {busy ? <Loader2 className="animate-spin" aria-hidden /> : <CheckCircle2 aria-hidden />} Enregistrer
             </Button>
           </div>
         </form>
@@ -227,7 +227,7 @@ export function CheckInDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                   }}
                 />
                 <Button type="button" variant="outline" onClick={() => setScanning(false)}>
-                  Stop camera
+                  Arrêter la caméra
                 </Button>
               </>
             ) : (
@@ -239,14 +239,14 @@ export function CheckInDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                   setScanning(true)
                 }}
               >
-                <ScanLine aria-hidden /> Scan QR code
+                <ScanLine aria-hidden /> Scanner un QR code
               </Button>
             )}
           </div>
         )}
         {!canScan && (
           <p className="flex items-center gap-1.5 text-xs text-[#645757]">
-            <Camera className="size-3.5" aria-hidden /> This browser cannot scan with the camera. A USB or Bluetooth scanner types into the box above.
+            <Camera className="size-3.5" aria-hidden /> Ce navigateur ne peut pas scanner avec la caméra. Un lecteur USB ou Bluetooth saisit dans la zone ci-dessus.
           </p>
         )}
 
@@ -254,16 +254,16 @@ export function CheckInDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           {outcome?.ok && (
             <div className="rounded-lg bg-[#f7f5f2] p-3 text-sm" data-testid="checkin-success">
               <p className="flex items-center gap-1.5 font-semibold text-[#0e634f]">
-                <CheckCircle2 className="size-4" aria-hidden /> {outcome.booker} is checked in
+                <CheckCircle2 className="size-4" aria-hidden /> {outcome.booker} est enregistré
               </p>
               <p className="mt-1 text-[#645757]">
                 {outcome.court} · {formatVenueTime(outcome.startsAt)}–{formatVenueTime(outcome.endsAt)} ·{' '}
                 <span className="font-mono">{outcome.reference}</span>
               </p>
               {outcome.cashDue > 0 && (
-                <p className="mt-1 font-medium">Collect {outcome.cashDue.toFixed(2)} TND in cash, then press Mark paid on the schedule.</p>
+                <p className="mt-1 font-medium">Encaissez {outcome.cashDue.toFixed(2)} TND en espèces, puis appuyez sur Marquer payé dans le planning.</p>
               )}
-              {outcome.paymentPending && <p className="mt-1 font-medium">Payment is still incomplete (online shares). Check with the organiser.</p>}
+              {outcome.paymentPending && <p className="mt-1 font-medium">Le paiement est encore incomplet (parts en ligne). Vérifiez auprès de l&apos;organisateur.</p>}
             </div>
           )}
           {outcome && !outcome.ok && (
@@ -275,7 +275,7 @@ export function CheckInDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
         <DialogFooter className="sm:justify-end">
           <Button type="button" variant="outline" onClick={() => close(false)}>
-            Done
+            Terminé
           </Button>
         </DialogFooter>
       </DialogContent>

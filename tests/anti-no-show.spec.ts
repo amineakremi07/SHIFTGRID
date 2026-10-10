@@ -54,9 +54,9 @@ test.describe('confirmation email with a check-in code', () => {
     const mail = confirmation('782910')
     expect(mail.html).toContain('<strong>782910</strong>')
     expect(mail.html).toContain(`src="cid:${CHECK_IN_QR_CID}"`)
-    expect(mail.html).toContain('Show this code/QR code at the club reception to validate your arrival.')
-    expect(mail.text).toContain('Check-in code: 782910')
-    expect(mail.text).toContain('Show this code/QR code at the club reception to validate your arrival.')
+    expect(mail.html).toContain("Présentez ce code ou ce QR code à l&#39;accueil du club pour valider votre arrivée.")
+    expect(mail.text).toContain("Code d'arrivée : 782910")
+    expect(mail.text).toContain("Présentez ce code ou ce QR code à l'accueil du club pour valider votre arrivée.")
   })
 
   test('has no check-in block without a code', () => {

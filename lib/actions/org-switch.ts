@@ -24,25 +24,25 @@ export type SwitchResult = ActionResult<{ path: string }>
  */
 export async function switchOrganizationAction(orgId: string): Promise<SwitchResult> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orgId)) {
-    return actionFail('Invalid organization.')
+    return actionFail('Organisation invalide.')
   }
 
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return actionFail('Please sign in again.')
-  if (await sessionNeedsSecondFactor(supabase, user)) return actionFail('Enter your two-factor code to continue.')
+  if (!user) return actionFail('Veuillez vous reconnecter.')
+  if (await sessionNeedsSecondFactor(supabase, user)) return actionFail('Saisissez votre code à deux facteurs pour continuer.')
 
   const limited = await actionRateLimit('lookup', user.id)
   if (limited) return actionFail(limited)
 
   const { data, error } = await getSupabaseAdmin().rpc('switch_active_organization', { p_user_id: user.id, p_org_id: orgId })
   if (error) {
-    if (error.message?.includes('not_a_member')) return actionFail('You are not a member of that organization.')
+    if (error.message?.includes('not_a_member')) return actionFail('Vous n\'êtes pas membre de cette organisation.')
     console.error('switchOrganization failed', { code: error.code, message: error.message })
     reportServerError('org-switch', new Error(`switch_active_organization failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
-    return actionFail('Could not switch organization. Please try again.')
+    return actionFail('Impossible de changer d\'organisation. Veuillez réessayer.')
   }
 
   // Every layout and page depends on who the account is acting as.

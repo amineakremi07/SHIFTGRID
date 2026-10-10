@@ -23,7 +23,7 @@ export type BookingFacts = {
   clubName: string
   courtName: string
   sport: string
-  /** e.g. "Tue 3 Nov 2026" */
+  /** e.g. "mar. 3 nov. 2026" */
   date: string
   /** e.g. "18:00 – 19:30" */
   time: string
@@ -60,7 +60,7 @@ function safeUrl(url: string): string {
 }
 
 function sportLabel(sport: string): string {
-  return sport ? sport.charAt(0).toUpperCase() + sport.slice(1) : 'Court'
+  return sport ? sport.charAt(0).toUpperCase() + sport.slice(1) : 'Terrain'
 }
 
 function button(label: string, url: string): string {
@@ -71,31 +71,31 @@ function button(label: string, url: string): string {
 function contactBlock(f: BookingFacts, opts: { icsAttached: boolean }): string {
   const links: string[] = []
   if (f.whatsappUrl) {
-    links.push(`<a href="${esc(safeUrl(f.whatsappUrl))}" style="display:inline-block;border:1px solid ${FOREST};color:${FOREST};text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px;margin:0 8px 8px 0">Contact the club on WhatsApp</a>`)
+    links.push(`<a href="${esc(safeUrl(f.whatsappUrl))}" style="display:inline-block;border:1px solid ${FOREST};color:${FOREST};text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px;margin:0 8px 8px 0">Contacter le club sur WhatsApp</a>`)
   }
   if (f.calendar) {
-    links.push(`<a href="${esc(safeUrl(googleCalendarUrl(f.calendar)))}" style="display:inline-block;border:1px solid ${FOREST};color:${FOREST};text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px;margin:0 8px 8px 0">Add to Google Calendar</a>`)
+    links.push(`<a href="${esc(safeUrl(googleCalendarUrl(f.calendar)))}" style="display:inline-block;border:1px solid ${FOREST};color:${FOREST};text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px;margin:0 8px 8px 0">Ajouter à Google Agenda</a>`)
   }
   if (links.length === 0) return ''
-  const ics = f.calendar && opts.icsAttached ? `<p style="margin:0;font-size:13px;color:${ASH}">Apple Calendar / Outlook: open the attached <strong>booking.ics</strong> file.</p>` : ''
+  const ics = f.calendar && opts.icsAttached ? `<p style="margin:0;font-size:13px;color:${ASH}">Apple Calendar / Outlook : ouvrez le fichier joint <strong>booking.ics</strong>.</p>` : ''
   return `<div style="margin:20px 0 0">${links.join('')}${ics}</div>`
 }
 
 function contactText(f: BookingFacts, opts: { icsAttached: boolean }): (string | false | null | undefined)[] {
   return [
-    f.whatsappUrl && `Contact the club on WhatsApp: ${f.whatsappUrl}`,
-    f.calendar && `Add to Google Calendar: ${googleCalendarUrl(f.calendar)}`,
-    f.calendar && opts.icsAttached && 'Apple Calendar / Outlook: open the attached booking.ics file.',
+    f.whatsappUrl && `Contacter le club sur WhatsApp : ${f.whatsappUrl}`,
+    f.calendar && `Ajouter à Google Agenda : ${googleCalendarUrl(f.calendar)}`,
+    f.calendar && opts.icsAttached && 'Apple Calendar / Outlook : ouvrez le fichier joint booking.ics.',
   ]
 }
 
 function factsTable(f: BookingFacts, extra: [string, string][] = []): string {
   const rows: [string, string][] = [
     ['Club', f.clubName],
-    ['Court', `${f.courtName} (${sportLabel(f.sport)})`],
+    ['Terrain', `${f.courtName} (${sportLabel(f.sport)})`],
     ['Date', f.date],
-    ['Time', f.time],
-    ['Reference', f.reference],
+    ['Heure', f.time],
+    ['Référence', f.reference],
     ...extra,
   ]
   const tr = rows
@@ -115,7 +115,7 @@ function shell(title: string, intro: string, body: string): string {
 <h1 style="margin:0 0 12px;font-size:22px;color:${INK}">${esc(title)}</h1>
 <p style="margin:0 0 8px;line-height:1.6;color:${INK}">${intro}</p>
 ${body}
-<p style="margin:32px 0 0;font-size:12px;color:${ASH}">You are receiving this because of a booking on ShiftGrid. Please do not reply to this message.</p>
+<p style="margin:32px 0 0;font-size:12px;color:${ASH}">Vous recevez ce message à la suite d'une réservation sur ShiftGrid. Merci de ne pas y répondre.</p>
 </div></div></body></html>`
 }
 
@@ -125,11 +125,11 @@ function textOf(lines: (string | false | null | undefined)[]): string {
 
 function factsText(f: BookingFacts): string[] {
   return [
-    `Club: ${f.clubName}`,
-    `Court: ${f.courtName} (${sportLabel(f.sport)})`,
-    `Date: ${f.date}`,
-    `Time: ${f.time}`,
-    `Reference: ${f.reference}`,
+    `Club : ${f.clubName}`,
+    `Terrain : ${f.courtName} (${sportLabel(f.sport)})`,
+    `Date : ${f.date}`,
+    `Heure : ${f.time}`,
+    `Référence : ${f.reference}`,
   ]
 }
 
@@ -150,57 +150,57 @@ export type ConfirmationProps = BookingFacts & {
   checkInCode?: string | null
 }
 
-const CHECK_IN_INSTRUCTION = 'Show this code/QR code at the club reception to validate your arrival.'
+const CHECK_IN_INSTRUCTION = 'Présentez ce code ou ce QR code à l\'accueil du club pour valider votre arrivée.'
 
 function checkInBlock(code: string): string {
   return `<div style="margin:20px 0 0;padding:18px 16px;background:#ffffff;border:1px solid ${OAT};border-radius:10px;text-align:center">
-<p style="margin:0 0 4px;font-size:13px;color:${ASH}">Your check-in code</p>
+<p style="margin:0 0 4px;font-size:13px;color:${ASH}">Votre code d'arrivée</p>
 <p style="margin:0;font-size:34px;letter-spacing:8px;color:${INK}"><strong>${esc(code)}</strong></p>
-<img src="cid:${CHECK_IN_QR_CID}" width="160" height="160" alt="Check-in QR code ${esc(code)}" style="display:block;margin:14px auto 0;border:0">
+<img src="cid:${CHECK_IN_QR_CID}" width="160" height="160" alt="QR code d'arrivée ${esc(code)}" style="display:block;margin:14px auto 0;border:0">
 <p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:${INK}">${esc(CHECK_IN_INSTRUCTION)}</p>
 </div>`
 }
 
 export function confirmationEmail(p: ConfirmationProps): Rendered {
   const headline =
-    p.state === 'confirmed' ? 'Your booking is confirmed' : p.state === 'awaiting_shares' ? 'Your slot is held' : 'Your slot is reserved'
-  const subject = `${p.state === 'confirmed' ? 'Booking confirmed' : 'Booking reserved'}: ${p.courtName}, ${p.date} ${p.time.split(' ')[0]}`
+    p.state === 'confirmed' ? 'Votre réservation est confirmée' : p.state === 'awaiting_shares' ? 'Votre créneau est retenu' : 'Votre créneau est réservé'
+  const subject = `${p.state === 'confirmed' ? 'Réservation confirmée' : 'Réservation enregistrée'} : ${p.courtName}, ${p.date} ${p.time.split(' ')[0]}`
 
   const payment =
     p.state === 'confirmed'
-      ? `Paid in full (${formatTND(p.amount)}).`
+      ? `Payé en totalité (${formatTND(p.amount)}).`
       : p.state === 'awaiting_shares'
-        ? `You paid your share (${formatTND(p.paidNow)}). The booking is confirmed once every player has paid the remaining ${formatTND(p.amount - p.paidNow)}.${p.invitesEmailed ? ` We emailed ${p.invitesEmailed} ${p.invitesEmailed === 1 ? 'player' : 'players'} their payment link.` : ''}`
-        : `Please pay ${formatTND(p.amount)} in cash at the club. The staff will confirm your payment when you arrive.`
+        ? `Vous avez payé votre part (${formatTND(p.paidNow)}). La réservation est confirmée dès que chaque joueur a payé le reste, soit ${formatTND(p.amount - p.paidNow)}.${p.invitesEmailed ? ` Nous avons envoyé son lien de paiement à ${p.invitesEmailed} ${p.invitesEmailed === 1 ? 'joueur' : 'joueurs'}.` : ''}`
+        : `Merci de payer ${formatTND(p.amount)} en espèces au club. Le personnel confirmera votre paiement à votre arrivée.`
 
   const cancel = p.cancelUrl
-    ? `<p style="margin:20px 0 0;font-size:14px;line-height:1.5;color:${ASH}">Need to cancel? Free until 24 hours before your slot, with this private link (keep it to yourself): <a href="${esc(safeUrl(p.cancelUrl))}" style="color:${TEAL}">cancel this booking</a>.</p>`
+    ? `<p style="margin:20px 0 0;font-size:14px;line-height:1.5;color:${ASH}">Besoin d'annuler ? Gratuit jusqu'à 24 heures avant votre créneau, avec ce lien privé (gardez-le pour vous) : <a href="${esc(safeUrl(p.cancelUrl))}" style="color:${TEAL}">annuler cette réservation</a>.</p>`
     : ''
 
   const html = shell(
     headline,
-    `Hi ${esc(p.recipientName)}, here are your booking details.`,
-    `${factsTable(p, [['Total', formatTND(p.amount)], ['Players', String(p.playerCount)]])}
+    `Bonjour ${esc(p.recipientName)}, voici le détail de votre réservation.`,
+    `${factsTable(p, [['Total', formatTND(p.amount)], ['Joueurs', String(p.playerCount)]])}
 <p style="margin:0;line-height:1.6">${esc(payment)}</p>
 ${p.checkInCode ? checkInBlock(p.checkInCode) : ''}
-${button('View your booking pass', p.passUrl)}${contactBlock(p, { icsAttached: true })}${cancel}`
+${button('Voir votre pass de réservation', p.passUrl)}${contactBlock(p, { icsAttached: true })}${cancel}`
   )
 
   const text = textOf([
     `${headline}`,
-    `Hi ${p.recipientName}, here are your booking details.`,
+    `Bonjour ${p.recipientName}, voici le détail de votre réservation.`,
     '',
     ...factsText(p),
-    `Total: ${formatTND(p.amount)}`,
+    `Total : ${formatTND(p.amount)}`,
     '',
     payment,
     '',
-    p.checkInCode && `Check-in code: ${p.checkInCode}`,
+    p.checkInCode && `Code d\'arrivée : ${p.checkInCode}`,
     p.checkInCode && CHECK_IN_INSTRUCTION,
     p.checkInCode && '',
-    `Your pass: ${p.passUrl}`,
+    `Votre pass : ${p.passUrl}`,
     ...contactText(p, { icsAttached: true }),
-    p.cancelUrl && `Cancel (private link): ${p.cancelUrl}`,
+    p.cancelUrl && `Annuler (lien privé) : ${p.cancelUrl}`,
   ])
   return { subject, html, text }
 }
@@ -215,21 +215,21 @@ export type SplitInviteProps = BookingFacts & {
 }
 
 export function splitInviteEmail(p: SplitInviteProps): Rendered {
-  const subject = `${p.organizerName} invited you to play at ${p.clubName} on ${p.date}`
+  const subject = `${p.organizerName} vous invite à jouer à ${p.clubName} le ${p.date}`
   const html = shell(
-    'You are invited to play',
-    `<strong>${esc(p.organizerName)}</strong> booked a court and split the cost. Your share is <strong>${esc(formatTND(p.share))}</strong>.`,
-    `${factsTable(p, [['Your share', formatTND(p.share)]])}
-<p style="margin:0;line-height:1.6">The booking is confirmed once every player has paid their share. This link is yours alone and works once.</p>
-${button(`Pay ${formatTND(p.share)}`, p.joinUrl)}`
+    'Vous êtes invité à jouer',
+    `<strong>${esc(p.organizerName)}</strong> a réservé un terrain et partage le coût. Votre part est de <strong>${esc(formatTND(p.share))}</strong>.`,
+    `${factsTable(p, [['Votre part', formatTND(p.share)]])}
+<p style="margin:0;line-height:1.6">La réservation est confirmée dès que chaque joueur a payé sa part. Ce lien est personnel et ne fonctionne qu'une fois.</p>
+${button(`Payer ${formatTND(p.share)}`, p.joinUrl)}`
   )
   const text = textOf([
-    `${p.organizerName} invited you to play.`,
+    `${p.organizerName} vous invite à jouer.`,
     '',
     ...factsText(p),
-    `Your share: ${formatTND(p.share)}`,
+    `Votre part : ${formatTND(p.share)}`,
     '',
-    `Pay your share (private, one-use link): ${p.joinUrl}`,
+    `Payer votre part (lien privé à usage unique) : ${p.joinUrl}`,
   ])
   return { subject, html, text }
 }
@@ -246,25 +246,25 @@ export type CancellationProps = BookingFacts & {
 }
 
 export function cancellationEmail(p: CancellationProps): Rendered {
-  const subject = `Booking cancelled: ${p.courtName}, ${p.date} ${p.time.split(' ')[0]}`
-  const who = p.cancelledBy === 'club' ? `${p.clubName} cancelled this booking.` : 'You cancelled this booking.'
+  const subject = `Réservation annulée : ${p.courtName}, ${p.date} ${p.time.split(' ')[0]}`
+  const who = p.cancelledBy === 'club' ? `${p.clubName} a annulé cette réservation.` : 'Vous avez annulé cette réservation.'
   const refund =
     p.refundAmount > 0
-      ? `A refund of ${formatTND(p.refundAmount)} has been recorded for this booking. ${p.clubName} returns it to the players who paid; contact the club if you have not received it within a few days.`
-      : 'Nothing had been paid online, so there is nothing to refund.'
+      ? `Un remboursement de ${formatTND(p.refundAmount)} a été enregistré pour cette réservation. ${p.clubName} le restitue aux joueurs qui ont payé ; contactez le club si vous ne l'avez pas reçu sous quelques jours.`
+      : 'Rien n\'avait été payé en ligne : il n\'y a donc rien à rembourser.'
   const html = shell(
-    'Booking cancelled',
-    `Hi ${esc(p.recipientName)}, ${esc(who)} The slot has been released.`,
+    'Réservation annulée',
+    `Bonjour ${esc(p.recipientName)}, ${esc(who)} Le créneau a été libéré.`,
     `${factsTable(p)}
-${p.reason ? `<p style="margin:0 0 12px;line-height:1.6"><span style="color:${ASH}">Reason:</span> ${esc(p.reason)}</p>` : ''}
+${p.reason ? `<p style="margin:0 0 12px;line-height:1.6"><span style="color:${ASH}">Motif :</span> ${esc(p.reason)}</p>` : ''}
 <p style="margin:0;line-height:1.6">${esc(refund)}</p>`
   )
   const text = textOf([
-    'Booking cancelled',
-    `Hi ${p.recipientName}, ${who} The slot has been released.`,
+    'Réservation annulée',
+    `Bonjour ${p.recipientName}, ${who} Le créneau a été libéré.`,
     '',
     ...factsText(p),
-    p.reason && `Reason: ${p.reason}`,
+    p.reason && `Motif : ${p.reason}`,
     '',
     refund,
   ])
@@ -286,28 +286,28 @@ export type ReminderProps = BookingFacts & {
 
 export function reminderEmail(p: ReminderProps): Rendered {
   const start = p.time.split(' ')[0]
-  const subject = `Reminder: you play at ${p.clubName} at ${start}`
+  const subject = `Rappel : vous jouez à ${p.clubName} à ${start}`
   const note =
     p.state === 'pay_at_club'
-      ? `Remember to pay ${formatTND(p.dueAtClub)} in cash at the club.`
+      ? `N'oubliez pas de payer ${formatTND(p.dueAtClub)} en espèces au club.`
       : p.state === 'awaiting_shares' && p.unpaidShares > 0
-        ? `${p.unpaidShares} ${p.unpaidShares === 1 ? 'share is' : 'shares are'} still unpaid. The booking is only confirmed once everyone has paid.`
-        : 'Everything is paid. Just turn up.'
+        ? `${p.unpaidShares} ${p.unpaidShares === 1 ? 'part reste impayée' : 'parts restent impayées'}. La réservation n'est confirmée qu'une fois que tout le monde a payé.`
+        : 'Tout est payé. Il ne vous reste qu\'à venir.'
   const html = shell(
-    `You play today at ${start}`,
-    `Hi ${esc(p.recipientName)}, a quick reminder that your game starts in about two hours.`,
+    `Vous jouez aujourd'hui à ${start}`,
+    `Bonjour ${esc(p.recipientName)}, petit rappel : votre match commence dans environ deux heures.`,
     `${factsTable(p)}
 <p style="margin:0;line-height:1.6">${esc(note)}</p>
-${p.passUrl ? button('View your booking pass', p.passUrl) : `<p style="margin:16px 0 0;font-size:14px;color:${ASH}">Quote reference ${esc(p.reference)} at the club.</p>`}${contactBlock(p, { icsAttached: false })}`
+${p.passUrl ? button('Voir votre pass de réservation', p.passUrl) : `<p style="margin:16px 0 0;font-size:14px;color:${ASH}">Indiquez la référence ${esc(p.reference)} au club.</p>`}${contactBlock(p, { icsAttached: false })}`
   )
   const text = textOf([
-    `Reminder: you play today at ${start}`,
-    `Hi ${p.recipientName}, your game starts in about two hours.`,
+    `Rappel : vous jouez aujourd'hui à ${start}`,
+    `Bonjour ${p.recipientName}, votre match commence dans environ deux heures.`,
     '',
     ...factsText(p),
     '',
     note,
-    p.passUrl ? `Your pass: ${p.passUrl}` : `Quote reference ${p.reference} at the club.`,
+    p.passUrl ? `Votre pass : ${p.passUrl}` : `Indiquez la référence ${p.reference} au club.`,
     ...contactText(p, { icsAttached: false }),
   ])
   return { subject, html, text }

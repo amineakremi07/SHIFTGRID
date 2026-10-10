@@ -7,7 +7,7 @@ import { findGuestBooking } from '@/lib/guest-cancel'
 /** Secret-link page: never cached, never indexed, never leaks the token in a Referer. */
 export const dynamic = 'force-dynamic'
 export const metadata = {
-  title: 'Cancel your booking',
+  title: 'Annuler votre réservation',
   robots: { index: false, follow: false },
   referrer: 'no-referrer' as const,
 }
@@ -22,12 +22,12 @@ export default async function CancelGuestPage({ searchParams }: { searchParams?:
         <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
           ShiftGrid
         </Link>
-        <h1 className="mb-6 mt-3 text-3xl font-semibold tracking-tight">Cancel your booking</h1>
+        <h1 className="mb-6 mt-3 text-3xl font-semibold tracking-tight">Annuler votre réservation</h1>
 
         {!booking || !token ? (
-          <Notice title="This link is not valid">
-            The cancellation link is incomplete or has been mistyped. Open the exact link you saved when you booked, or
-            contact the club.
+          <Notice title="Ce lien n'est pas valide">
+            Le lien d&apos;annulation est incomplet ou mal saisi. Ouvrez exactement le lien que vous avez enregistré lors de la
+            réservation, ou contactez le club.
           </Notice>
         ) : (
           <BookingState booking={booking} token={token} />
@@ -49,17 +49,17 @@ function BookingState({
   const summary = (
     <dl className="rounded-xl bg-card p-5 text-sm">
       <Row label="Club" value={booking.clubName} />
-      <Row label="Court" value={`${booking.courtName} (${booking.sport})`} />
-      <Row label="When" value={`${formatVenueDate(venueDateString(start))}, ${formatVenueTime(start)}–${formatVenueTime(booking.endsAt)}`} />
-      <Row label="Reference" value={booking.reference} mono />
+      <Row label="Terrain" value={`${booking.courtName} (${booking.sport})`} />
+      <Row label="Quand" value={`${formatVenueDate(venueDateString(start))}, ${formatVenueTime(start)}–${formatVenueTime(booking.endsAt)}`} />
+      <Row label="Référence" value={booking.reference} mono />
     </dl>
   )
 
   if (booking.status === 'cancelled') {
     return (
       <>
-        <Notice title="This booking is cancelled" tone="success">
-          The slot has been released. Nothing more to do.
+        <Notice title="Cette réservation est annulée" tone="success">
+          Le créneau a été libéré. Il n&apos;y a plus rien à faire.
         </Notice>
         <div className="mt-4">{summary}</div>
       </>
@@ -68,7 +68,7 @@ function BookingState({
   if (booking.status === 'completed' || now >= Date.parse(booking.endsAt)) {
     return (
       <>
-        <Notice title="This booking has already taken place">There is nothing left to cancel.</Notice>
+        <Notice title="Cette réservation a déjà eu lieu">Il n&apos;y a plus rien à annuler.</Notice>
         <div className="mt-4">{summary}</div>
       </>
     )
@@ -76,8 +76,8 @@ function BookingState({
   if (now >= Date.parse(booking.cancelDeadline)) {
     return (
       <>
-        <Notice title="Free cancellation has closed">
-          Bookings can be cancelled online until 24 hours before the start. Please contact {booking.clubName} directly.
+        <Notice title="L'annulation gratuite est close">
+          Les réservations peuvent être annulées en ligne jusqu&apos;à 24 heures avant le début. Veuillez contacter directement {booking.clubName}.
         </Notice>
         <div className="mt-4">{summary}</div>
       </>

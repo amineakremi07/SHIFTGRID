@@ -28,10 +28,10 @@ export function TrustBanner({
       <div role="alert" className="mb-8 flex gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm" data-testid="suspension-banner">
         <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden />
         <div>
-          <p className="font-semibold text-destructive">Booking is suspended until {formatVenueDate(venueDateString(new Date(suspendedUntil)))}</p>
+          <p className="font-semibold text-destructive">Réservation suspendue jusqu&apos;au {formatVenueDate(venueDateString(new Date(suspendedUntil)))}</p>
           <p className="mt-1">
-            You missed {noShowCount} bookings without cancelling, so your account cannot make new bookings for 30 days. Existing bookings are not affected.
-            Your trust score is {trustScore}/100.
+            Vous avez manqué {noShowCount} réservations sans annuler : votre compte ne peut plus effectuer de nouvelles réservations pendant 30 jours. Les réservations existantes ne sont pas affectées.
+            Votre score de confiance est de {trustScore}/100.
           </p>
         </div>
       </div>
@@ -42,10 +42,10 @@ export function TrustBanner({
     <div role="status" className="mb-8 flex gap-3 rounded-xl border border-[#d9a400]/50 bg-[#d9a400]/10 p-4 text-sm" data-testid="no-show-warning">
       <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[#8a6a00]" aria-hidden />
       <div>
-        <p className="font-semibold">You have {noShowCount} no-shows on your account</p>
+        <p className="font-semibold">Votre compte compte {noShowCount} absences</p>
         <p className="mt-1">
-          Your trust score is {trustScore}/100. One more no-show suspends your account from booking for 30 days. If you cannot come, please cancel in time so
-          someone else can play.
+          Votre score de confiance est de {trustScore}/100. Une absence de plus suspend votre compte des réservations pendant 30 jours. Si vous ne pouvez pas venir, annulez à temps afin
+          qu&apos;un autre joueur puisse jouer.
         </p>
       </div>
     </div>

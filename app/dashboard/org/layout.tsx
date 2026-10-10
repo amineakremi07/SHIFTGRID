@@ -31,7 +31,7 @@ export default async function OrgDashboardLayout({ children }: { children: React
         <div className="mx-auto flex w-full max-w-[1920px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
           <div>
             <p className="text-xs uppercase tracking-wider text-[#f7f5f2]/70">
-              {ctx.role === 'org_admin' ? 'Owner' : 'Staff'} portal
+              {ctx.role === 'org_admin' ? 'Espace propriétaire' : 'Espace équipe'}
             </p>
             <h1 className="text-xl font-semibold tracking-tight">{ctx.orgName}</h1>
           </div>
@@ -42,7 +42,7 @@ export default async function OrgDashboardLayout({ children }: { children: React
             {ctx.orgStatus === 'approved' && <Notifications orgId={ctx.orgId} />}
             <form action="/logout" method="post">
               <button type="submit" className="text-sm text-[#f7f5f2]/80 underline-offset-4 hover:underline">
-                Sign out
+                Se déconnecter
               </button>
             </form>
           </div>
@@ -54,21 +54,21 @@ export default async function OrgDashboardLayout({ children }: { children: React
           <div role="status" className="rounded-xl bg-[#eae6df] px-6 py-10 text-center">
             <p className="text-lg font-semibold">
               {ctx.archived
-                ? 'This club has been closed'
+                ? 'Ce club a été fermé'
                 : ctx.orgStatus === 'pending'
-                  ? 'Your club is awaiting verification'
-                  : `Your club is ${ctx.orgStatus}`}
+                  ? 'Votre club est en attente de vérification'
+                  : `Votre club est ${ctx.orgStatus === 'suspended' ? 'suspendu' : ctx.orgStatus === 'rejected' ? 'refusé' : ctx.orgStatus}`}
             </p>
             <p className="mx-auto mt-1 max-w-[52ch] text-sm text-[#645757]">
               {ctx.archived
-                ? 'The club was archived, so it is no longer listed and cannot take bookings. Its booking history is kept. Contact support to have it reopened.'
+                ? 'Le club a été archivé : il n\'est plus listé et ne peut plus recevoir de réservations. Son historique de réservations est conservé. Contactez le support pour le rouvrir.'
                 : ctx.orgStatus === 'pending'
-                  ? 'A platform admin is reviewing your registration. Courts and bookings unlock once it is approved.'
-                  : 'Bookings and court management are unavailable. Please contact support.'}
+                  ? 'Un administrateur de la plateforme examine votre inscription. Les terrains et les réservations seront débloqués une fois celle-ci approuvée.'
+                  : 'Les réservations et la gestion des terrains sont indisponibles. Veuillez contacter le support.'}
             </p>
             {ctx.orgStatus === 'rejected' && ctx.rejectionReason && (
               <p className="mx-auto mt-3 max-w-[52ch] rounded-lg bg-[#f7f5f2] px-4 py-3 text-sm">
-                <span className="text-[#645757]">Reason: </span>
+                <span className="text-[#645757]">Motif : </span>
                 {ctx.rejectionReason}
               </p>
             )}

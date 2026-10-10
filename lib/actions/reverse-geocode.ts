@@ -26,7 +26,7 @@ export async function reverseGeocodeAction(latitude: number, longitude: number):
     !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
     latitude < latMin || latitude > latMax || longitude < lngMin || longitude > lngMax
   ) {
-    return { ok: false, reason: 'invalid', message: 'That spot is outside Tunisia.' }
+    return { ok: false, reason: 'invalid', message: 'Cet endroit est hors de Tunisie.' }
   }
 
   const limited = await actionRateLimit('lookup', auth.ctx.userId)
@@ -44,13 +44,13 @@ export async function reverseGeocodeAction(latitude: number, longitude: number):
         next: { revalidate: 60 * 60 * 24 },
       }
     )
-    if (res.status === 429) return { ok: false, reason: 'rate_limited', message: 'The address service is busy. Please try again in a moment.' }
-    if (!res.ok) return { ok: false, reason: 'unavailable', message: 'The address service is not available right now.' }
+    if (res.status === 429) return { ok: false, reason: 'rate_limited', message: 'Le service d\'adresses est occupé. Veuillez réessayer dans un instant.' }
+    if (!res.ok) return { ok: false, reason: 'unavailable', message: 'Le service d\'adresses n\'est pas disponible pour le moment.' }
 
     const formatted = formatReverseAddress(await res.json())
-    if (!formatted) return { ok: false, reason: 'not_found', message: 'No street address was found at that spot.' }
+    if (!formatted) return { ok: false, reason: 'not_found', message: 'Aucune adresse postale n\'a été trouvée à cet endroit.' }
     return { ok: true, ...formatted }
   } catch {
-    return { ok: false, reason: 'unavailable', message: 'The address service did not answer.' }
+    return { ok: false, reason: 'unavailable', message: 'Le service d\'adresses n\'a pas répondu.' }
   }
 }

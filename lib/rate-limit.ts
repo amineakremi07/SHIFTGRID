@@ -24,20 +24,20 @@ export type RateRule = 'auth' | 'booking' | 'guest_ip' | 'cron' | 'lookup' | 'ap
 /** requests per window (seconds), per key. */
 export const RATE_RULES: Record<RateRule, { max: number; windowSec: number; label: string }> = {
   /** Sign-in, sign-up, invite acceptance: brute force and account spam. Per IP. */
-  auth: { max: 5, windowSec: 60, label: 'sign-in attempts' },
+  auth: { max: 5, windowSec: 60, label: 'tentatives de connexion' },
   /** Creating bookings / paying shares: slot hogging. Per user, else per IP. */
-  booking: { max: 10, windowSec: 60, label: 'booking requests' },
+  booking: { max: 10, windowSec: 60, label: 'demandes de réservation' },
   /**
    * Guest bookings, per IP only: the backstop for the per-(phone + IP) `booking` bucket, which a caller can
    * dodge by changing phone numbers. Looser than `booking` so a shared mobile-carrier address (CGNAT) is not locked out.
    */
-  guest_ip: { max: 30, windowSec: 60, label: 'booking requests from this network' },
+  guest_ip: { max: 30, windowSec: 60, label: 'demandes de réservation depuis ce réseau' },
   /** The scheduler endpoint, checked before its secret so the secret cannot be guessed at speed. */
-  cron: { max: 10, windowSec: 60, label: 'cron calls' },
+  cron: { max: 10, windowSec: 60, label: 'appels cron' },
   /** Unauthenticated lookups that reach third parties or the database (geocoding, registry check). */
-  lookup: { max: 20, windowSec: 60, label: 'lookups' },
+  lookup: { max: 20, windowSec: 60, label: 'recherches' },
   /** Everything else under /api. */
-  api: { max: 60, windowSec: 60, label: 'API requests' },
+  api: { max: 60, windowSec: 60, label: 'requêtes API' },
 }
 
 /** A max / window pair; an explicit one overrides the rule's default (per-API-key limits). */
@@ -200,7 +200,7 @@ export function tooManyRequests(result: RateResult, extraHeaders: Record<string,
 
 export function retryMessage(rule: RateRule, result: RateResult): string {
   const s = result.retryAfter
-  return `Too many ${RATE_RULES[rule].label}. Please wait ${s} second${s === 1 ? '' : 's'} and try again.`
+  return `Trop de ${RATE_RULES[rule].label}. Veuillez patienter ${s} seconde${s === 1 ? '' : 's'} puis réessayer.`
 }
 
 /**

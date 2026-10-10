@@ -4,21 +4,23 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { BarChart3, CalendarDays, LayoutGrid, Settings, ShieldCheck, Users } from 'lucide-react'
 
+import { t } from '@/lib/i18n/messages'
+import type { MessageKey } from '@/lib/i18n/messages'
 import { cn } from '@/lib/utils'
 
-const ITEMS = [
-  { href: '/dashboard/org/bookings', label: 'Bookings', icon: CalendarDays, ownerOnly: false },
-  { href: '/dashboard/org/analytics', label: 'Analytics', icon: BarChart3, ownerOnly: true },
-  { href: '/dashboard/org/courts', label: 'Courts', icon: LayoutGrid, ownerOnly: true },
-  { href: '/dashboard/org/settings', label: 'Settings', icon: Settings, ownerOnly: true },
-  { href: '/dashboard/org/staff', label: 'Team', icon: Users, ownerOnly: true },
-  { href: '/dashboard/org/settings/security', label: 'Security', icon: ShieldCheck, ownerOnly: false },
+const ITEMS: { href: string; label: MessageKey; icon: typeof Users; ownerOnly: boolean }[] = [
+  { href: '/dashboard/org/bookings', label: 'dash.bookings', icon: CalendarDays, ownerOnly: false },
+  { href: '/dashboard/org/analytics', label: 'dash.analytics', icon: BarChart3, ownerOnly: true },
+  { href: '/dashboard/org/courts', label: 'dash.courts', icon: LayoutGrid, ownerOnly: true },
+  { href: '/dashboard/org/settings', label: 'dash.settings', icon: Settings, ownerOnly: true },
+  { href: '/dashboard/org/staff', label: 'dash.team', icon: Users, ownerOnly: true },
+  { href: '/dashboard/org/settings/security', label: 'dash.security', icon: ShieldCheck, ownerOnly: false },
 ]
 
 export function OrgNav({ role }: { role: 'org_admin' | 'staff' }) {
   const pathname = usePathname()
   return (
-    <nav aria-label="Club dashboard" className="flex gap-1 overflow-x-auto">
+    <nav aria-label={t('dash.nav')} className="flex gap-1 overflow-x-auto">
       {ITEMS.filter((i) => !i.ownerOnly || role === 'org_admin').map(({ href, label, icon: Icon }) => {
         const active = pathname === href
         return (
@@ -34,7 +36,7 @@ export function OrgNav({ role }: { role: 'org_admin' | 'staff' }) {
             )}
           >
             <Icon className="size-4" aria-hidden />
-            {label}
+            {t(label)}
           </Link>
         )
       })}

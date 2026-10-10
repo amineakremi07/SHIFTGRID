@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 /** The request time. A function, so the render body itself stays pure. */
 const readClock = () => Date.now()
 
-export const metadata = { title: 'My reservations' }
+export const metadata = { title: 'Mes réservations' }
 
 export default async function ReservationsPage() {
   const supabase = await createClient()
@@ -47,14 +47,14 @@ export default async function ReservationsPage() {
     return (
       <Shell>
         <div role="alert" className="rounded-xl bg-card px-6 py-10 text-center text-sm">
-          We couldn&apos;t load your reservations. Please refresh in a moment.
+          Impossible de charger vos réservations. Veuillez actualiser la page dans un instant.
         </div>
       </Shell>
     )
   }
 
   const courtName = new Map((courtsRes.data ?? []).map((c) => [c.id, c.name]))
-  const clubName = profile?.organizations?.name ?? 'Your club'
+  const clubName = profile?.organizations?.name ?? 'Votre club'
   const now = readClock()
 
   const all: Reservation[] = (bookingsRes.data ?? []).map((b) => {
@@ -63,7 +63,7 @@ export default async function ReservationsPage() {
     return {
       id: b.id,
       clubName,
-      courtName: (b.court_id && courtName.get(b.court_id)) || 'Court',
+      courtName: (b.court_id && courtName.get(b.court_id)) || 'Terrain',
       sport: b.sport as Sport,
       startsAt: b.starts_at,
       endsAt: b.ends_at,
@@ -90,13 +90,13 @@ export default async function ReservationsPage() {
       />
       <section aria-labelledby="upcoming-heading" className="space-y-3">
         <h2 id="upcoming-heading" className="text-lg font-semibold">
-          Upcoming
+          À venir
         </h2>
         {upcoming.length === 0 ? (
           <div className="rounded-xl bg-card px-6 py-10 text-center">
-            <p className="font-medium">No upcoming bookings</p>
+            <p className="font-medium">Aucune réservation à venir</p>
             <Link href={profile?.org_id ? `/courts/${profile.org_id}` : '/'} className="mt-2 inline-block text-sm underline-offset-4 hover:underline">
-              Book a court
+              Réserver un terrain
             </Link>
           </div>
         ) : (
@@ -111,7 +111,7 @@ export default async function ReservationsPage() {
       {history.length > 0 && (
         <section aria-labelledby="history-heading" className="mt-10 space-y-3">
           <h2 id="history-heading" className="text-lg font-semibold">
-            Past and cancelled
+            Passées et annulées
           </h2>
           <ul className="space-y-3">
             {history.map((r) => (
@@ -132,9 +132,9 @@ function Shell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto max-w-3xl">
         <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" aria-hidden />
-          Home
+          Accueil
         </Link>
-        <h1 className="mb-8 mt-4 text-3xl font-semibold tracking-tight">My reservations</h1>
+        <h1 className="mb-8 mt-4 text-3xl font-semibold tracking-tight">Mes réservations</h1>
         {children}
       </div>
     </main>

@@ -9,7 +9,7 @@ import { formatTND, onlinePaymentMode } from '@/lib/payments'
 /** The link is a secret: never cached, indexed, or leaked through the referrer. */
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Pay your share',
+  title: 'Payer votre part',
   robots: { index: false, follow: false },
   referrer: 'no-referrer',
 }
@@ -30,12 +30,12 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
   if (!invite) {
     return (
       <Shell>
-        <h1 className="text-xl font-semibold">This payment link is not valid</h1>
+        <h1 className="text-xl font-semibold">Ce lien de paiement n&apos;est pas valide</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          It may have been replaced by a newer one. Ask the person who booked to send it again.
+          Il a peut-être été remplacé par un plus récent. Demandez à la personne qui a réservé de vous le renvoyer.
         </p>
         <Link href="/" className="mt-4 inline-block text-sm underline underline-offset-4">
-          Back to ShiftGrid
+          Retour à ShiftGrid
         </Link>
       </Shell>
     )
@@ -47,7 +47,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
 
   return (
     <Shell>
-      <p className="text-xs uppercase tracking-wider text-muted-foreground">You are invited to play</p>
+      <p className="text-xs uppercase tracking-wider text-muted-foreground">Vous êtes invité à jouer</p>
       <h1 className="mt-1 text-xl font-semibold">{invite.clubName}</h1>
       <p className="text-sm capitalize text-muted-foreground">
         {invite.courtName} · {invite.sport}
@@ -55,19 +55,19 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
 
       <dl className="mt-4 space-y-2 text-sm">
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">When</dt>
+          <dt className="text-muted-foreground">Quand</dt>
           <dd className="font-medium tabular-nums">
             {day}, {formatVenueTime(invite.startsAt)} – {formatVenueTime(invite.endsAt)}
           </dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Your share</dt>
+          <dt className="text-muted-foreground">Votre part</dt>
           <dd className="font-semibold tabular-nums">{formatTND(invite.amount)}</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Paid so far</dt>
+          <dt className="text-muted-foreground">Déjà payé</dt>
           <dd className="tabular-nums">
-            {invite.paidCount} of {invite.totalShares} players
+            {invite.paidCount} joueur{invite.paidCount > 1 ? 's' : ''} sur {invite.totalShares}
           </dd>
         </div>
       </dl>
@@ -75,11 +75,11 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
       <div className="mt-6">
         {closed ? (
           <p role="status" className="rounded-lg bg-muted p-3 text-sm">
-            This booking was cancelled, so there is nothing to pay.
+            Cette réservation a été annulée : il n&apos;y a rien à payer.
           </p>
         ) : paid ? (
           <p role="status" className="rounded-lg bg-success/10 p-3 text-sm text-success">
-            This share is already paid. See you on court!
+            Cette part est déjà payée. À bientôt sur le terrain !
           </p>
         ) : (
           <JoinPayForm token={token as string} amount={invite.amount} onlineMode={onlinePaymentMode()} />

@@ -12,21 +12,21 @@ export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as
 export type WeekdayKey = (typeof WEEKDAY_KEYS)[number]
 
 export const WEEKDAY_LABELS: Record<WeekdayKey, string> = {
-  mon: 'Monday',
-  tue: 'Tuesday',
-  wed: 'Wednesday',
-  thu: 'Thursday',
-  fri: 'Friday',
-  sat: 'Saturday',
-  sun: 'Sunday',
+  mon: 'Lundi',
+  tue: 'Mardi',
+  wed: 'Mercredi',
+  thu: 'Jeudi',
+  fri: 'Vendredi',
+  sat: 'Samedi',
+  sun: 'Dimanche',
 }
 
-const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM (24h)')
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Utilisez le format HH:MM (24 h)')
 
 export const dayHoursSchema = z
   .object({ open: z.boolean(), from: hhmm, to: hhmm })
   .refine((d) => !d.open || d.from !== d.to, {
-    message: 'Opening and closing time must differ',
+    message: 'L\'heure d\'ouverture et de fermeture doivent être différentes',
     path: ['to'],
   })
 

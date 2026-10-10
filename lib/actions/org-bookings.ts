@@ -17,7 +17,7 @@ export type NoShowResult = ActionResult<{ message: string }>
  */
 export async function markNoShowAction(bookingId: string): Promise<NoShowResult> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId)) {
-    return actionFail('Invalid booking.')
+    return actionFail('Réservation invalide.')
   }
   const auth = await requireOrgAction(['org_admin', 'staff'])
   if (!auth.ok) return actionFail(auth.message)
@@ -29,7 +29,7 @@ export async function markNoShowAction(bookingId: string): Promise<NoShowResult>
   revalidatePath('/dashboard/org/analytics')
   revalidatePath('/reservations')
 
-  if (!result.isMember) return actionOk({ message: 'Marked as a no-show.' })
-  const base = `Marked as a no-show. Trust score is now ${result.trustScore}, with ${result.noShowCount} no-show${result.noShowCount === 1 ? '' : 's'}.`
+  if (!result.isMember) return actionOk({ message: 'Marquée comme absence.' })
+  const base = `Marquée comme absence. Le score de confiance est désormais de ${result.trustScore}, avec ${result.noShowCount} absence${result.noShowCount === 1 ? '' : 's'}.`
   return actionOk({ message: result.suspendedUntil ? `${base} The player is suspended from booking for 30 days.` : base })
 }

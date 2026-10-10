@@ -67,7 +67,7 @@ export async function saveClubProfile(input: ClubProfileInput): Promise<ProfileR
   if (!parsed.success) {
     const fieldErrors: Record<string, string | undefined> = {}
     for (const [key, messages] of Object.entries(parsed.error.flatten().fieldErrors)) fieldErrors[key] = messages?.[0]
-    return { ok: false, message: 'Please fix the highlighted fields.', fieldErrors }
+    return { ok: false, message: 'Veuillez corriger les champs signalés.', fieldErrors }
   }
   const p = parsed.data
 
@@ -86,7 +86,7 @@ export async function saveClubProfile(input: ClubProfileInput): Promise<ProfileR
   if (error) {
     console.error('saveClubProfile failed', { code: error.code, message: error.message })
     reportServerError('club-profile.save', new Error(`saveClubProfile failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
-    return fail('Could not save the profile. Please try again.')
+    return fail('Impossible d\'enregistrer le profil. Veuillez réessayer.')
   }
 
   refresh(auth.ctx.orgId)
@@ -105,16 +105,16 @@ export async function createGalleryUploadUrls(
   const limited = await actionRateLimit('lookup', auth.ctx.userId)
   if (limited) return fail(limited)
 
-  if (!Array.isArray(files) || files.length === 0 || files.length > GALLERY_MAX) return fail(`Choose between 1 and ${GALLERY_MAX} photos.`)
+  if (!Array.isArray(files) || files.length === 0 || files.length > GALLERY_MAX) return fail(`Choisissez entre 1 et ${GALLERY_MAX} photos.`)
   for (const file of files) {
     const problem = validateGalleryFile(file)
     if (problem) return fail(problem)
   }
 
   const existing = await currentGallery(auth.ctx.orgId)
-  if (existing === null) return fail('Could not load your gallery. Please try again.')
+  if (existing === null) return fail('Impossible de charger votre galerie. Veuillez réessayer.')
   if (existing.length + files.length > GALLERY_MAX) {
-    return fail(`The gallery holds up to ${GALLERY_MAX} photos. You have ${existing.length}, so you can add ${Math.max(0, GALLERY_MAX - existing.length)} more.`)
+    return fail(`La galerie contient jusqu\'à ${GALLERY_MAX} photos. Vous en avez ${existing.length}, vous pouvez donc en ajouter ${Math.max(0, GALLERY_MAX - existing.length)}.`)
   }
 
   const storage = getSupabaseAdmin().storage.from(GALLERY_BUCKET)
@@ -126,7 +126,7 @@ export async function createGalleryUploadUrls(
     if (error || !data) {
       console.error('createSignedUploadUrl failed', error?.message)
       reportServerError('club-profile.upload-url', new Error('createSignedUploadUrl failed'))
-      return fail('Could not prepare the upload. Please try again.')
+      return fail('Impossible de préparer le téléversement. Veuillez réessayer.')
     }
     tickets.push({ path, token: data.token, type })
   }
@@ -140,25 +140,25 @@ export async function addGalleryImages(paths: string[]): Promise<GalleryResult> 
   const orgId = auth.ctx.orgId
 
   if (!Array.isArray(paths) || paths.length === 0 || paths.length > GALLERY_MAX || new Set(paths).size !== paths.length) {
-    return fail('Invalid upload.')
+    return fail('Téléversement invalide.')
   }
-  if (!paths.every((p) => typeof p === 'string' && isOwnGalleryPath(p, orgId))) return fail('Invalid upload.')
+  if (!paths.every((p) => typeof p === 'string' && isOwnGalleryPath(p, orgId))) return fail('Téléversement invalide.')
 
   const admin = getSupabaseAdmin()
   const storage = admin.storage.from(GALLERY_BUCKET)
 
   const checks = await Promise.all(paths.map((p) => storage.exists(p)))
-  if (checks.some((c) => c.error || !c.data)) return fail('One of the photos did not finish uploading. Please try again.')
+  if (checks.some((c) => c.error || !c.data)) return fail('Une des photos n\'a pas fini d\'être téléversée. Veuillez réessayer.')
 
   const existing = await currentGallery(orgId)
-  if (existing === null) return fail('Could not load your gallery. Please try again.')
+  if (existing === null) return fail('Impossible de charger votre galerie. Veuillez réessayer.')
 
   const prefix = galleryPublicPrefix(supabaseUrl(), orgId)
   const added = paths.map((p) => `${prefix}${p.slice(orgId.length + 1)}`)
   const next = [...existing, ...added.filter((u) => !existing.includes(u))]
   if (next.length > GALLERY_MAX) {
     await storage.remove(paths) // do not leave files nobody can see or delete
-    return fail(`The gallery holds up to ${GALLERY_MAX} photos.`)
+    return fail(`La galerie contient jusqu\'à ${GALLERY_MAX} photos.`)
   }
 
   const { error } = await admin.from('organizations').update({ gallery_urls: next }).eq('id', orgId)
@@ -166,7 +166,7 @@ export async function addGalleryImages(paths: string[]): Promise<GalleryResult> 
     console.error('addGalleryImages failed', { code: error.code, message: error.message })
     reportServerError('club-profile.gallery-add', new Error(`addGalleryImages failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
     await storage.remove(paths)
-    return fail('Could not save the photos. Please try again.')
+    return fail('Impossible d\'enregistrer les photos. Veuillez réessayer.')
   }
 
   refresh(orgId)
@@ -184,18 +184,18 @@ export async function saveGallery(orderedUrls: string[]): Promise<GalleryResult>
   const orgId = auth.ctx.orgId
 
   if (!Array.isArray(orderedUrls) || orderedUrls.length > GALLERY_MAX || new Set(orderedUrls).size !== orderedUrls.length) {
-    return fail('Invalid photo list.')
+    return fail('Liste de photos invalide.')
   }
   const existing = await currentGallery(orgId)
-  if (existing === null) return fail('Could not load your gallery. Please try again.')
-  if (!orderedUrls.every((u) => existing.includes(u))) return fail('Your gallery changed in another window. Reload the page and try again.')
+  if (existing === null) return fail('Impossible de charger votre galerie. Veuillez réessayer.')
+  if (!orderedUrls.every((u) => existing.includes(u))) return fail('Votre galerie a changé dans une autre fenêtre. Rechargez la page et réessayez.')
 
   const admin = getSupabaseAdmin()
   const { error } = await admin.from('organizations').update({ gallery_urls: orderedUrls }).eq('id', orgId)
   if (error) {
     console.error('saveGallery failed', { code: error.code, message: error.message })
     reportServerError('club-profile.gallery-save', new Error(`saveGallery failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
-    return fail('Could not save the gallery. Please try again.')
+    return fail('Impossible d\'enregistrer la galerie. Veuillez réessayer.')
   }
 
   const removed = existing

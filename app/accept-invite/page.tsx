@@ -40,9 +40,9 @@ function AcceptInviteContent() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (name.trim().length < 2) return setError('Please enter your name')
-    if (password.length < 8) return setError('Password must be at least 8 characters')
-    if (password !== confirm) return setError('Passwords do not match')
+    if (name.trim().length < 2) return setError('Veuillez saisir votre nom')
+    if (password.length < 8) return setError('Le mot de passe doit contenir au moins 8 caractères')
+    if (password !== confirm) return setError('Les mots de passe ne correspondent pas')
 
     setSubmitting(true)
     const result = await acceptStaffInvite({ token, displayName: name, password })
@@ -76,15 +76,15 @@ function AcceptInviteContent() {
 
         {preview === null ? (
           <div role="status" className="flex items-center justify-center gap-2 rounded-xl bg-[#eae6df] py-12 text-sm">
-            <Loader2 className="size-4 animate-spin" aria-hidden /> Checking your invitation
+            <Loader2 className="size-4 animate-spin" aria-hidden /> Vérification de votre invitation
           </div>
         ) : !preview.ok ? (
           <div role="alert" className="rounded-xl bg-[#eae6df] px-6 py-10 text-center">
             <AlertCircle className="mx-auto mb-3 size-8 text-destructive" aria-hidden />
-            <p className="font-semibold">Invitation unavailable</p>
+            <p className="font-semibold">Invitation indisponible</p>
             <p className="mt-1 text-sm text-[#645757]">{preview.message}</p>
             <Link href="/login-owner" className="mt-4 inline-block text-sm underline-offset-4 hover:underline">
-              Go to login
+              Aller à la connexion
             </Link>
           </div>
         ) : (
@@ -92,7 +92,7 @@ function AcceptInviteContent() {
             <div>
               <h1 className="text-xl font-semibold">Join {preview.clubName}</h1>
               <p className="mt-1 text-sm text-[#645757]">
-                You were invited as staff. Choose a name and a password for <strong>{preview.email}</strong>.
+                Vous avez été invité comme membre de l&apos;équipe. Choisissez un nom et un mot de passe pour <strong>{preview.email}</strong>.
               </p>
             </div>
 
@@ -103,11 +103,11 @@ function AcceptInviteContent() {
             )}
 
             <div className="grid gap-1.5">
-              <Label htmlFor="name">Your name</Label>
+              <Label htmlFor="name">Votre nom</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" disabled={submitting} />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Mot de passe</Label>
               <Input
                 id="password"
                 type="password"
@@ -118,7 +118,7 @@ function AcceptInviteContent() {
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="confirm">Confirm password</Label>
+              <Label htmlFor="confirm">Confirmer le mot de passe</Label>
               <Input
                 id="confirm"
                 type="password"
@@ -131,7 +131,7 @@ function AcceptInviteContent() {
 
             <Button type="submit" disabled={submitting} className="h-10 w-full bg-[#1d3023] text-[#f7f5f2] hover:bg-[#1d3023]/90">
               {submitting && <Loader2 className="animate-spin" aria-hidden />}
-              Create account and join
+              Créer le compte et rejoindre
             </Button>
           </form>
         )}

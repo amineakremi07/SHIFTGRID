@@ -55,13 +55,12 @@ export function formatVenueTime(instant: Date | string): string {
   }).format(at)
 }
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const WEEKDAYS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.']
+const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 
 /**
- * "Tue 29 Sep 2026" for a venue date string. Built by hand rather than with Intl
- * so the text is identical across ICU versions and browsers (Intl varies on the
- * comma and on "Sep" vs "Sept").
+ * "mar. 29 sept. 2026" for a venue date string. Built by hand rather than with Intl
+ * so the text is identical across ICU versions and browsers.
  */
 export function formatVenueDate(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number)

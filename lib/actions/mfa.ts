@@ -29,7 +29,7 @@ export async function checkMFAStatus(): Promise<MfaStatus> {
   if (!user) return { ok: true, signedIn: false }
 
   const { data: aal, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-  if (error) return { ok: false, message: 'Could not read your security status.' }
+  if (error) return { ok: false, message: 'Impossible de lire votre état de sécurité.' }
 
   // `user.factors` came from the auth server (getUser), unlike the copy in the session cookie.
   const verified = (user.factors ?? []).filter((f) => f.factor_type === 'totp' && f.status === 'verified')
@@ -54,7 +54,7 @@ export async function enrollMFA(): Promise<EnrollResult> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { ok: false, message: 'Please sign in again.' }
+  if (!user) return { ok: false, message: 'Veuillez vous reconnecter.' }
 
   const limited = await actionRateLimit('auth', user.id)
   if (limited) return { ok: false, message: limited }
@@ -71,7 +71,7 @@ export async function enrollMFA(): Promise<EnrollResult> {
   })
   if (error || !data) {
     console.error('mfa enroll failed', error?.message)
-    return { ok: false, message: 'Could not start two-factor setup. Please try again.' }
+    return { ok: false, message: 'Impossible de démarrer la configuration à deux facteurs. Veuillez réessayer.' }
   }
   return { ok: true, factorId: data.id, uri: data.totp.uri, secret: data.totp.secret }
 }
@@ -88,23 +88,23 @@ const factorIdSchema = z.string().uuid()
 export async function verifyMFA(factorId: string, code: string): Promise<VerifyResult> {
   const id = factorIdSchema.safeParse(factorId)
   const digits = normaliseTotp(code)
-  if (!id.success || !digits) return { ok: false, message: 'Enter the 6-digit code from your authenticator app.' }
+  if (!id.success || !digits) return { ok: false, message: 'Saisissez le code à 6 chiffres de votre application d\'authentification.' }
 
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { ok: false, message: 'Please sign in again.' }
+  if (!user) return { ok: false, message: 'Veuillez vous reconnecter.' }
 
   // Six digits can be guessed: count attempts per account.
   const limited = await actionRateLimit('auth', user.id)
   if (limited) return { ok: false, message: limited }
 
   const challenge = await supabase.auth.mfa.challenge({ factorId: id.data })
-  if (challenge.error || !challenge.data) return { ok: false, message: 'Could not check that code. Please try again.' }
+  if (challenge.error || !challenge.data) return { ok: false, message: 'Impossible de vérifier ce code. Veuillez réessayer.' }
 
   const { error } = await supabase.auth.mfa.verify({ factorId: id.data, challengeId: challenge.data.id, code: digits })
-  if (error) return { ok: false, message: 'That code is not right or has expired. Wait for the next one and try again.' }
+  if (error) return { ok: false, message: 'Ce code est incorrect ou a expiré. Attendez le suivant et réessayez.' }
 
   captureAudit({ action: 'mfa.verify', status: 'verified' })
   return { ok: true }
@@ -113,16 +113,16 @@ export async function verifyMFA(factorId: string, code: string): Promise<VerifyR
 /** Remove an authenticator. Supabase only allows it from an aal2 session, so a stolen password cannot do it. */
 export async function disableMFA(factorId: string): Promise<VerifyResult> {
   const id = factorIdSchema.safeParse(factorId)
-  if (!id.success) return { ok: false, message: 'Invalid authenticator.' }
+  if (!id.success) return { ok: false, message: 'Authentificateur invalide.' }
 
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { ok: false, message: 'Please sign in again.' }
+  if (!user) return { ok: false, message: 'Veuillez vous reconnecter.' }
 
   const { error } = await supabase.auth.mfa.unenroll({ factorId: id.data })
-  if (error) return { ok: false, message: 'Could not remove it. Confirm a code from the authenticator first, then try again.' }
+  if (error) return { ok: false, message: 'Impossible de le retirer. Confirmez d\'abord un code de l\'authentificateur, puis réessayez.' }
 
   captureAudit({ action: 'mfa.disable', status: 'removed' })
   return { ok: true }

@@ -47,9 +47,9 @@ export function splitShares(total: number, count: number): { organizer: number; 
 }
 
 export const CHOICE_LABEL: Record<PaymentChoice, string> = {
-  online_full: 'Pay in full online',
-  split: 'Split with your players',
-  cash: 'Pay at the venue',
+  online_full: 'Tout payer en ligne',
+  split: 'Partager avec vos joueurs',
+  cash: 'Payer sur place',
 }
 
 /** Site-relative link for a friend to pay their share. The client prefixes its origin. */

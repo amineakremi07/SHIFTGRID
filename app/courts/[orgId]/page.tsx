@@ -50,7 +50,7 @@ async function loadMember(orgId: string): Promise<{ member: BookingDrawerMember;
   return {
     userId: user.id,
     member: {
-      displayName: profile?.display_name ?? user.email ?? 'Your account',
+      displayName: profile?.display_name ?? user.email ?? 'Votre compte',
       email: user.email ?? null,
       phone: profile?.phone ?? null,
       role: profile?.role ?? 'unknown',
@@ -184,14 +184,14 @@ export default async function ClubPage({
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        All clubs
+        Tous les clubs
       </Link>
 
       <header className="mb-8 mt-4">
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{org.name}</h1>
         <p className="mt-2 flex items-center gap-1.5 text-muted-foreground">
           <MapPin className="size-4 shrink-0" aria-hidden />
-          {displayAddress(org.address, org.city) || 'Tunisia'}
+          {displayAddress(org.address, org.city) || 'Tunisie'}
         </p>
       </header>
 
@@ -202,7 +202,7 @@ export default async function ClubPage({
             {org.description && (
               <section aria-labelledby="club-about-heading" className="space-y-2">
                 <h2 id="club-about-heading" className="text-lg font-semibold">
-                  About
+                  À propos
                 </h2>
                 <p className="max-w-[68ch] whitespace-pre-line leading-relaxed text-muted-foreground" data-testid="club-bio">
                   {org.description}
@@ -218,21 +218,21 @@ export default async function ClubPage({
 
       {loadFailed ? (
         <div role="alert" className="rounded-xl bg-card px-6 py-12 text-center">
-          <p className="text-lg font-semibold">We couldn&apos;t load availability right now</p>
+          <p className="text-lg font-semibold">Impossible de charger les disponibilités pour le moment</p>
           <p className="mx-auto mt-1 max-w-[46ch] text-sm text-muted-foreground">
-            Please refresh in a moment. Slots are not shown, so you can&apos;t book one by mistake.
+            Veuillez actualiser la page dans un instant. Les créneaux ne sont pas affichés, afin que vous ne puissiez pas en réserver un par erreur.
           </p>
         </div>
       ) : matrixCourts.length === 0 ? (
         <div className="rounded-xl bg-card px-6 py-12 text-center">
-          <p className="text-lg font-semibold">No courts are open for booking yet</p>
+          <p className="text-lg font-semibold">Aucun terrain n&apos;est encore ouvert à la réservation</p>
           <p className="mx-auto mt-1 max-w-[46ch] text-sm text-muted-foreground">
-            This club hasn&apos;t set up its courts. Check back soon.
+            Ce club n&apos;a pas encore configuré ses terrains. Revenez bientôt.
           </p>
         </div>
       ) : (
         <ClubBookingView
-          closedNotice={closedToday ? `${org.name} is closed on ${WEEKDAY_LABELS[weekdayKey(day)]}s.` : null}
+          closedNotice={closedToday ? `${org.name} est fermé le ${WEEKDAY_LABELS[weekdayKey(day)].toLowerCase()}.` : null}
           orgId={org.id}
           orgName={org.name}
           orgAddress={[org.address, org.city].filter(Boolean).join(', ') || null}

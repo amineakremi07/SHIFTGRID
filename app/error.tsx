@@ -14,14 +14,14 @@ export default function RouteError({ error, reset }: { error: Error & { digest?:
 
   return (
     <div className="mx-auto flex min-h-[50vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
-      <h1 className="text-xl font-semibold">Something went wrong</h1>
+      <h1 className="text-xl font-semibold">Une erreur est survenue</h1>
       <p className="text-sm text-muted-foreground">
-        We have been notified. Please try again{error.digest ? ` (ref ${error.digest})` : ''}.
+        Nous avons été prévenus. Veuillez réessayer{error.digest ? ` (réf. ${error.digest})` : ''}.
       </p>
       <div className="flex gap-2">
-        <Button onClick={reset}>Try again</Button>
+        <Button onClick={reset}>Réessayer</Button>
         <Button asChild variant="outline">
-          <Link href="/">Home</Link>
+          <Link href="/">Accueil</Link>
         </Button>
       </div>
     </div>

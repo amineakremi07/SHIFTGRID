@@ -44,19 +44,19 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
     let picked = chosen
     if (picked.length === 0 || busy) return
     if (picked.length > room) {
-      toast.error(room > 0 ? `You can add ${room} more photo${room === 1 ? '' : 's'} (the gallery holds ${GALLERY_MAX}).` : `The gallery is full (${GALLERY_MAX} photos). Delete one first.`)
+      toast.error(room > 0 ? `Vous pouvez ajouter ${room} photo${room === 1 ? '' : 's'} de plus (la galerie en contient ${GALLERY_MAX}).` : `La galerie est pleine (${GALLERY_MAX} photos). Supprimez-en une d\'abord.`)
       return
     }
     // Type first (cheap), then shrink big phone photos in the browser, then check the 5 MB cap.
     for (const file of picked) {
       const problem = validateGalleryFile({ type: file.type, size: Math.min(file.size, 1), name: file.name })
       if (problem) return void toast.error(problem)
-      if (file.size > GALLERY_MAX_RAW_BYTES) return void toast.error(`${file.name} is too large (30 MB maximum).`)
+      if (file.size > GALLERY_MAX_RAW_BYTES) return void toast.error(`${file.name} est trop volumineux (30 Mo maximum).`)
     }
 
     setBusy('uploading')
     try {
-      setProgress('Optimising photos…')
+      setProgress('Optimisation des photos…')
       const files = await Promise.all(picked.map(prepareGalleryImage))
       for (const file of files) {
         const problem = validateGalleryFile(file)
@@ -64,7 +64,7 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
       }
       picked = files
 
-      setProgress('Preparing…')
+      setProgress('Préparation…')
       const prepared = await createGalleryUploadUrls(picked.map((f) => ({ type: f.type, size: f.size, name: f.name })))
       if (!prepared.ok) return void toast.error(prepared.message)
 
@@ -74,21 +74,21 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
         setProgress(`Uploading ${i + 1} of ${picked.length}…`)
         const { error } = await storage.uploadToSignedUrl(ticket.path, ticket.token, picked[i], { contentType: picked[i].type })
         if (error) {
-          toast.error(`Could not upload ${picked[i].name}. Please try again.`)
+          toast.error(`Impossible de téléverser ${picked[i].name}. Veuillez réessayer.`)
           break
         }
         uploaded.push(ticket.path)
       }
       if (uploaded.length === 0) return
 
-      setProgress('Saving…')
+      setProgress('Enregistrement…')
       const saved = await addGalleryImages(uploaded)
       if (!saved.ok) return void toast.error(saved.message)
       setUrls(saved.urls)
-      toast.success(`${uploaded.length} photo${uploaded.length === 1 ? '' : 's'} added`)
+      toast.success(`${uploaded.length} photo${uploaded.length === 1 ? ' ajoutée' : 's ajoutées'}`)
       router.refresh()
     } catch {
-      toast.error('The upload failed. Please check your connection and try again.')
+      toast.error('Le téléversement a échoué. Vérifiez votre connexion et réessayez.')
     } finally {
       setBusy(null)
       setProgress('')
@@ -123,7 +123,7 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
 
   const confirmDelete = async () => {
     if (!toDelete) return
-    const ok = await commit(urls.filter((u) => u !== toDelete), 'Photo deleted')
+    const ok = await commit(urls.filter((u) => u !== toDelete), 'Photo supprimée')
     if (ok) setToDelete(null)
   }
 
@@ -131,7 +131,7 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm text-[#645757]">
-          Up to {GALLERY_MAX} photos (JPG, PNG or WebP, 5 MB each). The first photo is the cover players see first.
+          Jusqu&apos;à {GALLERY_MAX} photos (JPG, PNG ou WebP, 5 Mo chacune). La première photo est la couverture que les joueurs voient en premier.
         </p>
         <span className="text-sm font-medium tabular-nums" data-testid="gallery-count">
           {urls.length} / {GALLERY_MAX}
@@ -157,8 +157,8 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
         )}
       >
         {busy === 'uploading' ? <Loader2 className="size-6 animate-spin" aria-hidden /> : <ImagePlus className="size-6" aria-hidden />}
-        <span className="font-medium">{busy === 'uploading' ? progress : 'Drop photos here or click to choose several'}</span>
-        <span className="text-xs text-[#645757]">{room > 0 ? `${room} more allowed` : 'The gallery is full'}</span>
+        <span className="font-medium">{busy === 'uploading' ? progress : 'Déposez des photos ici ou cliquez pour en choisir plusieurs'}</span>
+        <span className="text-xs text-[#645757]">{room > 0 ? `${room} de plus autorisée${room > 1 ? 's' : ''}` : 'La galerie est pleine'}</span>
         <input
           ref={inputRef}
           id="gallery-files"
@@ -172,16 +172,16 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
       </label>
 
       {urls.length === 0 ? (
-        <p className="rounded-lg bg-[#f7f5f2] px-4 py-6 text-center text-sm text-[#645757]">No photos yet. Clubs with photos get more bookings.</p>
+        <p className="rounded-lg bg-[#f7f5f2] px-4 py-6 text-center text-sm text-[#645757]">Pas encore de photos. Les clubs avec photos reçoivent plus de réservations.</p>
       ) : (
         <ul className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4', busy === 'saving' && 'opacity-70')} data-testid="gallery-grid">
           {urls.map((url, i) => (
             <li key={url} className="overflow-hidden rounded-lg bg-[#f7f5f2]" data-testid="gallery-item">
               <div className="relative aspect-[4/3]">
                 {/* Served straight from the storage CDN (photos are downscaled before upload), no image proxy in between. */}
-                <Image src={url} alt={`Gallery photo ${i + 1}`} fill unoptimized sizes="(min-width: 1024px) 220px, 45vw" className="object-cover" />
+                <Image src={url} alt={`Photo de la galerie ${i + 1}`} fill unoptimized sizes="(min-width: 1024px) 220px, 45vw" className="object-cover" />
                 {i === 0 && (
-                  <span className="absolute left-1.5 top-1.5 rounded-sm bg-[#1d3023] px-1.5 py-0.5 text-[11px] font-medium text-[#f7f5f2]">Cover</span>
+                  <span className="absolute left-1.5 top-1.5 rounded-sm bg-[#1d3023] px-1.5 py-0.5 text-[11px] font-medium text-[#f7f5f2]">Couverture</span>
                 )}
               </div>
               <div className="flex items-center justify-between gap-1 p-1.5">
@@ -190,7 +190,7 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
                     type="button"
                     variant="outline"
                     size="icon-sm"
-                    aria-label={`Move photo ${i + 1} earlier`}
+                    aria-label={`Déplacer la photo ${i + 1} plus tôt`}
                     disabled={i === 0 || busy !== null}
                     onClick={() => move(i, i - 1)}
                   >
@@ -200,7 +200,7 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
                     type="button"
                     variant="outline"
                     size="icon-sm"
-                    aria-label={`Move photo ${i + 1} later`}
+                    aria-label={`Déplacer la photo ${i + 1} plus tard`}
                     disabled={i === urls.length - 1 || busy !== null}
                     onClick={() => move(i, i + 1)}
                   >
@@ -208,14 +208,14 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
                   </Button>
                 </div>
                 <div className="flex gap-1">
-                  <Button type="button" variant="outline" size="icon-sm" aria-label={`Preview photo ${i + 1}`} onClick={() => setPreview(url)}>
+                  <Button type="button" variant="outline" size="icon-sm" aria-label={`Aperçu de la photo ${i + 1}`} onClick={() => setPreview(url)}>
                     <Eye aria-hidden />
                   </Button>
                   <Button
                     type="button"
                     variant="destructive"
                     size="icon-sm"
-                    aria-label={`Delete photo ${i + 1}`}
+                    aria-label={`Supprimer la photo ${i + 1}`}
                     disabled={busy !== null}
                     onClick={() => setToDelete(url)}
                   >
@@ -231,12 +231,12 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
       <Dialog open={preview !== null} onOpenChange={(o) => !o && setPreview(null)}>
         <DialogContent className="bg-[#eae6df] sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Photo preview</DialogTitle>
-            <DialogDescription>This is how the photo looks on your public page.</DialogDescription>
+            <DialogTitle>Aperçu de la photo</DialogTitle>
+            <DialogDescription>Voici l&apos;aspect de la photo sur votre page publique.</DialogDescription>
           </DialogHeader>
           {preview && (
             <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-black/5">
-              <Image src={preview} alt="Gallery photo preview" fill unoptimized sizes="(min-width: 768px) 700px, 95vw" className="object-contain" />
+              <Image src={preview} alt="Aperçu de la photo de la galerie" fill unoptimized sizes="(min-width: 768px) 700px, 95vw" className="object-contain" />
             </div>
           )}
         </DialogContent>
@@ -245,16 +245,16 @@ export function GalleryManager({ initialUrls }: { initialUrls: string[] }) {
       <Dialog open={toDelete !== null} onOpenChange={(o) => !o && busy === null && setToDelete(null)}>
         <DialogContent className="bg-[#eae6df] sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete this photo?</DialogTitle>
-            <DialogDescription>It disappears from your public page and is deleted for good.</DialogDescription>
+            <DialogTitle>Supprimer cette photo ?</DialogTitle>
+            <DialogDescription>Elle disparaît de votre page publique et est supprimée définitivement.</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setToDelete(null)} disabled={busy !== null}>
-              Keep it
+              La conserver
             </Button>
             <Button variant="destructive" onClick={confirmDelete} disabled={busy !== null}>
               {busy === 'saving' && <Loader2 className="animate-spin" aria-hidden />}
-              Delete photo
+              Supprimer la photo
             </Button>
           </DialogFooter>
         </DialogContent>

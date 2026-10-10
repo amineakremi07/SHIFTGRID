@@ -20,15 +20,20 @@ export function BrandMark({
   imageClassName = 'h-9 sm:h-10',
   href = '/',
   tone = 'light',
+  asStatic = false,
 }: {
   className?: string
   /** Sets the logo height (the width follows from the ratio). */
   imageClassName?: string
   href?: string
   tone?: 'light' | 'dark'
+  /** Render the logo without its own link, for placing inside another link. */
+  asStatic?: boolean
 }) {
+  const Wrapper = asStatic ? 'span' : Link
+  const wrapperProps = asStatic ? {} : { href, prefetch: true }
   return (
-    <Link href={href} prefetch className={cn('inline-flex items-center', className)}>
+    <Wrapper {...(wrapperProps as { href: string })} className={cn('inline-flex items-center', className)}>
       <span className={cn('relative block aspect-[2.7/1]', imageClassName)}>
         <Image
           src={tone === 'dark' ? '/logo-dark.svg' : '/logo.svg'}
@@ -40,6 +45,6 @@ export function BrandMark({
           className="object-cover"
         />
       </span>
-    </Link>
+    </Wrapper>
   )
 }

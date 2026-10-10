@@ -24,7 +24,7 @@ export async function saveCourt(courtId: string | null, input: CourtFormInput): 
 
   const parsed = courtFormSchema.safeParse(input)
   if (!parsed.success) {
-    return actionFailFromZod('Please fix the highlighted fields.', parsed.error)
+    return actionFailFromZod('Veuillez corriger les champs signalés.', parsed.error)
   }
   const v = parsed.data
   const supabase = await createClient()
@@ -48,14 +48,14 @@ export async function saveCourt(courtId: string | null, input: CourtFormInput): 
       .select('id')
     if (error) {
       console.error('saveCourt update failed', { code: error.code, message: error.message })
-      return actionFail('Could not save the court. Please try again.')
+      return actionFail('Impossible d\'enregistrer le terrain. Veuillez réessayer.')
     }
-    if (!data?.length) return actionFail('That court no longer exists.')
+    if (!data?.length) return actionFail('Ce terrain n\'existe plus.')
   } else {
     const { error } = await supabase.from('courts').insert({ ...fields, org_id: auth.ctx.orgId })
     if (error) {
       console.error('saveCourt insert failed', { code: error.code, message: error.message })
-      return actionFail('Could not add the court. Please try again.')
+      return actionFail('Impossible d\'ajouter le terrain. Veuillez réessayer.')
     }
   }
 
@@ -68,7 +68,7 @@ export async function saveCourt(courtId: string | null, input: CourtFormInput): 
 export async function setCourtStatus(courtId: string, status: 'active' | 'maintenance'): Promise<CourtActionResult> {
   const auth = await requireOrgAction(['org_admin'])
   if (!auth.ok) return actionFail(auth.message)
-  if (status !== 'active' && status !== 'maintenance') return actionFail('Invalid status.')
+  if (status !== 'active' && status !== 'maintenance') return actionFail('Statut invalide.')
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -79,9 +79,9 @@ export async function setCourtStatus(courtId: string, status: 'active' | 'mainte
     .select('id')
   if (error) {
     console.error('setCourtStatus failed', { code: error.code, message: error.message })
-    return actionFail('Could not update the court. Please try again.')
+    return actionFail('Impossible de mettre à jour le terrain. Veuillez réessayer.')
   }
-  if (!data?.length) return actionFail('That court no longer exists.')
+  if (!data?.length) return actionFail('Ce terrain n\'existe plus.')
 
   captureAudit({ action: 'court.set_status', status, court_id: courtId, org_id: auth.ctx.orgId, actor: 'org_admin' })
   revalidatePath('/dashboard/org/courts')
@@ -99,7 +99,7 @@ export async function setCourtStatus(courtId: string, status: 'active' | 'mainte
 export async function archiveCourtAction(courtId: string): Promise<CourtActionResult> {
   const auth = await requireOrgAction(['org_admin'])
   if (!auth.ok) return actionFail(auth.message)
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courtId)) return actionFail('Invalid court.')
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courtId)) return actionFail('Terrain invalide.')
 
   const { data, error } = await getSupabaseAdmin()
     .from('courts')
@@ -112,12 +112,12 @@ export async function archiveCourtAction(courtId: string): Promise<CourtActionRe
     const upcoming = error.message.match(/has_upcoming_bookings:(\d+)/)
     if (upcoming) {
       const n = Number(upcoming[1])
-      return actionFail(`This court has ${n} upcoming booking${n === 1 ? '' : 's'}. Cancel or move ${n === 1 ? 'it' : 'them'} first, then archive the court.`)
+      return actionFail(`Ce terrain a ${n} réservation${n === 1 ? '' : 's'} à venir. Annulez-${n === 1 ? 'la' : 'les'} ou déplacez-${n === 1 ? 'la' : 'les'} d\'abord, puis archivez le terrain.`)
     }
     console.error('archiveCourt failed', { code: error.code, message: error.message })
-    return actionFail('Could not archive the court. Please try again.')
+    return actionFail('Impossible d\'archiver le terrain. Veuillez réessayer.')
   }
-  if (!data?.length) return actionFail('That court no longer exists.')
+  if (!data?.length) return actionFail('Ce terrain n\'existe plus.')
 
   captureAudit({ action: 'court.archive', status: 'archived', court_id: courtId, org_id: auth.ctx.orgId, actor: 'org_admin' })
   revalidatePath('/dashboard/org/courts')
@@ -132,7 +132,7 @@ export async function archiveCourtAction(courtId: string): Promise<CourtActionRe
 export async function restoreCourtAction(courtId: string): Promise<CourtActionResult> {
   const auth = await requireOrgAction(['org_admin'])
   if (!auth.ok) return actionFail(auth.message)
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courtId)) return actionFail('Invalid court.')
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courtId)) return actionFail('Terrain invalide.')
 
   const { data, error } = await getSupabaseAdmin()
     .from('courts')
@@ -143,9 +143,9 @@ export async function restoreCourtAction(courtId: string): Promise<CourtActionRe
     .select('id')
   if (error) {
     console.error('restoreCourt failed', { code: error.code, message: error.message })
-    return actionFail('Could not restore the court. Please try again.')
+    return actionFail('Impossible de restaurer le terrain. Veuillez réessayer.')
   }
-  if (!data?.length) return actionFail('That court is not archived.')
+  if (!data?.length) return actionFail('Ce terrain n\'est pas archivé.')
 
   captureAudit({ action: 'court.restore', status: 'active', court_id: courtId, org_id: auth.ctx.orgId, actor: 'org_admin' })
 

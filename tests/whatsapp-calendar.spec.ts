@@ -59,7 +59,7 @@ test.describe('calendar', () => {
   test('google link carries the UTC times, title and location', () => {
     const u = new URL(googleCalendarUrl(event))
     expect(u.searchParams.get('dates')).toBe('20301103T170000Z/20301103T183000Z')
-    expect(u.searchParams.get('text')).toBe('Padel at Padel, Club; Tunis')
+    expect(u.searchParams.get('text')).toBe('Padel à Padel, Club; Tunis')
     expect(u.searchParams.get('location')).toContain('29 Avenue du Ghana')
   })
 
@@ -69,7 +69,7 @@ test.describe('calendar', () => {
     expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true)
     expect(ics).toContain('DTSTART:20301103T170000Z')
     expect(ics).toContain('DTEND:20301103T183000Z')
-    expect(ics).toContain('SUMMARY:Padel at Padel' + String.fromCharCode(92) + ', Club' + String.fromCharCode(92) + '; Tunis')
+    expect(ics).toContain('SUMMARY:Padel à Padel' + String.fromCharCode(92) + ', Club' + String.fromCharCode(92) + '; Tunis')
     expect(ics).toContain('UID:b1b2c3d4-0000-4000-8000-000000000001@shiftgrid')
     for (const line of ics.split('\r\n')) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75)
   })

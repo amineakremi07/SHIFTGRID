@@ -16,7 +16,7 @@ export default async function OrgSecurityPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Security</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Sécurité</h1>
       <MfaSetup factors={factors} />
     </div>
   )

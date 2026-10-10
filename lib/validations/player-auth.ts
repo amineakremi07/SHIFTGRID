@@ -16,28 +16,28 @@ export const tunisianPhoneRegex = /^(\+?216\s?|00216\s?)?[234579]\d{1}[\s.-]?\d{
 /** Required consent to the Terms and Privacy Policy. Checked on the server, not just in the form. */
 export const termsConsentSchema = z
   .boolean()
-  .refine((v) => v === true, 'You must accept the Terms of Service and Privacy Policy to continue')
+  .refine((v) => v === true, 'Vous devez accepter les conditions d\'utilisation et la politique de confidentialité pour continuer')
 
 export const playerSignInSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('Veuillez saisir une adresse e-mail valide'),
+  password: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
   rememberMe: z.boolean().default(true),
 })
 
 export const playerSignUpSchema = z.object({
-  displayName: z.string().trim().min(2, 'Full name must be at least 2 characters').max(100).transform(stripHtml),
-  email: z.string().email('Please enter a valid email address'),
+  displayName: z.string().trim().min(2, 'Le nom complet doit contenir au moins 2 caractères').max(100).transform(stripHtml),
+  email: z.string().email('Veuillez saisir une adresse e-mail valide'),
   phone: guestPhoneSchema,
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  orgId: z.string().uuid('Invalid organization ID'),
+  password: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
+  orgId: z.string().uuid('Identifiant d\'organisation invalide'),
   rememberMe: z.boolean().default(true),
   acceptTerms: termsConsentSchema,
 })
 
 export const anonymousBookerSchema = z.object({
-  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100).transform(stripHtml),
+  name: z.string().trim().min(2, 'Le nom doit contenir au moins 2 caractères').max(100).transform(stripHtml),
   phone: guestPhoneSchema,
-  orgId: z.string().uuid('Invalid organization ID'),
+  orgId: z.string().uuid('Identifiant d\'organisation invalide'),
 })
 
 /**
@@ -45,15 +45,15 @@ export const anonymousBookerSchema = z.object({
  * profile is linked to exactly one organization (profiles.org_id is NOT NULL).
  */
 export const playerRegisterSchema = z.object({
-  fullName: z.string().trim().min(2, 'Please enter your full name').max(100, 'Name is too long').transform(stripHtml),
-  email: z.string().trim().toLowerCase().email('Please enter a valid email address'),
+  fullName: z.string().trim().min(2, 'Veuillez saisir votre nom complet').max(100, 'Le nom est trop long').transform(stripHtml),
+  email: z.string().trim().toLowerCase().email('Veuillez saisir une adresse e-mail valide'),
   phone: guestPhoneSchema,
   // 72 is bcrypt's byte limit: longer passwords would be silently truncated.
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(72, 'Password must be at most 72 characters'),
-  orgId: z.string().uuid('Please choose your club'),
+    .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+    .max(72, 'Le mot de passe ne doit pas dépasser 72 caractères'),
+  orgId: z.string().uuid('Veuillez choisir votre club'),
   acceptTerms: termsConsentSchema,
 })
 

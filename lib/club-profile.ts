@@ -26,18 +26,18 @@ const blankToNull = (value: unknown) => (typeof value === 'string' && value.trim
 
 export const clubProfileSchema = z
   .object({
-    name: z.string().trim().min(2, 'Enter the club name (2 characters minimum)').max(100, 'The name is too long (100 characters maximum)').transform(stripHtml),
-    description: z.preprocess(blankToNull, z.string().trim().max(BIO_MAX, `The bio is limited to ${BIO_MAX} characters`).transform(stripHtml).nullable()),
-    address: z.preprocess(blankToNull, z.string().trim().max(200, 'The address is too long (200 characters maximum)').transform(stripHtml).nullable()),
-    city: z.preprocess(blankToNull, z.string().trim().max(80, 'The city name is too long').transform(stripHtml).nullable()),
+    name: z.string().trim().min(2, 'Saisissez le nom du club (2 caractères minimum)').max(100, 'Le nom est trop long (100 caractères maximum)').transform(stripHtml),
+    description: z.preprocess(blankToNull, z.string().trim().max(BIO_MAX, `La présentation est limitée à ${BIO_MAX} caractères`).transform(stripHtml).nullable()),
+    address: z.preprocess(blankToNull, z.string().trim().max(200, 'L\'adresse est trop longue (200 caractères maximum)').transform(stripHtml).nullable()),
+    city: z.preprocess(blankToNull, z.string().trim().max(80, 'Le nom de la ville est trop long').transform(stripHtml).nullable()),
     /** Stored as digits in international form (216XXXXXXXX); typed with spaces, +216 or 8 local digits. */
     whatsappNumber: z
-      .preprocess((v) => (v === undefined ? null : blankToNull(v)), z.string().trim().max(30, 'That number is too long').nullable())
+      .preprocess((v) => (v === undefined ? null : blankToNull(v)), z.string().trim().max(30, 'Ce numéro est trop long').nullable())
       .transform((value, ctx) => {
         if (value === null) return null
         const normalized = normalizeWhatsapp(value)
         if (!normalized) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter a valid number, e.g. +216 98 123 456' })
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Saisissez un numéro valide, ex. : +216 98 123 456' })
           return z.NEVER
         }
         return normalized
@@ -48,13 +48,13 @@ export const clubProfileSchema = z
   .strict()
   .superRefine((v, ctx) => {
     if ((v.latitude === null) !== (v.longitude === null)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['latitude'], message: 'Place the pin on the map (latitude and longitude go together)' })
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['latitude'], message: 'Placez le repère sur la carte (latitude et longitude vont ensemble)' })
       return
     }
     if (v.latitude === null || v.longitude === null) return
     const { latMin, latMax, lngMin, lngMax } = TUNISIA_BOUNDS
     if (v.latitude < latMin || v.latitude > latMax || v.longitude < lngMin || v.longitude > lngMax) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['latitude'], message: 'That location is outside Tunisia. Move the pin to your club.' })
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['latitude'], message: 'Cet emplacement est hors de Tunisie. Déplacez le repère vers votre club.' })
     }
   })
 
@@ -63,9 +63,9 @@ export type ClubProfile = z.output<typeof clubProfileSchema>
 
 /** Client-side check of one chosen file, with the same limits as the bucket. */
 export function validateGalleryFile(file: { type: string; size: number; name?: string }): string | null {
-  if (!(file.type in GALLERY_TYPES)) return `${file.name ?? 'This file'} is not a JPG, PNG or WebP image.`
-  if (file.size > GALLERY_MAX_BYTES) return `${file.name ?? 'This file'} is larger than 5 MB.`
-  if (file.size === 0) return `${file.name ?? 'This file'} is empty.`
+  if (!(file.type in GALLERY_TYPES)) return `${file.name ?? 'Ce fichier'} n'est pas une image JPG, PNG ou WebP.`
+  if (file.size > GALLERY_MAX_BYTES) return `${file.name ?? 'Ce fichier'} dépasse 5 Mo.`
+  if (file.size === 0) return `${file.name ?? 'Ce fichier'} est vide.`
   return null
 }
 

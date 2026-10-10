@@ -31,11 +31,11 @@ export function JoinPayForm({ token, amount, onlineMode }: { token: string; amou
         <span className="flex size-12 items-center justify-center rounded-full bg-success/10 text-success">
           <Check className="size-6" aria-hidden />
         </span>
-        <h2 className="text-lg font-semibold">Your share is paid</h2>
+        <h2 className="text-lg font-semibold">Votre part est payée</h2>
         <p className="text-sm text-muted-foreground">
           {done.confirmed
-            ? 'Everyone has paid, so the booking is confirmed. See you on court!'
-            : 'The booking is confirmed once every player has paid. See you on court!'}
+            ? 'Tout le monde a payé : la réservation est confirmée. À bientôt sur le terrain !'
+            : 'La réservation est confirmée dès que chaque joueur a payé. À bientôt sur le terrain !'}
         </p>
       </div>
     )
@@ -44,7 +44,7 @@ export function JoinPayForm({ token, amount, onlineMode }: { token: string; amou
   if (onlineMode === 'disabled') {
     return (
       <p role="alert" className="rounded-lg bg-accent p-3 text-sm text-accent-foreground">
-        Online payment is not available yet. Please pay the organizer or the club directly.
+        Le paiement en ligne n&apos;est pas encore disponible. Veuillez payer directement l&apos;organisateur ou le club.
       </p>
     )
   }
@@ -52,14 +52,14 @@ export function JoinPayForm({ token, amount, onlineMode }: { token: string; amou
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="payer-name">Your name (optional)</Label>
+        <Label htmlFor="payer-name">Votre nom (facultatif)</Label>
         <Input id="payer-name" autoComplete="name" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
       </div>
       {onlineMode === 'test' && (
         <p className="flex items-start gap-2 rounded-lg bg-accent p-3 text-xs text-accent-foreground">
           <FlaskConical className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           <span>
-            <strong>Test mode:</strong> no real payment gateway is connected, so no money is charged.
+            <strong>Mode test :</strong> aucune passerelle de paiement réelle n&apos;est connectée, aucun argent n&apos;est débité.
           </span>
         </p>
       )}
@@ -70,7 +70,7 @@ export function JoinPayForm({ token, amount, onlineMode }: { token: string; amou
       )}
       <Button className="h-11 w-full" onClick={pay} disabled={busy}>
         {busy && <Loader2 className="animate-spin" aria-hidden />}
-        Pay {formatTND(amount)}
+        Payer {formatTND(amount)}
       </Button>
     </div>
   )

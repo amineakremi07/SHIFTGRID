@@ -61,14 +61,14 @@ export async function createManualBooking(...args: Parameters<typeof createManua
 async function createManualBookingImpl(orgId: string, rawInput: unknown): Promise<ManualBookingSuccess | ManualBookingFailure> {
   const parsed = manualBookingSchema.safeParse(rawInput)
   if (!parsed.success) {
-    return fail(400, 'invalid_input', 'Please check the details and try again.', parsed.error.flatten().fieldErrors)
+    return fail(400, 'invalid_input', 'Veuillez vérifier les informations et réessayer.', parsed.error.flatten().fieldErrors)
   }
   const data = parsed.data
   const admin = getSupabaseAdmin()
 
   // The court must belong to the caller's club; another club's court looks like a missing one.
   const { data: court } = await admin.from('courts').select('id, org_id, sport, name').eq('id', data.court_id).maybeSingle()
-  if (!court || court.org_id !== orgId) return fail(404, 'court_not_found', 'Court not found.')
+  if (!court || court.org_id !== orgId) return fail(404, 'court_not_found', 'Terrain introuvable.')
 
   const startsAt = data.starts_at ?? venueInstant(data.date, timeToMinutes(data.start_time!)).toISOString()
   const options = PLAYER_COUNT_OPTIONS[court.sport as Sport] as readonly number[] | undefined
@@ -99,13 +99,13 @@ async function createManualBookingImpl(orgId: string, rawInput: unknown): Promis
     // 23P01 (overlapping lock) or 23505 on the lock's primary key (identical start): the slot is gone.
     if (error.code === '23P01' || (error.code === '23505' && error.message.includes('court_slot_locks'))) {
       captureRateLimit({ route: 'booking.manual', limit: 1, remaining: 0, source: 'slot_lock' })
-      return fail(409, 'slot_taken', 'Slot already booked')
+      return fail(409, 'slot_taken', 'Ce créneau est déjà réservé')
     }
-    if (error.message.includes('slot_in_past')) return fail(422, 'slot_in_past', 'That time has already started. Pick a later slot.')
-    if (error.message.includes('guest_details_required')) return fail(400, 'invalid_input', 'Please enter the customer name.')
+    if (error.message.includes('slot_in_past')) return fail(422, 'slot_in_past', 'Cet horaire a déjà commencé. Choisissez un créneau plus tardif.')
+    if (error.message.includes('guest_details_required')) return fail(400, 'invalid_input', 'Veuillez saisir le nom du client.')
     console.error('manual booking failed', { code: error.code, message: error.message })
     reportServerError('booking.manual', new Error(`create_booking failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
-    return fail(500, 'unknown', 'Could not create the booking. Please try again.')
+    return fail(500, 'unknown', 'Impossible de créer la réservation. Veuillez réessayer.')
   }
 
   const row = booked as {

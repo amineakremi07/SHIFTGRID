@@ -73,11 +73,11 @@ export type BoardBooking = {
 }
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
-  confirmed: 'Confirmed',
-  pending_payment: 'Pending',
-  cancelled: 'Cancelled',
-  completed: 'Checked in',
-  no_show: 'No-show',
+  confirmed: 'Confirmée',
+  pending_payment: 'En attente',
+  cancelled: 'Annulée',
+  completed: 'Arrivée enregistrée',
+  no_show: 'Absence',
 }
 const STATUS_VARIANT: Record<BookingStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
   confirmed: 'success',
@@ -197,14 +197,14 @@ export function BookingsBoard({
   )
   const shownCourtIds = new Set(shownCourts.map((c) => c.id))
   const shownCancelled = cancelled.filter((b) => sportFilter === 'all' || (b.courtId && shownCourtIds.has(b.courtId)))
-  const courtName = (id: string | null) => courts.find((c) => c.id === id)?.name ?? 'Removed court'
+  const courtName = (id: string | null) => courts.find((c) => c.id === id)?.name ?? 'Terrain supprimé'
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Daily schedule</h2>
-          <p className="text-sm text-[#645757]">Tap a free slot, or use Add Manual Booking, for a desk or phone customer.</p>
+          <h2 className="text-2xl font-semibold tracking-tight">Planning du jour</h2>
+          <p className="text-sm text-[#645757]">Touchez un créneau libre, ou utilisez Ajouter une réservation manuelle, pour un client au guichet ou au téléphone.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -214,31 +214,31 @@ export function BookingsBoard({
             }}
             className="bg-[#1d3023] text-[#f7f5f2] hover:bg-[#1d3023]/90"
           >
-            <PhoneCall aria-hidden /> Add Manual Booking
+            <PhoneCall aria-hidden /> Ajouter une réservation manuelle
           </Button>
           <Button variant="outline" onClick={() => setCheckInOpen(true)}>
-            <ScanLine aria-hidden /> Check-in player
+            <ScanLine aria-hidden /> Enregistrer une arrivée
           </Button>
           <DayPicker dateStr={dateStr} minDate={minDate} maxDate={maxDate} onChange={changeDate} pending={pending} />
         </div>
       </div>
 
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Confirmed" value={String(open.filter((b) => b.status === 'confirmed').length)} />
-        <Stat label="Pending" value={String(open.filter((b) => b.status === 'pending_payment').length)} />
-        <Stat label="Cancelled" value={String(cancelled.length)} />
-        <Stat label="Expected revenue" value={tnd(revenue)} />
+        <Stat label="Confirmées" value={String(open.filter((b) => b.status === 'confirmed').length)} />
+        <Stat label="En attente" value={String(open.filter((b) => b.status === 'pending_payment').length)} />
+        <Stat label="Annulées" value={String(cancelled.length)} />
+        <Stat label="Revenu attendu" value={tnd(revenue)} />
       </dl>
 
       <div className={cn('space-y-6 transition-opacity', pending && 'opacity-60')} aria-busy={pending}>
         {courts.length === 0 ? (
           <div className="rounded-xl bg-[#eae6df] px-6 py-12 text-center">
-            <p className="text-lg font-semibold">No courts yet</p>
-            <p className="mt-1 text-sm text-[#645757]">Add courts under Courts to start taking bookings.</p>
+            <p className="text-lg font-semibold">Aucun terrain pour le moment</p>
+            <p className="mt-1 text-sm text-[#645757]">Ajoutez des terrains dans Terrains pour commencer à recevoir des réservations.</p>
           </div>
         ) : (
           <>
-          <div role="group" aria-label="Filter courts by sport" className="flex flex-wrap gap-2">
+          <div role="group" aria-label="Filtrer les terrains par sport" className="flex flex-wrap gap-2">
             {SPORT_FILTERS.map((sport) => {
               const count = sport === 'all' ? courts.length : courts.filter((c) => c.sport === sport).length
               const active = sportFilter === sport
@@ -256,14 +256,14 @@ export function BookingsBoard({
                       : 'border-[#d7d2cc] bg-[#f7f5f2] text-[#2a1a1d] hover:border-[#1d3023]'
                   )}
                 >
-                  {sport === 'all' ? 'All' : sport}
+                  {sport === 'all' ? 'Tous' : sport}
                   <span className={cn('ml-1.5 text-xs tabular-nums', active ? 'text-[#f7f5f2]/70' : 'text-[#645757]')}>{count}</span>
                 </button>
               )
             })}
           </div>
           {shownCourts.length === 0 && (
-            <p className="rounded-xl bg-[#eae6df] px-6 py-8 text-center text-sm text-[#645757]">No {sportFilter} courts at this club.</p>
+            <p className="rounded-xl bg-[#eae6df] px-6 py-8 text-center text-sm text-[#645757]">Aucun terrain de {sportFilter} dans ce club.</p>
           )}
           <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5">
             {shownCourts.map((court) => (
@@ -288,7 +288,7 @@ export function BookingsBoard({
         {shownCancelled.length > 0 && (
           <section aria-labelledby="cancelled-heading" className="rounded-xl bg-[#eae6df] p-5">
             <h3 id="cancelled-heading" className="text-sm font-semibold">
-              Cancelled ({shownCancelled.length})
+              Annulées ({shownCancelled.length})
             </h3>
             <ul className="mt-3 divide-y divide-[#d7d2cc] text-sm">
               {shownCancelled.map((b) => (
@@ -341,7 +341,7 @@ export function BookingsBoard({
       <CheckInDialog open={checkInOpen} onOpenChange={setCheckInOpen} />
 
       <span className="sr-only" aria-live="polite">
-        {today === dateStr ? 'Showing today' : `Showing ${dateStr}`}
+        {today === dateStr ? 'Affichage d\'aujourd\'hui' : `Affichage du ${dateStr}`}
       </span>
     </div>
   )
@@ -388,12 +388,12 @@ function CourtColumn({
             {court.sport} · {SPORT_DURATION_MIN[court.sport]} min
           </p>
         </div>
-        {court.archived && <Badge variant="secondary">Archived</Badge>}
+        {court.archived && <Badge variant="secondary">Archivé</Badge>}
         {!court.archived && court.status === 'maintenance' && <Badge variant="warning">Maintenance</Badge>}
       </header>
 
       {court.closed ? (
-        <p className="rounded-lg bg-[#f7f5f2] px-3 py-4 text-center text-sm text-[#645757]">Club closed this day</p>
+        <p className="rounded-lg bg-[#f7f5f2] px-3 py-4 text-center text-sm text-[#645757]">Club fermé ce jour-là</p>
       ) : (
         <ul className="space-y-2">
           {offGrid.map((b) => (
@@ -416,9 +416,9 @@ function CourtColumn({
                     {formatVenueTime(slot.start)}–{formatVenueTime(slot.end)}
                   </span>
                   <span className="inline-flex items-center gap-1 text-[#645757]">
-                    {slot.past ? 'Past' : court.status !== 'active' ? 'Unavailable' : (
+                    {slot.past ? 'Passé' : court.status !== 'active' ? 'Indisponible' : (
                       <>
-                        <Plus className="size-3.5" aria-hidden /> Walk-in
+                        <Plus className="size-3.5" aria-hidden /> Guichet
                       </>
                     )}
                   </span>
@@ -427,7 +427,7 @@ function CourtColumn({
             )
           })}
           {court.slots.length === 0 && offGrid.length === 0 && (
-            <li className="text-sm text-[#645757]">No slots this day.</li>
+            <li className="text-sm text-[#645757]">Aucun créneau ce jour-là.</li>
           )}
         </ul>
       )}
@@ -436,10 +436,10 @@ function CourtColumn({
 }
 
 function paymentLabel(b: BoardBooking): { text: string; paid: boolean } | null {
-  if (b.paymentStatus === 'paid') return { text: b.paymentProvider === 'cash' ? 'Paid in cash' : 'Paid online', paid: true }
-  if (b.paymentStatus === 'refunded') return { text: 'Refunded', paid: false }
+  if (b.paymentStatus === 'paid') return { text: b.paymentProvider === 'cash' ? 'Payé en espèces' : 'Payé en ligne', paid: true }
+  if (b.paymentStatus === 'refunded') return { text: 'Remboursé', paid: false }
   if (b.paymentStatus === 'pending') {
-    return { text: b.paymentProvider === 'cash' ? 'Cash due' : 'Awaiting shares', paid: false }
+    return { text: b.paymentProvider === 'cash' ? 'Espèces à encaisser' : 'Parts en attente', paid: false }
   }
   return null
 }
@@ -472,7 +472,7 @@ function BookingRow({
     const result = await postCheckIn(booking.id)
     setCheckingIn(false)
     if (!result.ok) toast.error(result.message)
-    else toast.success(`${result.booker} is checked in.${result.cashDue > 0 ? ` Collect ${result.cashDue.toFixed(2)} TND.` : ''}`)
+    else toast.success(`${result.booker} est enregistré.${result.cashDue > 0 ? ` Encaissez ${result.cashDue.toFixed(2)} TND.` : ''}`)
     router.refresh()
   }
   const payment = paymentLabel(booking)
@@ -489,7 +489,7 @@ function BookingRow({
       router.refresh()
       return
     }
-    toast.success('Payment recorded. The booking is confirmed.')
+    toast.success('Paiement enregistré. La réservation est confirmée.')
     router.refresh()
   }
 
@@ -513,7 +513,7 @@ function BookingRow({
       <p className="mt-1 flex items-center gap-1.5">
         {booking.isMember ? <User className="size-4 shrink-0" aria-hidden /> : <UserRound className="size-4 shrink-0" aria-hidden />}
         <span className="truncate text-base font-semibold" data-testid="booking-player-name">{booking.bookerName}</span>
-        <span className="shrink-0 text-xs text-[#645757]">· {booking.playerCount} players</span>
+        <span className="shrink-0 text-xs text-[#645757]">· {booking.playerCount} joueurs</span>
       </p>
       {booking.note && <p className="mt-1 truncate text-xs italic text-[#645757]" title={booking.note}>“{booking.note}”</p>}
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-[#645757]">
@@ -526,12 +526,12 @@ function BookingRow({
           )}
           <span className="font-mono">{booking.reference}</span>
           {booking.source !== 'online' && (
-            <span className="rounded-sm bg-[#1d3023] px-1.5 font-medium text-[#f7f5f2]">{booking.source === 'phone' ? 'Phone' : 'Walk-in'}</span>
+            <span className="rounded-sm bg-[#1d3023] px-1.5 font-medium text-[#f7f5f2]">{booking.source === 'phone' ? 'Téléphone' : 'Guichet'}</span>
           )}
-          {booking.checkedInAt && <span className="font-medium text-[#0e634f]">· in at {formatVenueTime(booking.checkedInAt)}</span>}
+          {booking.checkedInAt && <span className="font-medium text-[#0e634f]">· arrivé à {formatVenueTime(booking.checkedInAt)}</span>}
           {booking.noShowCount !== null && booking.noShowCount > 0 && (
-            <span className="rounded-sm bg-destructive/10 px-1 font-medium text-destructive" title="Member trust score and no-shows">
-              Trust {booking.trustScore} · {booking.noShowCount} no-show{booking.noShowCount === 1 ? '' : 's'}
+            <span className="rounded-sm bg-destructive/10 px-1 font-medium text-destructive" title="Score de confiance et absences du membre">
+              Confiance {booking.trustScore} · {booking.noShowCount} absence{booking.noShowCount === 1 ? '' : 's'}
             </span>
           )}
           {booking.amount !== null && <span>· {tnd(booking.amount)}</span>}
@@ -544,22 +544,22 @@ function BookingRow({
         <span className="inline-flex gap-1.5">
           {canCollect && (
             <Button variant="outline" size="xs" onClick={collect} disabled={collecting}>
-              {collecting ? <Loader2 className="animate-spin" aria-hidden /> : <Banknote aria-hidden />} Mark paid
+              {collecting ? <Loader2 className="animate-spin" aria-hidden /> : <Banknote aria-hidden />} Marquer payé
             </Button>
           )}
           {canCheckIn && (
             <Button variant="outline" size="xs" onClick={checkIn} disabled={checkingIn}>
-              {checkingIn ? <Loader2 className="animate-spin" aria-hidden /> : <CheckCircle2 aria-hidden />} Check in
+              {checkingIn ? <Loader2 className="animate-spin" aria-hidden /> : <CheckCircle2 aria-hidden />} Enregistrer l&apos;arrivée
             </Button>
           )}
           {canNoShow && (
             <Button variant="outline" size="xs" onClick={() => onNoShow(booking)}>
-              <UserX aria-hidden /> No-show
+              <UserX aria-hidden /> Absence
             </Button>
           )}
           {isOpen(booking) && (
             <Button variant="destructive" size="xs" onClick={() => onCancel(booking)}>
-              <X aria-hidden /> Cancel
+              <X aria-hidden /> Annuler
             </Button>
           )}
         </span>
@@ -590,7 +590,7 @@ function CancelDialog({
       onDone() // the booking may already be gone; show the real state
       return
     }
-    toast.success('Booking cancelled. The slot is free again.')
+    toast.success('Réservation annulée. Le créneau est de nouveau libre.')
     setReason('')
     onDone()
   }
@@ -599,30 +599,30 @@ function CancelDialog({
     <Dialog open={booking !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="bg-[#eae6df] sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Cancel this booking?</DialogTitle>
+          <DialogTitle>Annuler cette réservation ?</DialogTitle>
           <DialogDescription>
             {booking &&
-              `${booking.bookerName} · ${formatVenueTime(booking.startsAt)}–${formatVenueTime(booking.endsAt)} · ${booking.reference}. The slot becomes bookable again immediately.`}
+              `${booking.bookerName} · ${formatVenueTime(booking.startsAt)}–${formatVenueTime(booking.endsAt)} · ${booking.reference}. Le créneau redevient réservable immédiatement.`}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-1.5">
-          <Label htmlFor="cancel-reason">Reason (optional)</Label>
+          <Label htmlFor="cancel-reason">Motif (facultatif)</Label>
           <Textarea
             id="cancel-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
             maxLength={300}
-            placeholder="e.g. Customer called to cancel"
+            placeholder="ex. : le client a appelé pour annuler"
           />
         </div>
         <DialogFooter className="gap-2 sm:justify-end">
           <Button variant="outline" onClick={onClose}>
-            Keep booking
+            Conserver la réservation
           </Button>
           <Button variant="destructive" disabled={busy} onClick={confirm}>
             {busy && <Loader2 className="animate-spin" aria-hidden />}
-            Cancel booking
+            Annuler la réservation
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -655,22 +655,22 @@ function NoShowDialog({
     <Dialog open={booking !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="bg-[#eae6df] sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Mark as no-show?</DialogTitle>
+          <DialogTitle>Marquer comme absence ?</DialogTitle>
           <DialogDescription>
             {booking &&
               `${booking.bookerName} · ${formatVenueTime(booking.startsAt)}–${formatVenueTime(booking.endsAt)} · ${booking.reference}. `}
             {booking?.isMember
-              ? 'The player loses 30 trust points and gets a no-show on their record. A third no-show suspends their bookings for 30 days. This cannot be undone here.'
-              : 'This guest has no account, so only the booking is marked.'}
+              ? 'Le joueur perd 30 points de confiance et une absence est inscrite à son dossier. Une troisième absence suspend ses réservations pendant 30 jours. Cette action ne peut pas être annulée ici.'
+              : 'Cet invité n\'a pas de compte : seule la réservation est marquée.'}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:justify-end">
           <Button variant="outline" onClick={onClose}>
-            Keep booking
+            Conserver la réservation
           </Button>
           <Button variant="destructive" disabled={busy} onClick={confirm}>
             {busy && <Loader2 className="animate-spin" aria-hidden />}
-            Mark as no-show
+            Marquer comme absence
           </Button>
         </DialogFooter>
       </DialogContent>

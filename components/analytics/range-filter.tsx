@@ -4,6 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CalendarDays } from 'lucide-react'
+import { fr } from 'react-day-picker/locale'
 import type { DateRange as PickerRange } from 'react-day-picker'
 
 import { Button } from '@/components/ui/button'
@@ -53,7 +54,7 @@ export function RangeFilter({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <nav aria-label="Date range" className="flex flex-wrap gap-1 rounded-lg bg-[#eae6df] p-1">
+      <nav aria-label="Période" className="flex flex-wrap gap-1 rounded-lg bg-[#eae6df] p-1">
         {QUICK.map((key) => (
           <Link
             key={key}
@@ -79,12 +80,13 @@ export function RangeFilter({
         <PopoverTrigger asChild>
           <Button variant={preset === 'custom' ? 'secondary' : 'outline'} className="tabular-nums">
             <CalendarDays aria-hidden />
-            {preset === 'custom' ? `${formatVenueDate(from)} – ${formatVenueDate(to)}` : 'Custom range'}
+            {preset === 'custom' ? `${formatVenueDate(from)} – ${formatVenueDate(to)}` : 'Période personnalisée'}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-auto p-0">
           <Calendar
             mode="range"
+            locale={fr}
             numberOfMonths={2}
             selected={draft}
             defaultMonth={toCalendarDate(from)}
@@ -93,9 +95,9 @@ export function RangeFilter({
             disabled={{ after: toCalendarDate(today) }}
           />
           <div className="flex items-center justify-between gap-3 border-t border-[#d7d2cc] p-3">
-            <p className="text-xs text-[#645757]">Up to {MAX_RANGE_DAYS} days, ending no later than today.</p>
+            <p className="text-xs text-[#645757]">Jusqu&apos;à {MAX_RANGE_DAYS} jours, se terminant au plus tard aujourd&apos;hui.</p>
             <Button onClick={apply} disabled={!draft?.from}>
-              Apply
+              Appliquer
             </Button>
           </div>
         </PopoverContent>

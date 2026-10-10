@@ -178,8 +178,8 @@ function ManualBookingForm({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const found: Errors = {}
-    if (!court) found.court = 'Choose a court.'
-    if (!slot) found.start = 'Choose a free time.'
+    if (!court) found.court = 'Choisissez un terrain.'
+    if (!slot) found.start = 'Choisissez un horaire libre.'
 
     const payload = {
       court_id: courtId,
@@ -220,16 +220,16 @@ function ManualBookingForm({
 
       if (json?.success) {
         setCreated(json.data)
-        toast.success(`Booked. Reference ${json.data.reference}`)
+        toast.success(`Réservé. Référence ${json.data.reference}`)
         onBooked() // the schedule refreshes and the slot shows as taken
         return
       }
 
-      const message = json && !json.success && json.error ? json.error : 'Could not create the booking. Please try again.'
+      const message = json && !json.success && json.error ? json.error : 'Impossible de créer la réservation. Veuillez réessayer.'
       if (res.status === 409) {
         // Someone took it a moment ago: show the real state and let staff pick another time.
         setStart('')
-        setErrors({ start: `${message}. Pick another time.` })
+        setErrors({ start: `${message}. Choisissez un autre horaire.` })
         toast.error(message)
         onBooked()
         return
@@ -244,7 +244,7 @@ function ManualBookingForm({
       setErrors(Object.keys(server).length > 0 ? server : { form: message })
       toast.error(message)
     } catch {
-      const message = 'We could not reach the server. Please check your connection and try again.'
+      const message = 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.'
       setErrors({ form: message })
       toast.error(message)
     } finally {
@@ -257,29 +257,29 @@ function ManualBookingForm({
       <>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CheckCircle2 className="size-5 text-[#0e634f]" aria-hidden /> Booking created
+            <CheckCircle2 className="size-5 text-[#0e634f]" aria-hidden /> Réservation créée
           </DialogTitle>
           <DialogDescription>
             {created.court} · {formatVenueTime(created.starts_at)}–{formatVenueTime(created.ends_at)} ·{' '}
-            {created.payment_status === 'paid' ? `paid on site (${tnd(created.amount)})` : `${tnd(created.amount)} to pay at the venue`}
+            {created.payment_status === 'paid' ? `payé sur place (${tnd(created.amount)})` : `${tnd(created.amount)} à payer sur place`}
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-lg bg-[#f7f5f2] p-4 text-center" data-testid="manual-created">
-          <p className="text-xs uppercase tracking-wide text-[#645757]">Check-in code</p>
+          <p className="text-xs uppercase tracking-wide text-[#645757]">Code d&apos;arrivée</p>
           <p className="font-mono text-4xl font-bold tracking-[0.3em]" data-testid="manual-check-in-code">
             {created.check_in_code}
           </p>
           <p className="mt-2 text-sm text-[#645757]">
-            Reference <span className="font-mono">{created.reference}</span>. The customer shows this code at reception.
-            {created.email_queued ? ' It is also on its way to their email.' : ' Read it out to them: no email was given.'}
+            Référence <span className="font-mono">{created.reference}</span>. Le client présente ce code à l&apos;accueil.
+            {created.email_queued ? ' Il est aussi en route vers son e-mail.' : ' Lisez-le-lui : aucun e-mail n\'a été indiqué.'}
           </p>
         </div>
         <DialogFooter className="gap-2 sm:justify-end">
           <Button type="button" variant="outline" onClick={reset}>
-            Add another
+            Ajouter une autre
           </Button>
           <Button type="button" onClick={onClose} className="bg-[#1d3023] text-[#f7f5f2] hover:bg-[#1d3023]/90">
-            Done
+            Terminé
           </Button>
         </DialogFooter>
       </>
@@ -289,14 +289,14 @@ function ManualBookingForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Add manual booking</DialogTitle>
-        <DialogDescription>For a customer at the desk or on the phone. The slot is blocked for everyone straight away.</DialogDescription>
+        <DialogTitle>Ajouter une réservation manuelle</DialogTitle>
+        <DialogDescription>Pour un client au guichet ou au téléphone. Le créneau est bloqué immédiatement pour tout le monde.</DialogDescription>
       </DialogHeader>
 
       <form onSubmit={submit} className="grid gap-4" noValidate>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5">
-            <Label htmlFor="mb-court">Court</Label>
+            <Label htmlFor="mb-court">Terrain</Label>
             <Select
               value={courtId}
               onValueChange={(v) => {
@@ -306,7 +306,7 @@ function ManualBookingForm({
               }}
             >
               <SelectTrigger id="mb-court" className="w-full" aria-invalid={Boolean(errors.court)}>
-                <SelectValue placeholder={activeCourts.length ? 'Choose a court' : 'No active court'} />
+                <SelectValue placeholder={activeCourts.length ? 'Choisissez un terrain' : 'Aucun terrain actif'} />
               </SelectTrigger>
               <SelectContent>
                 {activeCourts.map((c) => (
@@ -340,10 +340,10 @@ function ManualBookingForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5">
-            <Label htmlFor="mb-start">Start time</Label>
+            <Label htmlFor="mb-start">Heure de début</Label>
             <Select value={slot ? slot.start : ''} onValueChange={setStart} disabled={!court || freeSlots.length === 0}>
               <SelectTrigger id="mb-start" className="w-full" aria-invalid={Boolean(errors.start)}>
-                <SelectValue placeholder={!court ? 'Choose a court first' : freeSlots.length === 0 ? 'No free time' : 'Choose a time'} />
+                <SelectValue placeholder={!court ? 'Choisissez d\'abord un terrain' : freeSlots.length === 0 ? 'Aucun horaire libre' : 'Choisissez un horaire'} />
               </SelectTrigger>
               <SelectContent>
                 {freeSlots.map((s) => (
@@ -356,13 +356,13 @@ function ManualBookingForm({
             {errors.start && <p role="alert" className="text-xs text-destructive">{errors.start}</p>}
             {court && (
               <p className="text-xs text-[#645757]">
-                {court.closed ? 'The club is closed this day.' : `Every ${court.sport} session lasts ${SPORT_DURATION_MIN[court.sport]} min (end time is automatic).`}
+                {court.closed ? 'Le club est fermé ce jour-là.' : `Chaque séance de ${court.sport} dure ${SPORT_DURATION_MIN[court.sport]} min (l\'heure de fin est automatique).`}
               </p>
             )}
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="mb-players">Players</Label>
+            <Label htmlFor="mb-players">Joueurs</Label>
             <Select value={playerCount} onValueChange={setPlayers} disabled={!court}>
               <SelectTrigger id="mb-players" className="w-full">
                 <SelectValue placeholder="—" />
@@ -379,14 +379,14 @@ function ManualBookingForm({
         </div>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="mb-name">Customer name</Label>
+          <Label htmlFor="mb-name">Nom du client</Label>
           <Input id="mb-name" value={name} onChange={(e) => setName(e.target.value)} error={Boolean(errors.name)} maxLength={100} autoComplete="off" />
           {errors.name && <p role="alert" className="text-xs text-destructive">{errors.name}</p>}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5">
-            <Label htmlFor="mb-phone">Phone (optional)</Label>
+            <Label htmlFor="mb-phone">Téléphone (facultatif)</Label>
             <Input
               id="mb-phone"
               inputMode="tel"
@@ -399,13 +399,13 @@ function ManualBookingForm({
             {errors.phone && <p role="alert" className="text-xs text-destructive">{errors.phone}</p>}
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="mb-email">Email (optional)</Label>
+            <Label htmlFor="mb-email">E-mail (facultatif)</Label>
             <Input
               id="mb-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="sends the check-in code"
+              placeholder="envoie le code d'arrivée"
               error={Boolean(errors.email)}
               autoComplete="off"
             />
@@ -414,11 +414,11 @@ function ManualBookingForm({
         </div>
 
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-sm font-medium">Payment</legend>
+          <legend className="mb-1 text-sm font-medium">Paiement</legend>
           {(
             [
-              ['pay_at_venue', 'Pay at venue', 'Stays pending until you press Mark paid.'],
-              ['paid_on_site', 'Paid on-site', 'Cash already collected: the booking is confirmed and paid.'],
+              ['pay_at_venue', 'Payer sur place', 'Reste en attente jusqu\'à ce que vous appuyiez sur Marquer payé.'],
+              ['paid_on_site', 'Payé sur place', 'Espèces déjà encaissées : la réservation est confirmée et payée.'],
             ] as const
           ).map(([value, label, hint]) => (
             <label
@@ -442,14 +442,14 @@ function ManualBookingForm({
         </fieldset>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="mb-notes">Notes (optional, staff only)</Label>
+          <Label htmlFor="mb-notes">Notes (facultatif, équipe uniquement)</Label>
           <Textarea
             id="mb-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             maxLength={300}
-            placeholder="e.g. Phone booking, Desk reservation"
+            placeholder="ex. : réservation téléphonique, réservation au guichet"
           />
           {errors.notes && <p role="alert" className="text-xs text-destructive">{errors.notes}</p>}
         </div>
@@ -459,8 +459,8 @@ function ManualBookingForm({
             <span className="font-semibold">{tnd(price.total)}</span>
             <span className="text-[#645757]">
               {' '}
-              {payment === 'paid_on_site' ? 'collected on site' : 'to pay at the venue'}
-              {price.surcharge > 0 && ` (incl. ${tnd(price.surcharge)} night lighting)`}
+              {payment === 'paid_on_site' ? 'encaissés sur place' : 'à payer sur place'}
+              {price.surcharge > 0 && ` (dont ${tnd(price.surcharge)} d\'éclairage de nuit)`}
             </span>
           </p>
         )}
@@ -469,11 +469,11 @@ function ManualBookingForm({
 
         <DialogFooter className="gap-2 sm:justify-end">
           <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
+            Annuler
           </Button>
           <Button type="submit" disabled={saving || datePending} className="bg-[#1d3023] text-[#f7f5f2] hover:bg-[#1d3023]/90">
             {saving ? <Loader2 className="animate-spin" aria-hidden /> : <PhoneCall aria-hidden />}
-            Confirm booking
+            Confirmer la réservation
           </Button>
         </DialogFooter>
       </form>

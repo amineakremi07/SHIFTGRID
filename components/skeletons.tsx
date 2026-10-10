@@ -41,7 +41,7 @@ function CardRow() {
 export function ReservationsSkeleton() {
   return (
     <main className={PAGE}>
-      <Busy label="Loading your reservations" className="mx-auto max-w-3xl">
+      <Busy label="Chargement de vos réservations" className="mx-auto max-w-3xl">
         <Skeleton className="h-4 w-16" />
         <h1 className="mb-8 mt-4 text-3xl font-semibold tracking-tight">My reservations</h1>
         <Skeleton className="mb-3 h-6 w-28" />
@@ -56,7 +56,7 @@ export function ReservationsSkeleton() {
 }
 
 /** /reservations/[id], /reservations/join, /reservations/cancel-guest: one card. */
-export function SingleCardSkeleton({ label = 'Loading' }: { label?: string }) {
+export function SingleCardSkeleton({ label = 'Chargement' }: { label?: string }) {
   return (
     <main className={PAGE}>
       <Busy label={label} className="mx-auto max-w-xl">
@@ -87,7 +87,7 @@ export function SingleCardSkeleton({ label = 'Loading' }: { label?: string }) {
 export function ClubListSkeleton() {
   return (
     <main className={PAGE}>
-      <Busy label="Loading clubs">
+      <Busy label="Chargement des clubs">
         <Skeleton className="h-9 w-56" />
         <Skeleton className="mt-3 h-4 w-80 max-w-full" />
         <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -108,7 +108,7 @@ export function ClubListSkeleton() {
 export function ClubPageSkeleton() {
   return (
     <main className={PAGE}>
-      <Busy label="Loading availability">
+      <Busy label="Chargement des disponibilités">
         <Skeleton className="h-4 w-20" />
         <Skeleton className="mt-4 h-9 w-72 max-w-full" />
         <Skeleton className="mt-3 h-4 w-64 max-w-full" />
@@ -135,7 +135,7 @@ export function ClubPageSkeleton() {
 /** Club dashboard pages (inside the org layout, which already draws the header). */
 export function DashboardSkeleton() {
   return (
-    <Busy label="Loading">
+    <Busy label="Chargement">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
           <Skeleton className="h-8 w-48" />
@@ -156,7 +156,7 @@ export function DashboardSkeleton() {
 /** Platform admin pages. */
 export function AdminSkeleton() {
   return (
-    <Busy label="Loading">
+    <Busy label="Chargement">
       <Skeleton className="h-8 w-56" />
       <Skeleton className="mt-3 h-4 w-80 max-w-full" />
       <div className="mt-8 space-y-3">

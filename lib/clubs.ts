@@ -201,13 +201,6 @@ export function formatTND(amount: number): string {
   return `${Number.isInteger(amount) ? amount : amount.toFixed(2)} TND`
 }
 
-/** "4 Padel Courts • 2 Tennis Courts" */
-export function formatCourtCounts(club: Club): string {
-  return club.sports
-    .map((s) => `${s.courts} ${SPORT_LABEL[s.sport]} ${s.courts === 1 ? 'Court' : 'Courts'}`)
-    .join(' • ')
-}
-
 /**
  * The cheapest slot to headline on a card. With a sport filter active it is that
  * sport's price, otherwise the cheapest across all sports. Null when no price is set.

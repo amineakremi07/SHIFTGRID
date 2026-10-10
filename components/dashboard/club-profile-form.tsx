@@ -92,36 +92,36 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
     if (id !== lookupId.current) return // a later pin move owns the field now
     setLookingUp(false)
     if (!result.ok) {
-      setAddressNote(`${result.message} Type the address yourself: the pin is still saved with your changes.`)
+      setAddressNote(`${result.message} Saisissez l\'adresse vous-même : le repère est tout de même enregistré avec vos modifications.`)
       return
     }
     if (typedWhileLookingUp.current) {
-      setAddressNote('You edited the address while it was being looked up, so it was left as you typed it.')
+      setAddressNote('Vous avez modifié l\'adresse pendant la recherche : elle est conservée telle que vous l\'avez saisie.')
       return
     }
     setAddress(result.address.slice(0, 200))
     if (result.city) setCity(result.city.slice(0, 80))
     setErrors((e) => ({ ...e, address: undefined, city: undefined }))
-    setAddressNote('Address filled in from the map. Check it and edit it if needed.')
+    setAddressNote('Adresse renseignée depuis la carte. Vérifiez-la et modifiez-la si nécessaire.')
   }
 
   const search = async () => {
     const text = (query.trim() || [address, city].filter(Boolean).join(', ')).trim()
     if (text.length < 3) {
-      setSearchNote('Type an address or the name of a place.')
+      setSearchNote('Saisissez une adresse ou le nom d\'un lieu.')
       return
     }
     setSearching(true)
     setSearchNote('')
-    const hit = await geocodeAddress(text.toLowerCase().includes('tunisia') ? text : `${text}, Tunisia`)
+    const hit = await geocodeAddress(/tunisia|tunisie/i.test(text) ? text : `${text}, Tunisia`)
     setSearching(false)
     if (!hit) {
-      setSearchNote('Nothing found in Tunisia for that search. Try a nearby street, or click the map to place the pin.')
+      setSearchNote('Rien trouvé en Tunisie pour cette recherche. Essayez une rue proche, ou cliquez sur la carte pour placer le repère.')
       return
     }
     setPin({ latitude: hit.latitude, longitude: hit.longitude })
     setErrors((e) => ({ ...e, location: undefined }))
-    setSearchNote(`Found: ${hit.displayName}. Drag the pin to fine-tune it.`)
+    setSearchNote(`Trouvé : ${hit.displayName}. Déplacez le repère pour l\'affiner.`)
     if (!address.trim()) setAddress(hit.displayName.split(',').slice(0, 3).join(',').trim())
   }
 
@@ -167,43 +167,43 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
       }
       return void toast.error(result.message)
     }
-    toast.success('Club profile saved')
+    toast.success('Profil du club enregistré')
     router.refresh()
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Club profile</h2>
-        <p className="text-sm text-[#645757]">Your public page (&quot;vitrine&quot;): what players see before they book.</p>
+        <h2 className="text-2xl font-semibold tracking-tight">Profil du club</h2>
+        <p className="text-sm text-[#645757]">Votre page publique (« vitrine ») : ce que les joueurs voient avant de réserver.</p>
       </div>
 
       <form onSubmit={submit} className="space-y-6" noValidate>
-        <Section id="about" title="About your club">
+        <Section id="about" title="À propos de votre club">
           <div className="grid gap-1.5">
-            <Label htmlFor="cp-name">Club name</Label>
+            <Label htmlFor="cp-name">Nom du club</Label>
             <Input id="cp-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} error={Boolean(errors.name)} autoComplete="off" />
             {errors.name && <p role="alert" className="text-xs text-destructive">{errors.name}</p>}
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="cp-bio">Bio / description</Label>
+            <Label htmlFor="cp-bio">Présentation / description</Label>
             <Textarea
               id="cp-bio"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={5}
               maxLength={BIO_MAX}
-              placeholder="Tell players what makes your club special: courts, facilities, parking, café, coaching…"
+              placeholder="Dites aux joueurs ce qui rend votre club unique : terrains, installations, parking, café, coaching…"
             />
             <div className="flex justify-between text-xs text-[#645757]">
-              <span>{errors.description ? <span role="alert" className="text-destructive">{errors.description}</span> : 'Shown on your public page.'}</span>
+              <span>{errors.description ? <span role="alert" className="text-destructive">{errors.description}</span> : 'Affiché sur votre page publique.'}</span>
               <span className="tabular-nums">
                 {description.length} / {BIO_MAX}
               </span>
             </div>
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="cp-whatsapp">WhatsApp number</Label>
+            <Label htmlFor="cp-whatsapp">Numéro WhatsApp</Label>
             <Input
               id="cp-whatsapp"
               type="tel"
@@ -215,15 +215,15 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
               error={Boolean(errors.whatsappNumber)}
             />
             <p className="text-xs text-[#645757]">
-              {errors.whatsappNumber ? <span role="alert" className="text-destructive">{errors.whatsappNumber}</span> : 'Players get a "Contact the club on WhatsApp" button on their confirmation and reminder.'}
+              {errors.whatsappNumber ? <span role="alert" className="text-destructive">{errors.whatsappNumber}</span> : 'Les joueurs reçoivent un bouton « Contacter le club sur WhatsApp » dans leur confirmation et leur rappel.'}
             </p>
           </div>
         </Section>
 
-        <Section id="location" title="Location" hint="Players use this to find you. Search for your address, then drag the pin onto your entrance.">
+        <Section id="location" title="Emplacement" hint="Les joueurs l'utilisent pour vous trouver. Recherchez votre adresse, puis déplacez le repère sur votre entrée.">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="cp-address">Physical address</Label>
+              <Label htmlFor="cp-address">Adresse physique</Label>
               <div className="relative">
                 <Input
                   id="cp-address"
@@ -243,25 +243,25 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
                 {lookingUp && (
                   <Loader2
                     className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-[#645757]"
-                    aria-label="Looking up the address"
+                    aria-label="Recherche de l'adresse"
                     data-testid="address-loading"
                   />
                 )}
               </div>
               <p id="cp-address-note" role="status" aria-live="polite" className="min-h-4 text-xs text-[#645757]" data-testid="address-note">
-                {lookingUp ? 'Looking up the address…' : addressNote}
+                {lookingUp ? 'Recherche de l\'adresse…' : addressNote}
               </p>
               {errors.address && <p role="alert" className="text-xs text-destructive">{errors.address}</p>}
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="cp-city">City</Label>
+              <Label htmlFor="cp-city">Ville</Label>
               <Input id="cp-city" value={city} onChange={(e) => setCity(e.target.value)} maxLength={80} error={Boolean(errors.city)} placeholder="Tunis" autoComplete="off" />
               {errors.city && <p role="alert" className="text-xs text-destructive">{errors.city}</p>}
             </div>
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="cp-search">Search the map</Label>
+            <Label htmlFor="cp-search">Rechercher sur la carte</Label>
             <div className="flex gap-2">
               <Input
                 id="cp-search"
@@ -273,11 +273,11 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
                     void search()
                   }
                 }}
-                placeholder="Address or place, e.g. Lac 2, Tunis"
+                placeholder="Adresse ou lieu, ex. : Lac 2, Tunis"
                 autoComplete="off"
               />
               <Button type="button" variant="outline" onClick={() => void search()} disabled={searching}>
-                {searching ? <Loader2 className="animate-spin" aria-hidden /> : <Search aria-hidden />} Search
+                {searching ? <Loader2 className="animate-spin" aria-hidden /> : <Search aria-hidden />} Rechercher
               </Button>
             </div>
             {searchNote && (
@@ -311,12 +311,12 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
                   {pin.latitude.toFixed(6)}, {pin.longitude.toFixed(6)}
                 </span>
               ) : (
-                'No pin yet: search, or click the map to place it.'
+                'Pas encore de repère : recherchez, ou cliquez sur la carte pour le placer.'
               )}
             </p>
             {pin && (
               <Button type="button" variant="outline" size="sm" onClick={() => setPin(null)}>
-                <X aria-hidden /> Remove pin
+                <X aria-hidden /> Retirer le repère
               </Button>
             )}
           </div>
@@ -326,12 +326,12 @@ export function ClubProfileForm({ initial }: { initial: ClubProfileInitial }) {
         <div className="flex justify-end">
           <Button type="submit" disabled={saving} className="bg-[#1d3023] text-[#f7f5f2] hover:bg-[#1d3023]/90">
             {saving && <Loader2 className="animate-spin" aria-hidden />}
-            Save profile
+            Enregistrer le profil
           </Button>
         </div>
       </form>
 
-      <Section id="photos" title="Photo gallery" hint="Photos save as soon as you add, reorder or delete them.">
+      <Section id="photos" title="Galerie photo" hint="Les photos sont enregistrées dès que vous les ajoutez, les réordonnez ou les supprimez.">
         <GalleryManager initialUrls={initial.galleryUrls} />
       </Section>
     </div>

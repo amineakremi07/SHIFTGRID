@@ -8,8 +8,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createPublicClient } from '@/lib/supabase/public'
 
 export const metadata: Metadata = {
-  title: 'Join ShiftGrid',
-  description: 'Create a player account to book courts, or register your sports club.',
+  title: 'Rejoindre ShiftGrid',
+  description: 'Créez un compte joueur pour réserver des terrains, ou inscrivez votre club sportif.',
 }
 
 // Reads the session and the live club list, so never prerendered.
@@ -54,7 +54,7 @@ export default async function RegisterPage({
             ShiftGrid
           </Link>
           <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
-            Already registered? Log in
+            Déjà inscrit ? Connectez-vous
           </Link>
         </div>
       </header>

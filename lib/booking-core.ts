@@ -43,22 +43,22 @@ export async function checkBookableSlot(
   ])
 
   if (!court || court.org_id !== input.orgId || court.status !== 'active' || court.deleted_at !== null || !isSport(court.sport)) {
-    return { ok: false, code: 'unavailable', message: 'This court is no longer available for booking.' }
+    return { ok: false, code: 'unavailable', message: 'Ce terrain n\'est plus disponible à la réservation.' }
   }
   const sport = court.sport
 
   if (org?.status !== 'approved' || org.deleted_at !== null) {
-    return { ok: false, code: 'unavailable', message: 'This club is not accepting bookings right now.' }
+    return { ok: false, code: 'unavailable', message: 'Ce club n\'accepte pas de réservations pour le moment.' }
   }
 
   const today = venueDateString()
   if (input.date < today || input.date > addDays(today, MAX_DAYS_AHEAD)) {
-    return { ok: false, code: 'invalid_slot', message: 'That date is not open for booking.' }
+    return { ok: false, code: 'invalid_slot', message: 'Cette date n\'est pas ouverte à la réservation.' }
   }
 
   const hours = effectiveHours(parseWeeklyHours(org.weekly_hours), input.date, court)
   if (!hours) {
-    return { ok: false, code: 'invalid_slot', message: 'The club is closed on that day.' }
+    return { ok: false, code: 'invalid_slot', message: 'Le club est fermé ce jour-là.' }
   }
 
   const startsAtMs = Date.parse(input.startsAt)
@@ -71,11 +71,11 @@ export async function checkBookableSlot(
     now: new Date(0), // "past" is enforced by the database against the real clock
   }).some((slot) => Date.parse(slot.start) === startsAtMs)
   if (!onGrid) {
-    return { ok: false, code: 'invalid_slot', message: 'That time is not available on this court. Please pick a listed slot.' }
+    return { ok: false, code: 'invalid_slot', message: 'Cet horaire n\'est pas disponible sur ce terrain. Veuillez choisir un créneau proposé.' }
   }
 
   if (!(PLAYER_COUNT_OPTIONS[sport] as readonly number[]).includes(input.playerCount)) {
-    return { ok: false, code: 'invalid_input', message: 'That number of players is not allowed for this sport.' }
+    return { ok: false, code: 'invalid_input', message: 'Ce nombre de joueurs n\'est pas autorisé pour ce sport.' }
   }
 
   const price = computePrice({

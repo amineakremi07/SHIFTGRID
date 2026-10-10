@@ -57,7 +57,7 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
     })
     return (
       <div role="alert" className="rounded-xl bg-[#eae6df] px-6 py-10 text-center text-sm">
-        We couldn&apos;t load the schedule. Please refresh in a moment.
+        Impossible de charger le planning. Veuillez actualiser la page dans un instant.
       </div>
     )
   }
@@ -107,7 +107,7 @@ export default async function OrgBookingsPage({ searchParams }: { searchParams?:
       endsAt: b.ends_at,
       status: b.status,
       playerCount: b.player_count,
-      bookerName: guest?.name ?? member?.display_name ?? 'Unknown',
+      bookerName: guest?.name ?? member?.display_name ?? 'Inconnu',
       bookerPhone: guest?.phone ?? member?.phone ?? null,
       isMember: Boolean(member),
       amount: payments.get(b.id) ? Number(payments.get(b.id)!.amount) : null,

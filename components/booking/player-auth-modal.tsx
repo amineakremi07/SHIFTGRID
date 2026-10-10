@@ -111,10 +111,10 @@ export function PlayerAuthModal({
         setOpen(false)
         signInForm.reset()
       } else {
-        setError(result.error || 'Sign in failed')
+        setError(result.error || 'La connexion a échoué')
       }
     } catch {
-      setError('An unexpected error occurred')
+      setError('Une erreur inattendue est survenue')
     } finally {
       setIsSubmitting(false)
     }
@@ -130,10 +130,10 @@ export function PlayerAuthModal({
         setOpen(false)
         signUpForm.reset()
       } else {
-        setError(result.error || 'Sign up failed')
+        setError(result.error || 'L\'inscription a échoué')
       }
     } catch {
-      setError('An unexpected error occurred')
+      setError('Une erreur inattendue est survenue')
     } finally {
       setIsSubmitting(false)
     }
@@ -149,10 +149,10 @@ export function PlayerAuthModal({
         setOpen(false)
         anonymousForm.reset()
       } else {
-        setError(result.error || 'Failed to create booking profile')
+        setError(result.error || 'Échec de la création du profil de réservation')
       }
     } catch {
-      setError('An unexpected error occurred')
+      setError('Une erreur inattendue est survenue')
     } finally {
       setIsSubmitting(false)
     }
@@ -161,13 +161,13 @@ export function PlayerAuthModal({
   const renderSignIn = () => (
     <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-4">
       <div>
-        <Label htmlFor="signin-email">Email</Label>
+        <Label htmlFor="signin-email">E-mail</Label>
         <div className="relative mt-1">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             id="signin-email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="vous@exemple.com"
             className="pl-10"
             {...signInForm.register('email')}
           />
@@ -178,7 +178,7 @@ export function PlayerAuthModal({
       </div>
 
       <div>
-        <Label htmlFor="signin-password">Password</Label>
+        <Label htmlFor="signin-password">Mot de passe</Label>
         <div className="relative mt-1">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -220,7 +220,7 @@ export function PlayerAuthModal({
           )}
         />
         <Label htmlFor="signin-remember" className="text-sm font-normal cursor-pointer">
-          Remember me for 30 days
+          Se souvenir de moi pendant 30 jours
         </Label>
       </div>
 
@@ -234,10 +234,10 @@ export function PlayerAuthModal({
         {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Signing in...
+            Connexion...
           </>
         ) : (
-          'Sign In'
+          'Se connecter'
         )}
       </Button>
     </form>
@@ -246,12 +246,12 @@ export function PlayerAuthModal({
   const renderSignUp = () => (
     <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
       <div>
-        <Label htmlFor="signup-name">Full Name</Label>
+        <Label htmlFor="signup-name">Nom complet</Label>
         <div className="relative mt-1">
           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             id="signup-name"
-            placeholder="John Doe"
+            placeholder="Ali Ben Salah"
             className="pl-10"
             {...signUpForm.register('displayName')}
           />
@@ -262,13 +262,13 @@ export function PlayerAuthModal({
       </div>
 
       <div>
-        <Label htmlFor="signup-email">Email</Label>
+        <Label htmlFor="signup-email">E-mail</Label>
         <div className="relative mt-1">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             id="signup-email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="vous@exemple.com"
             className="pl-10"
             {...signUpForm.register('email')}
           />
@@ -279,7 +279,7 @@ export function PlayerAuthModal({
       </div>
 
       <div>
-        <Label htmlFor="signup-phone">Phone Number</Label>
+        <Label htmlFor="signup-phone">Numéro de téléphone</Label>
         <div className="relative mt-1">
           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -293,12 +293,12 @@ export function PlayerAuthModal({
           <p className="text-sm text-destructive mt-1">{signUpForm.formState.errors.phone.message}</p>
         )}
         <p className="text-xs text-muted-foreground mt-1">
-          Tunisian format: 98 123 456, +216 98 123 456, or 00216 98 123 456
+          Format tunisien : 98 123 456, +216 98 123 456 ou 00216 98 123 456
         </p>
       </div>
 
       <div>
-        <Label htmlFor="signup-password">Password</Label>
+        <Label htmlFor="signup-password">Mot de passe</Label>
         <div className="relative mt-1">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -340,7 +340,7 @@ export function PlayerAuthModal({
           )}
         />
         <Label htmlFor="signup-remember" className="text-sm font-normal cursor-pointer">
-          Remember me for 30 days
+          Se souvenir de moi pendant 30 jours
         </Label>
       </div>
 
@@ -367,10 +367,10 @@ export function PlayerAuthModal({
         {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Creating account...
+            Création du compte...
           </>
         ) : (
-          'Create Account'
+          'Créer le compte'
         )}
       </Button>
     </form>
@@ -383,10 +383,10 @@ export function PlayerAuthModal({
           <div className="flex items-start gap-3">
             <CheckCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-yellow-800">
-              <p className="font-medium">Anonymous Booking</p>
+              <p className="font-medium">Réservation sans compte</p>
               <p className="mt-1">
-                No account needed. After booking you get a private link to cancel if your plans change.
-                Your name and phone will be saved for future bookings at this complex.
+                Aucun compte nécessaire. Après la réservation, vous recevez un lien privé pour annuler si vos plans changent.
+                Votre nom et votre téléphone seront enregistrés pour vos prochaines réservations dans ce complexe.
               </p>
             </div>
           </div>
@@ -394,12 +394,12 @@ export function PlayerAuthModal({
       </Card>
 
       <div>
-        <Label htmlFor="anon-name">Full Name</Label>
+        <Label htmlFor="anon-name">Nom complet</Label>
         <div className="relative mt-1">
           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             id="anon-name"
-            placeholder="John Doe"
+            placeholder="Ali Ben Salah"
             className="pl-10"
             {...anonymousForm.register('name')}
           />
@@ -410,7 +410,7 @@ export function PlayerAuthModal({
       </div>
 
       <div>
-        <Label htmlFor="anon-phone">Phone Number</Label>
+        <Label htmlFor="anon-phone">Numéro de téléphone</Label>
         <div className="relative mt-1">
           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -424,7 +424,7 @@ export function PlayerAuthModal({
           <p className="text-sm text-destructive mt-1">{anonymousForm.formState.errors.phone.message}</p>
         )}
         <p className="text-xs text-muted-foreground mt-1">
-          Tunisian format: 98 123 456, +216 98 123 456, or 00216 98 123 456
+          Format tunisien : 98 123 456, +216 98 123 456 ou 00216 98 123 456
         </p>
       </div>
 
@@ -438,10 +438,10 @@ export function PlayerAuthModal({
         {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Continuing as guest...
+            Poursuite en tant qu&apos;invité...
           </>
         ) : (
-          'Continue as Guest'
+          'Continuer en tant qu&apos;invité'
         )}
       </Button>
     </form>
@@ -452,32 +452,32 @@ export function PlayerAuthModal({
       <DialogContent className="max-w-md sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            {mode === 'signin' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Continue as Guest'}
+            {mode === 'signin' ? 'Connexion' : mode === 'signup' ? 'Créer un compte' : 'Continuer en tant qu&apos;invité'}
           </DialogTitle>
           <DialogDescription>
             {mode === 'signin'
-              ? 'Enter your credentials to access your bookings'
+              ? 'Saisissez vos identifiants pour accéder à vos réservations'
               : mode === 'signup'
-              ? 'Create an account to manage your bookings and get reminders'
-              : 'Book without an account — confirmations sent via SMS'}
+              ? 'Créez un compte pour gérer vos réservations et recevoir des rappels'
+              : 'Réservez sans compte — les confirmations vous sont envoyées'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="mt-4 space-y-3">
           <GoogleButton orgId={orgId} next={typeof window === 'undefined' ? undefined : window.location.pathname + window.location.search} />
           <p className="text-center text-xs text-muted-foreground">
-            By continuing with Google you accept the Terms and the Privacy Policy.
+            En continuant avec Google, vous acceptez les conditions d&apos;utilisation et la politique de confidentialité.
           </p>
           <p className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
-            or
+            ou
           </p>
         </div>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as AuthMode)} className="mt-4">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            <TabsTrigger value="anonymous">Guest</TabsTrigger>
+            <TabsTrigger value="signin">Connexion</TabsTrigger>
+            <TabsTrigger value="signup">Inscription</TabsTrigger>
+            <TabsTrigger value="anonymous">Invité</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signin" className="mt-4 focus-visible:ring-0">
@@ -493,7 +493,7 @@ export function PlayerAuthModal({
 
         <DialogClose asChild>
           <Button variant="ghost" className="mt-4 w-full">
-            Close
+            Fermer
           </Button>
         </DialogClose>
       </DialogContent>

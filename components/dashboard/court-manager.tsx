@@ -67,7 +67,7 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
       setToArchive(null) // the message says why (e.g. upcoming bookings); nothing more to confirm
       return
     }
-    toast.success(`${toArchive.name} archived. Its booking history is kept.`)
+    toast.success(`${toArchive.name} archivé. Son historique de réservations est conservé.`)
     setToArchive(null)
     router.refresh()
   }
@@ -77,7 +77,7 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
     const result = await restoreCourtAction(court.id)
     setBusyId(null)
     if (!result.success) return void toast.error(result.error)
-    toast.success(`${court.name} is back`)
+    toast.success(`${court.name} est de retour`)
     router.refresh()
   }
 
@@ -86,7 +86,7 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
     const result = await setCourtStatus(court.id, active ? 'active' : 'maintenance')
     setBusyId(null)
     if (!result.success) return void toast.error(result.error)
-    toast.success(active ? `${court.name} is bookable again` : `${court.name} is in maintenance`)
+    toast.success(active ? `${court.name} est de nouveau réservable` : `${court.name} est en maintenance`)
     router.refresh()
   }
 
@@ -94,24 +94,24 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Courts</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Terrains</h2>
           <p className="text-sm text-[#645757]">
-            Prices are per slot in TND. Slot length follows the sport (padel and football 1.5h, tennis 1h) and cannot be changed.
+            Les prix sont par créneau, en TND. La durée du créneau suit le sport (padel et football 1 h 30, tennis 1 h) et ne peut pas être modifiée.
           </p>
         </div>
         <Button
           onClick={() => setEditing('new')}
           className="h-9 bg-[#1d3023] px-3 text-[#f7f5f2] hover:bg-[#1d3023]/90"
         >
-          <Plus aria-hidden /> Add court
+          <Plus aria-hidden /> Ajouter un terrain
         </Button>
       </div>
 
       {courts.length === 0 ? (
         <div className="rounded-xl bg-[#eae6df] px-6 py-12 text-center">
-          <p className="text-lg font-semibold">No courts yet</p>
+          <p className="text-lg font-semibold">Aucun terrain pour le moment</p>
           <p className="mx-auto mt-1 max-w-[46ch] text-sm text-[#645757]">
-            Add your first court so players can start booking.
+            Ajoutez votre premier terrain pour que les joueurs puissent réserver.
           </p>
         </div>
       ) : (
@@ -125,7 +125,7 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
                     <h3 className="truncate text-base font-semibold">{court.name}</h3>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge variant="outline">{SPORT_LABEL[court.sport]}</Badge>
-                      <Badge variant={active ? 'success' : 'warning'}>{active ? 'Active' : 'Maintenance'}</Badge>
+                      <Badge variant={active ? 'success' : 'warning'}>{active ? 'Actif' : 'Maintenance'}</Badge>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -134,42 +134,42 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
                       checked={active}
                       disabled={busyId === court.id}
                       onCheckedChange={(v) => toggleStatus(court, v)}
-                      aria-label={`${court.name} is bookable`}
+                      aria-label={`${court.name} est réservable`}
                     />
                   </div>
                 </div>
 
                 <dl className="mt-4 grid grid-cols-3 gap-3 text-sm">
                   <div>
-                    <dt className="text-[#645757]">Base price</dt>
+                    <dt className="text-[#645757]">Prix de base</dt>
                     <dd className="font-medium">
                       {tnd(slotPrice(court.pricePerHour, SPORT_DURATION_MIN[court.sport]))}
                       <span className="text-[#645757]"> / {slotHoursLabel(SPORT_DURATION_MIN[court.sport])}</span>
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-[#645757]">Night light</dt>
+                    <dt className="text-[#645757]">Éclairage de nuit</dt>
                     <dd className="font-medium">
                       {court.nightSurchargePerHour > 0
-                        ? `+${tnd(court.nightSurchargePerHour)} from ${court.nightStartsAt}`
-                        : 'None'}
+                        ? `+${tnd(court.nightSurchargePerHour)} à partir de ${court.nightStartsAt}`
+                        : 'Aucun'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-[#645757]">Slot</dt>
+                    <dt className="text-[#645757]">Créneau</dt>
                     <dd className="font-medium">
                       {SPORT_DURATION_MIN[court.sport]} min
-                      <span className="text-[#645757]"> + {BUFFER_MIN} buffer</span>
+                      <span className="text-[#645757]"> + {BUFFER_MIN} de battement</span>
                     </dd>
                   </div>
                 </dl>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" onClick={() => setEditing(court)}>
-                    <Pencil aria-hidden /> Edit
+                    <Pencil aria-hidden /> Modifier
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => setToArchive(court)} disabled={busyId === court.id}>
-                    <Archive aria-hidden /> Archive
+                    <Archive aria-hidden /> Archiver
                   </Button>
                 </div>
               </li>
@@ -181,9 +181,9 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
       {archived.length > 0 && (
         <section aria-labelledby="archived-courts-heading" className="space-y-2" data-testid="archived-courts">
           <h3 id="archived-courts-heading" className="text-sm font-semibold">
-            Archived courts ({archived.length})
+            Terrains archivés ({archived.length})
           </h3>
-          <p className="text-xs text-[#645757]">Hidden from players and the calendar. Their bookings stay in your history.</p>
+          <p className="text-xs text-[#645757]">Masqués pour les joueurs et dans le calendrier. Leurs réservations restent dans votre historique.</p>
           <ul className="divide-y divide-[#d7d2cc] rounded-xl bg-[#eae6df] px-4 text-sm">
             {archived.map((court) => (
               <li key={court.id} className="flex items-center justify-between gap-3 py-2.5">
@@ -191,7 +191,7 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
                   <span className="font-medium">{court.name}</span> <span className="text-[#645757]">· {SPORT_LABEL[court.sport]}</span>
                 </span>
                 <Button variant="outline" size="sm" onClick={() => restore(court)} disabled={busyId === court.id}>
-                  {busyId === court.id ? <Loader2 className="animate-spin" aria-hidden /> : <ArchiveRestore aria-hidden />} Restore
+                  {busyId === court.id ? <Loader2 className="animate-spin" aria-hidden /> : <ArchiveRestore aria-hidden />} Restaurer
                 </Button>
               </li>
             ))}
@@ -202,18 +202,18 @@ export function CourtManager({ courts, archived = [] }: { courts: ManagedCourt[]
       <Dialog open={toArchive !== null} onOpenChange={(o) => !o && busyId === null && setToArchive(null)}>
         <DialogContent className="bg-[#eae6df] sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Archive {toArchive?.name}?</DialogTitle>
+            <DialogTitle>Archiver {toArchive?.name} ?</DialogTitle>
             <DialogDescription>
-              It disappears from your public page and the booking calendar. Past bookings and revenue stay in your history, and you can restore the court later. A court with upcoming bookings cannot be archived.
+              Il disparaît de votre page publique et du calendrier de réservation. Les réservations passées et les revenus restent dans votre historique, et vous pourrez restaurer le terrain plus tard. Un terrain avec des réservations à venir ne peut pas être archivé.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setToArchive(null)} disabled={busyId !== null}>
-              Keep it
+              Le conserver
             </Button>
             <Button variant="destructive" onClick={archive} disabled={busyId !== null}>
               {busyId !== null && <Loader2 className="animate-spin" aria-hidden />}
-              Archive court
+              Archiver le terrain
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -275,7 +275,7 @@ function CourtDialog({
       if (result.issues) setErrors(issuesToFieldErrors(result.issues))
       return void toast.error(result.error)
     }
-    toast.success(existing ? 'Court updated' : 'Court added')
+    toast.success(existing ? 'Terrain mis à jour' : 'Terrain ajouté')
     onSaved()
   }
 
@@ -286,19 +286,19 @@ function CourtDialog({
     <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="bg-[#eae6df] sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{existing ? 'Edit court' : 'Add court'}</DialogTitle>
+          <DialogTitle>{existing ? 'Modifier le terrain' : 'Ajouter un terrain'}</DialogTitle>
           <DialogDescription>
-            {sportMinutes} min slots with a {BUFFER_MIN} min buffer, set by the sport.
+            Créneaux de {sportMinutes} min avec un battement de {BUFFER_MIN} min, définis par le sport.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="grid gap-4" noValidate>
-          <Field id="court-name" label="Court name" error={err('name')}>
+          <Field id="court-name" label="Nom du terrain" error={err('name')}>
             <Input
               id="court-name"
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
-              placeholder="Court 1 - Panoramic Padel"
+              placeholder="Terrain 1 - Padel panoramique"
               error={Boolean(err('name'))}
               maxLength={80}
             />
@@ -317,7 +317,7 @@ function CourtDialog({
             </Select>
           </Field>
 
-          <Field id="court-price" label={`Price per ${slotHoursLabel(sportMinutes)} slot (TND)`} error={err('pricePerSlot')}>
+          <Field id="court-price" label={`Prix d'un créneau de ${slotHoursLabel(sportMinutes)} (TND)`} error={err('pricePerSlot')}>
             <Input
               id="court-price"
               inputMode="decimal"
@@ -329,7 +329,7 @@ function CourtDialog({
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field id="court-night" label="Night Surcharge (TND)" error={err('nightSurchargePerHour')}>
+            <Field id="court-night" label="Supplément de nuit (TND)" error={err('nightSurchargePerHour')}>
               <Input
                 id="court-night"
                 inputMode="decimal"
@@ -338,7 +338,7 @@ function CourtDialog({
                 error={Boolean(err('nightSurchargePerHour'))}
               />
             </Field>
-            <Field id="court-night-from" label="Night starts at" error={err('nightStartsAt')}>
+            <Field id="court-night-from" label="La nuit commence à" error={err('nightStartsAt')}>
               <Input
                 id="court-night-from"
                 type="time"
@@ -351,7 +351,7 @@ function CourtDialog({
 
           <div className="flex items-center justify-between rounded-lg bg-[#f7f5f2] px-3 py-2.5">
             <Label htmlFor="court-active" className="text-sm">
-              {form.status === 'active' ? 'Active: players can book it' : 'Maintenance: hidden from booking'}
+              {form.status === 'active' ? 'Actif : les joueurs peuvent le réserver' : 'Maintenance : masqué à la réservation'}
             </Label>
             <Switch
               id="court-active"
@@ -362,11 +362,11 @@ function CourtDialog({
 
           <DialogFooter className="gap-2 sm:justify-end">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              Annuler
             </Button>
             <Button type="submit" disabled={saving} className="bg-[#1d3023] text-[#f7f5f2] hover:bg-[#1d3023]/90">
               {saving && <Loader2 className="animate-spin" aria-hidden />}
-              {existing ? 'Save changes' : 'Add court'}
+              {existing ? 'Enregistrer les modifications' : 'Ajouter le terrain'}
             </Button>
           </DialogFooter>
         </form>

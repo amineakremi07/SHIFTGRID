@@ -8,11 +8,11 @@ import { formatVenueDate, venueDateString } from '@/lib/court-time'
 import { getOrgAccess } from '@/lib/org-access'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Analytics' }
+export const metadata = { title: 'Statistiques' }
 
-const tnd = (n: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 }).format(n)} TND`
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-const pct = (n: number | null) => (n === null ? 'n/a' : `${Math.round(n * 100)}%`)
+const tnd = (n: number) => `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3 }).format(n)} TND`
+const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`
+const pct = (n: number | null) => (n === null ? 'n/d' : `${Math.round(n * 100)}%`)
 
 export default async function OrgAnalyticsPage({
   searchParams,
@@ -29,7 +29,7 @@ export default async function OrgAnalyticsPage({
     if (result.reason === 'forbidden') redirect('/dashboard/org/bookings')
     return (
       <div role="alert" className="rounded-xl bg-[#eae6df] px-6 py-10 text-center text-sm">
-        We couldn&apos;t load your analytics. Please refresh in a moment.
+        Impossible de charger vos statistiques. Veuillez actualiser la page dans un instant.
       </div>
     )
   }
@@ -40,10 +40,10 @@ export default async function OrgAnalyticsPage({
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Analytics</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Statistiques</h2>
           <p className="mt-1 text-sm text-[#645757]" data-testid="range-summary">
-            {formatVenueDate(data.range.from)} to {formatVenueDate(data.range.to)} · {data.range.days}{' '}
-            {data.range.days === 1 ? 'day' : 'days'} · all amounts in TND
+            {formatVenueDate(data.range.from)} au {formatVenueDate(data.range.to)} · {data.range.days}{' '}
+            {data.range.days === 1 ? 'jour' : 'jours'} · tous les montants en TND
           </p>
         </div>
         <RangeFilter preset={data.range.preset} from={data.range.from} to={data.range.to} today={today} />
@@ -51,8 +51,8 @@ export default async function OrgAnalyticsPage({
 
       {truncated && (
         <p role="status" className="rounded-lg bg-[#eae6df] px-4 py-3 text-sm">
-          This period has more bookings than we can summarise at once, so the most recent ones are left out. Choose a
-          shorter range for exact figures.
+          Cette période compte plus de réservations que nous ne pouvons en résumer d&apos;un coup : les plus récentes sont exclues. Choisissez une
+          période plus courte pour des chiffres exacts.
         </p>
       )}
 
@@ -60,55 +60,55 @@ export default async function OrgAnalyticsPage({
 
       <section aria-labelledby="kpi-heading" className="space-y-3">
         <h3 id="kpi-heading" className="text-lg font-semibold">
-          Selected period
+          Période sélectionnée
         </h3>
         <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Kpi label="Revenue" value={tnd(data.kpis.revenue)} hint={`${plural(data.kpis.bookings, 'booking')}, cancellations excluded`} />
-          <Kpi label="Average per booking" value={tnd(data.kpis.avgPerBooking)} />
+          <Kpi label="Revenus" value={tnd(data.kpis.revenue)} hint={`${plural(data.kpis.bookings, 'réservation')}, annulations exclues`} />
+          <Kpi label="Moyenne par réservation" value={tnd(data.kpis.avgPerBooking)} />
           <Kpi
-            label="Average occupancy"
+            label="Occupation moyenne"
             value={pct(data.kpis.occupancy)}
-            hint={`Peak ${pct(data.peak.peak)} · Off-peak ${pct(data.peak.offPeak)}`}
+            hint={`Pointe ${pct(data.peak.peak)} · Heures creuses ${pct(data.peak.offPeak)}`}
           />
           <Kpi
-            label="Cancellation rate"
+            label="Taux d'annulation"
             value={pct(data.cancellations.rate)}
-            hint={`${data.cancellations.count} of ${plural(data.cancellations.total, 'booking')} · ${tnd(data.cancellations.lost)} lost`}
+            hint={`${data.cancellations.count} sur ${plural(data.cancellations.total, 'réservation')} · ${tnd(data.cancellations.lost)} perdus`}
           />
         </dl>
       </section>
 
-      <Card title="Bookings over time">
+      <Card title="Réservations dans le temps">
         <TrendChart points={data.trend.points} granularity={data.trend.granularity} />
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card title="Payments">
+        <Card title="Paiements">
           <PaymentTable data={data} />
         </Card>
-        <Card title="Players">
+        <Card title="Joueurs">
           <Players data={data} />
         </Card>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card title="Occupancy by hour">
+        <Card title="Occupation par heure">
           <HoursChart hours={data.hours} />
         </Card>
-        <Card title="Top courts">
+        <Card title="Meilleurs terrains">
           <TopCourts data={data} />
         </Card>
       </div>
 
       <details className="rounded-xl bg-[#eae6df] px-5 py-4 text-sm text-[#645757]">
-        <summary className="cursor-pointer font-medium text-[#2a1a1d]">How these numbers are counted</summary>
+        <summary className="cursor-pointer font-medium text-[#2a1a1d]">Comment ces chiffres sont calculés</summary>
         <ul className="mt-3 list-disc space-y-1.5 pl-5">
-          <li>A booking counts on the day it starts, in Tunis time.</li>
-          <li>Revenue is the price of bookings that were not cancelled or refunded, whether or not the cash has reached you yet.</li>
-          <li>Occupancy is booked playing time divided by opening time of active courts. The 15-minute buffer between slots is not counted as booked, so a fully booked day reads below 100%.</li>
-          <li>Peak hours run from 17:00 to 04:59. Everything else is off-peak.</li>
-          <li>Returning players are people with two or more bookings in the period. Guests are matched by phone number.</li>
-          <li>Lost revenue is the price of cancelled bookings, the money you would have earned had they been kept.</li>
+          <li>Une réservation compte le jour où elle commence, à l&apos;heure de Tunis.</li>
+          <li>Le revenu est le prix des réservations non annulées ni remboursées, que l&apos;argent vous soit déjà parvenu ou non.</li>
+          <li>L&apos;occupation est le temps de jeu réservé divisé par le temps d&apos;ouverture des terrains actifs. Le battement de 15 minutes entre les créneaux n&apos;est pas compté comme réservé : une journée complète affiche donc moins de 100 %.</li>
+          <li>Les heures de pointe vont de 17 h 00 à 04 h 59. Tout le reste est en heures creuses.</li>
+          <li>Les joueurs fidèles sont ceux qui ont au moins deux réservations sur la période. Les invités sont rapprochés par numéro de téléphone.</li>
+          <li>Le revenu perdu est le prix des réservations annulées, l&apos;argent que vous auriez gagné si elles avaient été maintenues.</li>
         </ul>
       </details>
     </div>
@@ -117,15 +117,15 @@ export default async function OrgAnalyticsPage({
 
 function Headline({ data }: { data: Analytics }) {
   const items = [
-    { label: 'Today', p: data.periods.today },
-    { label: 'This week', p: data.periods.week },
-    { label: 'This month', p: data.periods.month },
-    { label: 'Year to date', p: data.periods.ytd },
+    { label: 'Aujourd\'hui', p: data.periods.today },
+    { label: 'Cette semaine', p: data.periods.week },
+    { label: 'Ce mois-ci', p: data.periods.month },
+    { label: 'Depuis le 1er janvier', p: data.periods.ytd },
   ]
   return (
     <section aria-labelledby="headline-heading" className="space-y-3">
       <h3 id="headline-heading" className="text-lg font-semibold">
-        Revenue to date
+        Revenus à ce jour
       </h3>
       <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {items.map(({ label, p }) => (
@@ -133,7 +133,7 @@ function Headline({ data }: { data: Analytics }) {
             key={label}
             label={label}
             value={tnd(p.revenue)}
-            hint={`${plural(p.bookings, 'booking')} · ${tnd(p.collected)} collected`}
+            hint={`${plural(p.bookings, 'réservation')} · ${tnd(p.collected)} encaissés`}
           />
         ))}
       </dl>
@@ -162,14 +162,14 @@ function Card({ title, children, className }: { title: string; children: React.R
 
 function PaymentTable({ data }: { data: Analytics }) {
   const rows = data.payments
-  if (rows.every((r) => r.count === 0)) return <p className="py-8 text-center text-sm text-[#645757]">No payments in this period.</p>
+  if (rows.every((r) => r.count === 0)) return <p className="py-8 text-center text-sm text-[#645757]">Aucun paiement sur cette période.</p>
   return (
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-[#d7d2cc] text-left text-xs uppercase tracking-wide text-[#645757]">
-          <th scope="col" className="pb-2 font-medium">Status</th>
-          <th scope="col" className="pb-2 text-right font-medium">Bookings</th>
-          <th scope="col" className="pb-2 text-right font-medium">Amount</th>
+          <th scope="col" className="pb-2 font-medium">Statut</th>
+          <th scope="col" className="pb-2 text-right font-medium">Réservations</th>
+          <th scope="col" className="pb-2 text-right font-medium">Montant</th>
         </tr>
       </thead>
       <tbody>
@@ -183,12 +183,12 @@ function PaymentTable({ data }: { data: Analytics }) {
       </tbody>
       <tfoot>
         <tr className="border-t border-[#d7d2cc]">
-          <th scope="row" className="pt-3 text-left font-medium">Collected</th>
+          <th scope="row" className="pt-3 text-left font-medium">Encaissé</th>
           <td />
           <td className="pt-3 text-right font-semibold tabular-nums">{tnd(data.kpis.collected)}</td>
         </tr>
         <tr>
-          <th scope="row" className="pt-1 text-left font-medium">Still to collect</th>
+          <th scope="row" className="pt-1 text-left font-medium">Reste à encaisser</th>
           <td />
           <td className="pt-1 text-right font-semibold tabular-nums">{tnd(data.kpis.outstanding)}</td>
         </tr>
@@ -200,14 +200,14 @@ function PaymentTable({ data }: { data: Analytics }) {
 function Players({ data }: { data: Analytics }) {
   const { members, guests, uniqueBookers, returning, returningRate } = data.players
   const total = members.bookings + guests.bookings
-  if (total === 0) return <p className="py-8 text-center text-sm text-[#645757]">No bookings in this period.</p>
+  if (total === 0) return <p className="py-8 text-center text-sm text-[#645757]">Aucune réservation sur cette période.</p>
   const memberShare = (members.bookings / total) * 100
   return (
     <div className="space-y-5">
       <div>
         <div
           role="img"
-          aria-label={`${Math.round(memberShare)}% of bookings by registered members, ${Math.round(100 - memberShare)}% by guests and walk-ins`}
+          aria-label={`${Math.round(memberShare)} % des réservations par des membres inscrits, ${Math.round(100 - memberShare)} % par des invités et clients au guichet`}
           className="flex h-3 overflow-hidden rounded-full bg-[#d7d2cc]"
         >
           <div className="bg-[#0e634f]" style={{ width: `${memberShare}%` }} />
@@ -216,27 +216,27 @@ function Players({ data }: { data: Analytics }) {
         <dl className="mt-3 grid grid-cols-2 gap-4 text-sm">
           <div>
             <dt className="flex items-center gap-1.5 text-[#645757]">
-              <span aria-hidden className="size-2.5 rounded-sm bg-[#0e634f]" /> Registered members
+              <span aria-hidden className="size-2.5 rounded-sm bg-[#0e634f]" /> Membres inscrits
             </dt>
-            <dd className="mt-0.5 font-semibold tabular-nums">{plural(members.bookings, 'booking')}</dd>
+            <dd className="mt-0.5 font-semibold tabular-nums">{plural(members.bookings, 'réservation')}</dd>
             <dd className="text-xs text-[#645757] tabular-nums">{tnd(members.revenue)}</dd>
           </div>
           <div>
             <dt className="flex items-center gap-1.5 text-[#645757]">
-              <span aria-hidden className="size-2.5 rounded-sm bg-[#645757]/50" /> Guests and walk-ins
+              <span aria-hidden className="size-2.5 rounded-sm bg-[#645757]/50" /> Invités et clients au guichet
             </dt>
-            <dd className="mt-0.5 font-semibold tabular-nums">{plural(guests.bookings, 'booking')}</dd>
+            <dd className="mt-0.5 font-semibold tabular-nums">{plural(guests.bookings, 'réservation')}</dd>
             <dd className="text-xs text-[#645757] tabular-nums">{tnd(guests.revenue)}</dd>
           </div>
         </dl>
       </div>
       <dl className="grid grid-cols-2 gap-4 border-t border-[#d7d2cc] pt-4 text-sm">
         <div>
-          <dt className="text-[#645757]">Different players</dt>
+          <dt className="text-[#645757]">Joueurs différents</dt>
           <dd className="mt-0.5 text-xl font-semibold tabular-nums">{uniqueBookers}</dd>
         </div>
         <div>
-          <dt className="text-[#645757]">Came back (2+ bookings)</dt>
+          <dt className="text-[#645757]">Fidèles (2 réservations ou plus)</dt>
           <dd className="mt-0.5 text-xl font-semibold tabular-nums">
             {returning} <span className="text-sm font-normal text-[#645757]">({pct(returningRate)})</span>
           </dd>
@@ -248,7 +248,7 @@ function Players({ data }: { data: Analytics }) {
 
 function TopCourts({ data }: { data: Analytics }) {
   const courts = data.courts
-  if (courts.length === 0) return <p className="py-8 text-center text-sm text-[#645757]">No courts to report on yet.</p>
+  if (courts.length === 0) return <p className="py-8 text-center text-sm text-[#645757]">Aucun terrain à analyser pour le moment.</p>
   const max = Math.max(...courts.map((c) => c.revenue), 1)
   return (
     <ol className="space-y-4">
@@ -266,7 +266,7 @@ function TopCourts({ data }: { data: Analytics }) {
             <div className="h-full rounded-full bg-[#0e634f]" style={{ width: `${(c.revenue / max) * 100}%` }} />
           </div>
           <p className="mt-1 text-xs text-[#645757] tabular-nums">
-            {plural(c.bookings, 'booking')} · {pct(c.occupancy)} occupancy
+            {plural(c.bookings, 'réservation')} · {pct(c.occupancy)} d&apos;occupation
           </p>
         </li>
       ))}

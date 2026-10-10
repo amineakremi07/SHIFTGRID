@@ -35,9 +35,9 @@ export type { SlotState }
 export type SlotTag = 'recommended' | 'high_demand' | 'quiet'
 
 export const SLOT_TAG_LABEL: Record<SlotTag, string> = {
-  recommended: 'Recommended for you',
-  high_demand: 'High demand',
-  quiet: 'Quiet time',
+  recommended: 'Recommandé pour vous',
+  high_demand: 'Forte demande',
+  quiet: 'Heure creuse',
 }
 
 export type MatrixSlot = CourtSlot & { tag?: SlotTag }
@@ -257,10 +257,10 @@ function useCountdown(expiresAt?: string | null) {
 /* -------------------------------- slot cell ------------------------------ */
 
 const STATE_LABEL: Record<SlotState, string> = {
-  available: 'Available',
-  occupied: 'Booked',
-  locked_buffer: 'In Reservation',
-  past: 'Past',
+  available: 'Disponible',
+  occupied: 'Réservé',
+  locked_buffer: 'En cours de réservation',
+  past: 'Passé',
 }
 
 function SlotCell({
@@ -287,14 +287,14 @@ function SlotCell({
 
   const tooltip =
     slot.state === 'available'
-      ? `${formatTND(price)} · ${peak ? 'Peak (night lighting)' : 'Off-peak'} · ${slotMinutes(court.sport)} min + ${BUFFER_MIN} min buffer`
+      ? `${formatTND(price)} · ${peak ? 'Pointe (éclairage de nuit)' : 'Heures creuses'} · ${slotMinutes(court.sport)} min + ${BUFFER_MIN} min de battement`
       : slot.state === 'occupied'
-        ? 'Already booked'
+        ? 'Déjà réservé'
         : slot.state === 'locked_buffer'
           ? countdown
-            ? `Held by another player — ${countdown} remaining`
-            : 'Held by another player'
-          : 'This slot has already passed'
+            ? `Retenu par un autre joueur — ${countdown} restantes`
+            : 'Retenu par un autre joueur'
+          : 'Ce créneau est déjà passé'
 
   const cell = (
     <motion.button
@@ -315,7 +315,7 @@ function SlotCell({
       disabled={!isAvailable}
       aria-pressed={isSelected}
       data-slot-cell
-      aria-label={`${court.name}, ${formatTime(slot.start)} to ${formatTime(slot.end)}, ${STATE_LABEL[slot.state]}${isAvailable ? `, ${formatTND(price)}, ${peak ? 'peak' : 'off-peak'} price${slot.tag ? `, ${SLOT_TAG_LABEL[slot.tag].toLowerCase()}` : ''}` : ''}`}
+      aria-label={`${court.name}, de ${formatTime(slot.start)} à ${formatTime(slot.end)}, ${STATE_LABEL[slot.state]}${isAvailable ? `, ${formatTND(price)}, tarif ${peak ? 'de pointe' : 'heures creuses'}${slot.tag ? `, ${SLOT_TAG_LABEL[slot.tag].toLowerCase()}` : ''}` : ''}`}
       className={cn(
         'relative min-h-12 w-full rounded-lg border p-3 text-left transition-colors',
         'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
@@ -368,7 +368,7 @@ function SlotCell({
                   isSelected ? 'bg-primary-foreground/15' : 'bg-accent text-accent-foreground'
                 )}
               >
-                Peak
+                Pointe
               </span>
             )}
           </span>
@@ -448,10 +448,10 @@ function CourtColumn({
         <CardTitle className="flex items-center justify-between gap-2 text-base">
           {court.name}
           <Badge variant={openCount > 0 ? 'success' : 'secondary'}>
-            {openCount > 0 ? `${openCount} open` : 'Full'}
+            {openCount > 0 ? `${openCount} libre${openCount > 1 ? 's' : ''}` : 'Complet'}
           </Badge>
         </CardTitle>
-        <ul aria-label="Court details" className="flex flex-wrap items-center gap-1.5 tabular-nums">
+        <ul aria-label="Détails du terrain" className="flex flex-wrap items-center gap-1.5 tabular-nums">
           <li>
             <Badge variant="outline" className="gap-1">
               <Clock aria-hidden />
@@ -459,7 +459,7 @@ function CourtColumn({
             </Badge>
           </li>
           <li>
-            <Badge variant="secondary" title={`Price per ${slotHoursLabel(slotMinutes(court.sport))} slot`}>
+            <Badge variant="secondary" title={`Prix d'un créneau de ${slotHoursLabel(slotMinutes(court.sport))}`}>
               {formatTND(slotFee(court.pricePerHour, slotMinutes(court.sport)))}
             </Badge>
           </li>
@@ -468,7 +468,7 @@ function CourtColumn({
               <Badge
                 variant="outline"
                 className="gap-1"
-                title={`Night surcharge: +${formatTND(court.nightSurchargePerHour ?? 0)} for slots from ${(court.nightStartsAt ?? '18:00:00').slice(0, 5)}`}
+                title={`Supplément de nuit : +${formatTND(court.nightSurchargePerHour ?? 0)} pour les créneaux à partir de ${(court.nightStartsAt ?? '18:00:00').slice(0, 5)}`}
               >
                 <Moon aria-hidden />
                 +{formatTND(court.nightSurchargePerHour ?? 0)} · {(court.nightStartsAt ?? '18:00:00').slice(0, 5)}
@@ -481,7 +481,7 @@ function CourtColumn({
       <CardContent>
         {court.slots.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            No slots in this window.
+            Aucun créneau sur cette période.
           </p>
         )}
         <motion.div
@@ -638,7 +638,7 @@ export function CourtSlotMatrix({
             <TabsContent key={value} value={value} className="mt-0">
               {sportCourts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No courts configured for this sport.
+                  Aucun terrain configuré pour ce sport.
                 </p>
               ) : (
                 <>
@@ -668,7 +668,7 @@ export function CourtSlotMatrix({
                       <div
                         className="mb-3 flex flex-wrap gap-1.5"
                         role="group"
-                        aria-label="Select court"
+                        aria-label="Choisir un terrain"
                       >
                         {sportCourts.map((court) => (
                           <Button
@@ -732,7 +732,7 @@ export function CourtSlotMatrix({
                   onSlotSelect?.(null)
                 }}
               >
-                Clear
+                Effacer
               </Button>
             </motion.div>
           )}

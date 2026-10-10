@@ -19,8 +19,8 @@ export default async function CourtsPage() {
   return (
     <main className="max-w-[1920px] mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
       <header className="mb-10">
-        <h1 className="text-4xl font-extrabold tracking-tight mb-2">Sports Complexes</h1>
-        <p className="text-muted-foreground text-lg">Public court availability across Tunisia</p>
+        <h1 className="text-4xl font-extrabold tracking-tight mb-2">Complexes sportifs</h1>
+        <p className="text-muted-foreground text-lg">Disponibilité publique des terrains partout en Tunisie</p>
       </header>
       <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5">
         {(orgs ?? []).map((org) => {
@@ -30,7 +30,7 @@ export default async function CourtsPage() {
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-xl leading-tight">{org.name}</CardTitle>
-                  <Badge variant="secondary">Verified</Badge>
+                  <Badge variant="secondary">Vérifié</Badge>
                 </div>
                 <CardDescription>
                   {org.address ?? ''}, {org.city ?? ''}
@@ -42,12 +42,12 @@ export default async function CourtsPage() {
                     <Badge key={c.id} variant="outline" className="text-xs">{c.sport}</Badge>
                   ))}
                   {orgCourts.length === 0 && (
-                    <span className="text-xs text-muted-foreground">No active courts listed</span>
+                    <span className="text-xs text-muted-foreground">Aucun terrain actif répertorié</span>
                   )}
                 </div>
                 <div className="mt-auto pt-2">
                   <Link href={`/courts/${org.id}`} passHref>
-                    <Button size="sm" className="w-full">View Availability</Button>
+                    <Button size="sm" className="w-full">Voir les disponibilités</Button>
                   </Link>
                 </div>
               </CardContent>

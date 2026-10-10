@@ -45,7 +45,7 @@ export function PassShares({
       setCopied(shareNo)
       window.setTimeout(() => setCopied((c) => (c === shareNo ? null : c)), 2000)
     } catch {
-      toast.error('Could not copy. Select the link and copy it by hand.')
+      toast.error('Copie impossible. Sélectionnez le lien et copiez-le manuellement.')
     }
   }
 
@@ -55,11 +55,11 @@ export function PassShares({
         <li key={s.shareNo} className="py-3 text-sm">
           <div className="flex items-center justify-between gap-3">
             <span className="font-medium">
-              {s.isOrganizer ? 'You' : (s.payerName ?? `Player ${s.shareNo}`)}{' '}
+              {s.isOrganizer ? 'Vous' : (s.payerName ?? `Joueur ${s.shareNo}`)}{' '}
               <span className="font-normal tabular-nums text-muted-foreground">{formatTND(s.amount)}</span>
             </span>
             <Badge variant={s.status === 'paid' ? 'success' : s.status === 'refunded' ? 'secondary' : 'warning'}>
-              {s.status === 'paid' ? 'Paid' : s.status === 'refunded' ? 'Refunded' : 'Waiting'}
+              {s.status === 'paid' ? 'Payée' : s.status === 'refunded' ? 'Remboursée' : 'En attente'}
             </Badge>
           </div>
 
@@ -70,18 +70,18 @@ export function PassShares({
                   <input
                     readOnly
                     value={links[s.shareNo]}
-                    aria-label={`Payment link for player ${s.shareNo}`}
+                    aria-label={`Lien de paiement du joueur ${s.shareNo}`}
                     onFocus={(e) => e.currentTarget.select()}
                     className="ph-no-capture w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
                   />
                   <Button type="button" variant="outline" size="sm" onClick={() => copy(s.shareNo, links[s.shareNo])}>
-                    {copied === s.shareNo ? 'Copied' : 'Copy link'}
+                    {copied === s.shareNo ? 'Copié' : 'Copier le lien'}
                   </Button>
                 </>
               ) : (
                 <Button type="button" variant="outline" size="sm" disabled={busy === s.shareNo} onClick={() => create(s.shareNo)}>
                   {busy === s.shareNo && <Loader2 className="animate-spin" aria-hidden />}
-                  Create payment link
+                  Créer un lien de paiement
                 </Button>
               )}
             </div>

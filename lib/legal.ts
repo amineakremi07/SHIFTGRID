@@ -3,10 +3,10 @@
  * /terms or /privacy change materially: it is stored with each account's consent
  * (auth user metadata), so we can tell which wording a person agreed to.
  */
-export const LEGAL_VERSION = '2026-10-10.1'
+export const LEGAL_VERSION = '2026-10-10.3'
 
 /** Human-readable date printed under the title of /terms and /privacy. */
-export const LEGAL_UPDATED = 'October 2026'
+export const LEGAL_UPDATED = 'octobre 2026'
 
 /** Data-protection contact printed on /privacy. Override per environment. */
 export const LEGAL_CONTACT_EMAIL = process.env.NEXT_PUBLIC_LEGAL_EMAIL || 'privacy@shiftgrid.tn'

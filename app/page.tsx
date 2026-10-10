@@ -1,9 +1,9 @@
-import Link from 'next/link'
-
-import { CookieSettingsButton } from '@/components/consent/consent-banner'
 import { ClubDiscovery } from '@/components/home/club-discovery'
 import { HeroSection } from '@/components/home/hero-section'
 import { HowItWorks } from '@/components/home/how-it-works'
+import { SiteFooter } from '@/components/home/site-footer'
+import { Navbar } from '@/components/nav/navbar'
+import { ScrollToTop } from '@/components/nav/scroll-to-top'
 import { buildClubs, type Club } from '@/lib/clubs'
 import { createPublicClient } from '@/lib/supabase/public'
 
@@ -57,32 +57,14 @@ export default async function Home() {
 
   return (
     <>
+      <Navbar />
       <main className="flex-1">
         <HeroSection />
         <ClubDiscovery clubs={clubs} loadFailed={failed} />
         <HowItWorks />
       </main>
-
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-[1920px] flex-wrap items-center justify-between gap-4 px-4 py-8 sm:px-6 lg:px-8 xl:px-12 text-sm text-muted-foreground">
-          <p>&copy; 2026 ShiftGrid. Sports court booking in Tunisia.</p>
-          <nav aria-label="Footer" className="flex gap-6">
-            <Link href="#discover" className="hover:text-foreground">
-              Clubs
-            </Link>
-            <Link href="/register?role=owner" className="hover:text-foreground">
-              List your club
-            </Link>
-            <Link href="/terms" className="hover:text-foreground">
-              Terms
-            </Link>
-            <Link href="/privacy" className="hover:text-foreground">
-              Privacy
-            </Link>
-            <CookieSettingsButton />
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
+      <ScrollToTop />
     </>
   )
 }

@@ -18,16 +18,17 @@ import {
   Zap,
 } from 'lucide-react'
 
+import { useAuthNav } from '@/hooks/use-auth-nav'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { t } from '@/lib/i18n/messages'
 import { trackEvent } from '@/components/providers/posthog-provider'
 import { SPRING } from '@/components/ui/motion-button'
 import {
   SPORT_LABEL,
   clubDistanceKm,
   filterClubs,
-  formatCourtCounts,
   formatDistance,
   formatHours,
   formatTND,
@@ -92,7 +93,7 @@ function ClubCard({
     >
       <article
         aria-labelledby={headingId}
-        className="flex w-full flex-col rounded-xl bg-card p-6"
+        className="flex w-full flex-col rounded-2xl border border-black/5 bg-card p-6 transition-transform duration-300 hover:scale-[1.01]"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -104,7 +105,7 @@ function ClubCard({
             </h3>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="size-3.5 shrink-0" aria-hidden />
-              <span className="truncate">{club.city ?? 'Tunisia'}</span>
+              <span className="truncate">{club.city ?? t('disc.card.tunisia')}</span>
             </p>
           </div>
           {distanceKm !== null && (
@@ -114,10 +115,10 @@ function ClubCard({
           )}
         </div>
 
-        <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Sports offered">
+        <ul className="mt-4 flex flex-wrap gap-1.5" aria-label={t('disc.card.sports')}>
           {club.sports.map((s) => (
             <li key={s.sport}>
-              <Badge variant={sport === s.sport ? 'success' : 'secondary'}>
+              <Badge variant="outline" className="font-normal text-muted-foreground">
                 {SPORT_LABEL[s.sport]}
               </Badge>
             </li>
@@ -126,14 +127,25 @@ function ClubCard({
 
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex items-center gap-2">
-            <dt className="sr-only">Opening hours</dt>
+            <dt className="sr-only">{t('disc.card.hours')}</dt>
             <Clock className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            <dd className="tabular-nums">Open today: {formatHours(club)}</dd>
+            <dd className="tabular-nums">
+              {t('disc.card.openToday', { hours: formatHours(club) })}
+            </dd>
           </div>
           <div className="flex items-center gap-2">
-            <dt className="sr-only">Courts</dt>
+            <dt className="sr-only">{t('disc.card.courts')}</dt>
             <Building2 className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            <dd>{formatCourtCounts(club)}</dd>
+            <dd>
+              {club.sports
+                .map((s) =>
+                  t(s.courts === 1 ? 'disc.card.court.one' : 'disc.card.court.other', {
+                    n: s.courts,
+                    sport: SPORT_LABEL[s.sport],
+                  })
+                )
+                .join(' • ')}
+            </dd>
           </div>
         </dl>
 
@@ -141,7 +153,7 @@ function ClubCard({
           <p className="text-sm">
             {price ? (
               <>
-                <span className="text-muted-foreground">From </span>
+                <span className="text-muted-foreground">{t('disc.card.from')}</span>
                 <span className="font-semibold tabular-nums">
                   {formatTND(price.price)}
                 </span>
@@ -151,7 +163,7 @@ function ClubCard({
                 </span>
               </>
             ) : (
-              <span className="text-muted-foreground">Price on request</span>
+              <span className="text-muted-foreground">{t('disc.card.onRequest')}</span>
             )}
           </p>
 
@@ -162,7 +174,7 @@ function ClubCard({
               aria-describedby={headingId}
               onClick={() => trackEvent('club.selected', { club_id: club.id, club_name: club.name })}
             >
-              View Slots &amp; Book
+              {t('disc.card.book')}
               <ArrowRight aria-hidden />
             </Link>
           </Button>
@@ -182,6 +194,7 @@ export function ClubDiscovery({
 }) {
   const reduce = useReducedMotion()
   const animate = !reduce
+  const auth = useAuthNav()
 
   const [query, setQuery] = React.useState('')
   const [sport, setSport] = React.useState<SportFilter>('all')
@@ -232,39 +245,39 @@ export function ClubDiscovery({
 
   const notice =
     geoStatus === 'denied'
-      ? 'Location access was declined, so clubs are listed alphabetically.'
+      ? t('disc.geo.denied')
       : geoStatus === 'timeout'
-        ? 'Finding your location took too long. Please try again.'
+        ? t('disc.geo.timeout')
         : geoStatus === 'unavailable'
-          ? 'Your location could not be determined right now.'
+          ? t('disc.geo.unavailable')
           : geoStatus === 'unsupported'
-            ? 'Your browser does not support location lookup.'
+            ? t('disc.geo.unsupported')
             : nearestUnranked
-              ? 'None of these clubs have shared a map location yet, so they cannot be ranked by distance.'
+              ? t('disc.geo.unranked')
               : null
 
   return (
     <section
       id="discover"
       aria-labelledby="discover-title"
-      className="mx-auto w-full max-w-[1920px] scroll-mt-6 px-4 py-16 sm:px-6 lg:px-8 xl:px-12 md:py-20"
+      className="scroll-mt-24 border-t border-border/40 bg-background"
     >
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-        Discover
+      <div className="mx-auto w-full max-w-[1920px] px-4 py-24 sm:px-6 md:py-32 lg:px-8 xl:px-12">
+      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        {t('disc.eyebrow')}
       </p>
       <h2
         id="discover-title"
-        className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl"
+        className="mt-3 max-w-[24ch] text-3xl font-semibold leading-[1.1] tracking-tight text-balance md:text-5xl"
       >
-        Find a Sports Club Near You
+        {t('disc.title')}
       </h2>
-      <p className="mt-2 max-w-[60ch] text-muted-foreground">
-        Search by club or place, choose your sport, then open a venue to see its
-        courts and live availability.
+      <p className="mt-4 max-w-[60ch] text-base leading-relaxed text-muted-foreground md:text-lg">
+        {t('disc.body')}
       </p>
 
       {/* --------------------------- search bar --------------------------- */}
-      <div className="mt-8 flex flex-col gap-3 md:flex-row">
+      <div className="mt-10 flex flex-col gap-3 md:flex-row">
         <div className="relative flex-1">
           <Search
             className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
@@ -279,8 +292,8 @@ export function ClubDiscovery({
             spellCheck={false}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search clubs or venues (e.g., 'Padel Club La Marsa')..."
-            aria-label="Search clubs or venues"
+            placeholder={t('disc.searchPlaceholder')}
+            aria-label={t('disc.searchLabel')}
             autoComplete="off"
             className="h-12 pl-11 pr-11 text-base"
           />
@@ -288,7 +301,7 @@ export function ClubDiscovery({
             <button
               type="button"
               onClick={() => setQuery('')}
-              aria-label="Clear search"
+              aria-label={t('disc.clearSearch')}
               className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <X className="size-4" aria-hidden />
@@ -313,7 +326,7 @@ export function ClubDiscovery({
           ) : (
             <Navigation aria-hidden />
           )}
-          {geoStatus === 'locating' ? 'Locating…' : 'Nearest to me'}
+          {geoStatus === 'locating' ? t('disc.locating') : t('disc.nearest')}
         </Button>
       </div>
 
@@ -321,12 +334,13 @@ export function ClubDiscovery({
       <LayoutGroup id="club-discovery">
         <div
           role="group"
-          aria-label="Filter by sport"
+          aria-label={t('disc.filterSport')}
           // Canvas-coloured track with a hairline: the Oat Milk hover below would
           // be invisible on an Oat Milk track.
-          className="mt-4 inline-flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-border bg-background p-1"
+          className="mt-4 inline-flex w-fit max-w-full flex-wrap gap-1 rounded-2xl border border-black/5 bg-card/60 p-1 backdrop-blur-xl"
         >
           {SPORT_TABS.map(({ value, label, icon: Icon }) => {
+            const tabLabel = value === 'all' ? t('disc.sport.all') : label
             const active = sport === value
             return (
               <motion.button
@@ -362,7 +376,7 @@ export function ClubDiscovery({
                   )}
                 >
                   <Icon className="size-4" aria-hidden />
-                  {label}
+                  {tabLabel}
                 </span>
               </motion.button>
             )
@@ -373,35 +387,38 @@ export function ClubDiscovery({
       <div aria-live="polite" className="mt-4 min-h-6 text-sm text-muted-foreground">
         {notice ??
           (clubs.length > 0
-            ? `${visible.length} ${visible.length === 1 ? 'club' : 'clubs'}${
-                sort === 'nearest' && position ? ' · nearest first' : ''
-              }`
+            ? `${t(visible.length === 1 ? 'disc.count.one' : 'disc.count.other', {
+                n: visible.length,
+              })}${sort === 'nearest' && position ? t('disc.nearestFirst') : ''}`
             : null)}
       </div>
 
       {/* ------------------------------ results ------------------------------ */}
       {loadFailed ? (
         <EmptyState
-          title="We couldn't load clubs right now"
-          body="Please refresh the page in a moment."
+          title={t('disc.failed.title')}
+          body={t('disc.failed.body')}
         />
       ) : clubs.length === 0 ? (
         <EmptyState
-          title="No clubs are listed yet"
-          body="Clubs appear here once they are verified and have courts set up."
+          title={t('disc.empty.title')}
+          body={t('disc.empty.body')}
           action={
-            <Button asChild variant="outline">
-              <Link href="/register?role=owner">List your club</Link>
-            </Button>
+            // Only visitors without an account are prospective club owners.
+            auth.status === 'signed_out' ? (
+              <Button asChild variant="outline">
+                <Link href="/register?role=owner">{t('disc.listClub')}</Link>
+              </Button>
+            ) : undefined
           }
         />
       ) : visible.length === 0 ? (
         <EmptyState
-          title="No clubs match your search"
-          body="Try a different name or place, or another sport."
+          title={t('disc.noMatch.title')}
+          body={t('disc.noMatch.body')}
           action={
             <Button variant="outline" onClick={clearFilters}>
-              Clear filters
+              {t('disc.clearFilters')}
             </Button>
           }
         />
@@ -423,6 +440,7 @@ export function ClubDiscovery({
           ))}
         </motion.ul>
       )}
+      </div>
     </section>
   )
 }
@@ -437,7 +455,7 @@ function EmptyState({
   action?: React.ReactNode
 }) {
   return (
-    <div className="mt-2 rounded-xl bg-card px-6 py-12 text-center">
+    <div className="mt-2 rounded-2xl border border-black/5 bg-card px-6 py-12 text-center">
       <Building2 className="mx-auto size-8 text-muted-foreground" aria-hidden />
       <p className="mt-4 text-lg font-semibold">{title}</p>
       <p className="mx-auto mt-1 max-w-[46ch] text-sm text-muted-foreground">{body}</p>

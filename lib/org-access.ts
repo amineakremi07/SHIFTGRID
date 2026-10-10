@@ -100,14 +100,14 @@ export type ActionAuth = { ok: true; ctx: OrgContext } | { ok: false; message: s
  */
 export async function requireOrgAction(roles: ReadonlyArray<'org_admin' | 'staff'>): Promise<ActionAuth> {
   const access = await getOrgAccess()
-  if (access.kind === 'signed_out') return { ok: false, message: 'Please sign in again.' }
-  if (access.kind === 'mfa_required') return { ok: false, message: 'Enter your two-factor code to continue.' }
-  if (access.kind !== 'ok') return { ok: false, message: 'You do not have access to a club dashboard.' }
+  if (access.kind === 'signed_out') return { ok: false, message: 'Veuillez vous reconnecter.' }
+  if (access.kind === 'mfa_required') return { ok: false, message: 'Saisissez votre code à deux facteurs pour continuer.' }
+  if (access.kind !== 'ok') return { ok: false, message: 'Vous n\'avez pas accès à un tableau de bord de club.' }
   if (!roles.includes(access.ctx.role)) {
-    return { ok: false, message: 'Only the club owner can do this.' }
+    return { ok: false, message: 'Seul le propriétaire du club peut effectuer cette action.' }
   }
   if (access.ctx.orgStatus !== 'approved') {
-    return { ok: false, message: 'Your club is not approved yet.' }
+    return { ok: false, message: 'Votre club n\'est pas encore approuvé.' }
   }
   return { ok: true, ctx: access.ctx }
 }

@@ -32,14 +32,14 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-muted/30">
       <header className="border-b bg-background">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-bold">Dashboard</h1>
+          <h1 className="text-xl font-bold">Tableau de bord</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
               {profile.role}
             </span>
             <form action="/logout" method="post">
               <button type="submit" className="text-sm text-primary hover:underline">
-                Sign Out
+                Se déconnecter
               </button>
             </form>
           </div>
@@ -49,29 +49,29 @@ export default async function DashboardPage() {
       <main className="container mx-auto py-8 px-4">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <div className="bg-background p-6 rounded-lg border">
-            <h3 className="text-lg font-semibold">Total Courts</h3>
+            <h3 className="text-lg font-semibold">Total des terrains</h3>
             <p className="text-3xl font-bold mt-2">--</p>
-            <p className="text-sm text-muted-foreground mt-1">Active courts</p>
+            <p className="text-sm text-muted-foreground mt-1">Terrains actifs</p>
           </div>
           <div className="bg-background p-6 rounded-lg border">
-            <h3 className="text-lg font-semibold">Pending Bookings</h3>
+            <h3 className="text-lg font-semibold">Réservations en attente</h3>
             <p className="text-3xl font-bold mt-2">--</p>
-            <p className="text-sm text-muted-foreground mt-1">Awaiting confirmation</p>
+            <p className="text-sm text-muted-foreground mt-1">En attente de confirmation</p>
           </div>
           <div className="bg-background p-6 rounded-lg border">
-            <h3 className="text-lg font-semibold">Today&apos;s Bookings</h3>
+            <h3 className="text-lg font-semibold">Réservations du jour</h3>
             <p className="text-3xl font-bold mt-2">--</p>
-            <p className="text-sm text-muted-foreground mt-1">Scheduled sessions</p>
+            <p className="text-sm text-muted-foreground mt-1">Séances prévues</p>
           </div>
           <div className="bg-background p-6 rounded-lg border">
-            <h3 className="text-lg font-semibold">Revenue (This Month)</h3>
+            <h3 className="text-lg font-semibold">Revenus (ce mois-ci)</h3>
             <p className="text-3xl font-bold mt-2">-- TND</p>
-            <p className="text-sm text-muted-foreground mt-1">Year to date</p>
+            <p className="text-sm text-muted-foreground mt-1">Depuis le début de l&apos;année</p>
           </div>
         </div>
 
         <div className="mt-8 bg-background p-6 rounded-lg border">
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+          <h2 className="text-xl font-semibold mb-4">Actions rapides</h2>
           <div className="grid gap-4 md:grid-cols-3">
             <a
               href="/dashboard/org/staff"
@@ -82,8 +82,8 @@ export default async function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </div>
-              <span className="font-medium">Manage Staff</span>
-              <span className="text-sm text-muted-foreground mt-1">Invite and manage team</span>
+              <span className="font-medium">Gérer l&apos;équipe</span>
+              <span className="text-sm text-muted-foreground mt-1">Inviter et gérer l&apos;équipe</span>
             </a>
             <a
               href="/dashboard/org/bookings"
@@ -94,8 +94,8 @@ export default async function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-medium">View Bookings</span>
-              <span className="text-sm text-muted-foreground mt-1">Calendar and schedule</span>
+              <span className="font-medium">Voir les réservations</span>
+              <span className="text-sm text-muted-foreground mt-1">Calendrier et planning</span>
             </a>
             <a
               href="/dashboard/org/settings"
@@ -107,8 +107,8 @@ export default async function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <span className="font-medium">Settings</span>
-              <span className="text-sm text-muted-foreground mt-1">Organization settings</span>
+              <span className="font-medium">Paramètres</span>
+              <span className="text-sm text-muted-foreground mt-1">Paramètres de l&apos;organisation</span>
             </a>
           </div>
         </div>

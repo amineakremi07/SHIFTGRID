@@ -13,7 +13,7 @@ export type BookingActionsProps = {
   clubName: string
   courtName: string
   sport: string
-  /** Display-ready venue date and time range for the WhatsApp message, e.g. "Tue 3 Nov 2026", "18:00 – 19:30". */
+  /** Display-ready venue date and time range for the WhatsApp message, ex. « mar. 3 nov. 2026 », "18:00 – 19:30". */
   date: string
   time: string
   /** Real instants (ISO) for the calendar. */
@@ -71,11 +71,11 @@ export function BookingActions(p: BookingActionsProps) {
             onClick={() => trackEvent('whatsapp_contact_clicked', { club_name: p.clubName, fallback: isFallback })}
           >
             <MessageCircle aria-hidden />
-            {isFallback ? 'Contact ShiftGrid on WhatsApp' : 'Contact the club on WhatsApp'}
+            {isFallback ? 'Contacter ShiftGrid sur WhatsApp' : 'Contacter le club sur WhatsApp'}
           </a>
         </Button>
       )}
-      <div role="group" aria-label="Add to calendar" className="grid grid-cols-2 gap-2">
+      <div role="group" aria-label="Ajouter au calendrier" className="grid grid-cols-2 gap-2">
         <Button asChild variant="outline" className="h-12">
           <a
             href={googleCalendarUrl(event)}

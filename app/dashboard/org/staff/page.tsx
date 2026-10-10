@@ -16,7 +16,7 @@ export default async function OrgStaffPage() {
   if (!overview.ok) {
     return (
       <div role="alert" className="rounded-xl bg-[#eae6df] px-6 py-10 text-center text-sm">
-        We couldn&apos;t load your team. Please refresh in a moment.
+        Impossible de charger votre équipe. Veuillez actualiser la page dans un instant.
       </div>
     )
   }

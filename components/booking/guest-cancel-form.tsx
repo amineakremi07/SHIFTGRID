@@ -31,14 +31,14 @@ export function GuestCancelForm({ bookingId, token }: { bookingId: string; token
       return
     }
     trackEvent('booking.cancelled', { booking_id: bookingId, actor: 'guest' })
-    toast.success('Booking cancelled. The slot is free again.')
+    toast.success('Réservation annulée. Le créneau est de nouveau libre.')
     router.refresh()
   }
 
   return (
     <div className="space-y-4">
       <div className="grid gap-1.5">
-        <Label htmlFor="guest-reason">Reason (optional)</Label>
+        <Label htmlFor="guest-reason">Motif (facultatif)</Label>
         <Textarea
           id="guest-reason"
           value={reason}
@@ -51,18 +51,18 @@ export function GuestCancelForm({ bookingId, token }: { bookingId: string; token
 
       {!confirming ? (
         <Button variant="destructive" className="w-full" onClick={() => setConfirming(true)}>
-          Cancel this booking
+          Annuler cette réservation
         </Button>
       ) : (
         <div className="space-y-2 rounded-xl border border-destructive/30 p-4">
-          <p className="text-sm font-medium">Cancel for good? This cannot be undone.</p>
+          <p className="text-sm font-medium">Annuler définitivement ? Cette action est irréversible.</p>
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setConfirming(false)} disabled={busy}>
-              Keep booking
+              Conserver la réservation
             </Button>
             <Button variant="destructive" className="flex-1" onClick={cancel} disabled={busy}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
-              Yes, cancel
+              Oui, annuler
             </Button>
           </div>
         </div>

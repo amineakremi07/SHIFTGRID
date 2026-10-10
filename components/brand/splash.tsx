@@ -52,7 +52,7 @@ export function Splash() {
 
   if (phase === 'gone') return null
   return (
-    <div id="sg-splash" className="sg-splash" data-leaving={phase === 'leave' ? 'true' : undefined} aria-hidden={phase === 'leave' ? true : undefined} role="status" aria-label="Loading ShiftGrid">
+    <div id="sg-splash" className="sg-splash" data-leaving={phase === 'leave' ? 'true' : undefined} aria-hidden={phase === 'leave' ? true : undefined} role="status" aria-label="Chargement de ShiftGrid">
       <div className="sg-splash-grid" aria-hidden>
         {Array.from({ length: 9 }, (_, i) => (
           <span key={i} style={{ animationDelay: `${(i % 3) * 90 + Math.floor(i / 3) * 90}ms` }} />

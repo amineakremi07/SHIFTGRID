@@ -25,9 +25,9 @@ import { cn } from '@/lib/utils'
    ========================================================================== */
 
 const OPTION_META: Record<PaymentChoice, { title: string; icon: typeof CreditCard }> = {
-  online_full: { title: 'Pay all now', icon: CreditCard },
-  split: { title: 'Split', icon: Users },
-  cash: { title: 'At club', icon: Banknote },
+  online_full: { title: 'Tout payer maintenant', icon: CreditCard },
+  split: { title: 'Partager', icon: Users },
+  cash: { title: 'Au club', icon: Banknote },
 }
 
 /** The amount charged right now for a choice (0 for cash). */
@@ -62,43 +62,44 @@ export function PaymentOptions({
       key: 'online_full',
       available: online,
       chip: formatTND(total),
-      detail: <>Pay {formatTND(total)} now. Your booking is confirmed straight away.</>,
-      note: online ? undefined : 'Online payment is not available yet.',
+      detail: <>Payez {formatTND(total)} maintenant. Votre réservation est confirmée immédiatement.</>,
+      note: online ? undefined : 'Le paiement en ligne n\'est pas encore disponible.',
     },
     {
       key: 'split',
       available: online && splitOk,
-      chip: shares ? `${formatTND(shares.organizer)} each` : 'share it',
+      chip: shares ? `${formatTND(shares.organizer)} chacun` : 'à partager',
       detail: shares ? (
         <>
-          Pay your {formatTND(shares.organizer)} share now ({playerCount} players). You get a link for each of the other{' '}
-          {playerCount - 1} to pay {formatTND(shares.others)}. The slot is held until every share is paid.
+          Payez votre part de {formatTND(shares.organizer)} maintenant ({playerCount} joueurs). Vous recevez un lien pour
+          chacun des {playerCount - 1} autres joueurs, qui paieront {formatTND(shares.others)}. Le créneau est retenu
+          jusqu&apos;au paiement de toutes les parts.
         </>
       ) : (
-        <>Pay your share now and send a link to the other players.</>
+        <>Payez votre part maintenant et envoyez un lien aux autres joueurs.</>
       ),
-      note: !online ? 'Online payment is not available yet.' : !splitOk ? 'Splitting works for up to 4 players.' : undefined,
+      note: !online ? 'Le paiement en ligne n\'est pas encore disponible.' : !splitOk ? 'Le partage fonctionne jusqu\'à 4 joueurs.' : undefined,
     },
     {
       key: 'cash',
       available: true,
-      chip: 'cash',
-      detail: <>Pay {formatTND(total)} in cash at the club. Staff confirm your payment when you arrive.</>,
+      chip: 'espèces',
+      detail: <>Payez {formatTND(total)} en espèces au club. Le personnel confirme votre paiement à votre arrivée.</>,
     },
   ]
 
   return (
     <fieldset className="space-y-2" disabled={disabled}>
       <legend className="mb-2 flex w-full items-center gap-2 text-sm font-medium">
-        Payment
+        Paiement
         {onlineMode === 'test' && value !== 'cash' && (
           <>
             <Badge variant="warning" className="px-1.5 py-0 text-[10px] tracking-wide">
               TEST
             </Badge>
-            <InfoTip label="About test mode">
-              <strong>Test mode:</strong> no real payment gateway is connected, so no money is charged. The payment is
-              recorded as paid for testing.
+            <InfoTip label="À propos du mode test">
+              <strong>Mode test :</strong> aucune passerelle de paiement réelle n&apos;est connectée, aucun argent n&apos;est
+              débité. Le paiement est enregistré comme payé pour les besoins du test.
             </InfoTip>
           </>
         )}
@@ -128,10 +129,10 @@ export function PaymentOptions({
               <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <span className="truncate">
                 {title} <span className="font-normal text-muted-foreground">·</span>{' '}
-                <span className="tabular-nums">{available ? chip : (note ? 'unavailable' : chip)}</span>
+                <span className="tabular-nums">{available ? chip : (note ? 'indisponible' : chip)}</span>
               </span>
             </span>
-            <InfoTip label={`About: ${title}`}>{note ?? detail}</InfoTip>
+            <InfoTip label={`À propos : ${title}`}>{note ?? detail}</InfoTip>
           </label>
         )
       })}
@@ -149,7 +150,7 @@ function useCopy() {
       setCopied(key)
       window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 2000)
     } catch {
-      toast.error('Could not copy. Select the link and copy it by hand.')
+      toast.error('Copie impossible. Sélectionnez le lien et copiez-le manuellement.')
     }
   }
   return { copied, copy }
@@ -162,20 +163,20 @@ export function GuestCancelLink({ path }: { path: string }) {
   const { copied, copy } = useCopy()
   const url = absolute(path)
   return (
-    <Disclosure title="Cancel link (keep private)" icon={<Link2 className="size-4 text-muted-foreground" aria-hidden />}>
+    <Disclosure title="Lien d'annulation (à garder privé)" icon={<Link2 className="size-4 text-muted-foreground" aria-hidden />}>
       <p>
-        It is the only way to cancel online without an account, free until 24 hours before your slot. Anyone with the
-        link can cancel, so keep it private.
+        C&apos;est le seul moyen d&apos;annuler en ligne sans compte, gratuitement jusqu&apos;à 24 heures avant votre
+        créneau. Toute personne disposant du lien peut annuler : gardez-le privé.
       </p>
       <input
         readOnly
         value={url}
-        aria-label="Cancellation link"
+        aria-label="Lien d'annulation"
         onFocus={(e) => e.currentTarget.select()}
         className="ph-no-capture w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs text-foreground"
       />
       <Button type="button" variant="outline" size="sm" onClick={() => copy('cancel', url)}>
-        {copied === 'cancel' ? 'Copied' : 'Copy link'}
+        {copied === 'cancel' ? 'Copié' : 'Copier le lien'}
       </Button>
     </Disclosure>
   )
@@ -202,7 +203,7 @@ export function InviteLinks({
     setBusy(null)
     if (!res.ok) return void toast.error(res.message)
     setLinks((prev) => prev.map((l) => (l.shareNo === shareNo ? { ...l, path: res.path } : l)))
-    toast.success('New link created. The old one no longer works.')
+    toast.success('Nouveau lien créé. L\'ancien ne fonctionne plus.')
   }
 
   return (
@@ -212,23 +213,23 @@ export function InviteLinks({
         return (
           <li key={l.shareNo} className="rounded-lg border border-border p-3 text-sm">
             <p className="font-medium">
-              Player {l.shareNo} <span className="font-normal text-muted-foreground">pays {formatTND(l.amount)}</span>
+              Joueur {l.shareNo} <span className="font-normal text-muted-foreground">paie {formatTND(l.amount)}</span>
             </p>
             <input
               readOnly
               value={url}
-              aria-label={`Payment link for player ${l.shareNo}`}
+              aria-label={`Lien de paiement du joueur ${l.shareNo}`}
               onFocus={(e) => e.currentTarget.select()}
               className="ph-no-capture mt-2 w-full rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs"
             />
             <div className="mt-2 flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => copy(`s${l.shareNo}`, url)}>
-                {copied === `s${l.shareNo}` ? 'Copied' : 'Copy link'}
+                {copied === `s${l.shareNo}` ? 'Copié' : 'Copier le lien'}
               </Button>
               {bookingId && (
                 <Button type="button" variant="ghost" size="sm" disabled={busy === l.shareNo} onClick={() => regenerate(l.shareNo)}>
                   {busy === l.shareNo && <Loader2 className="animate-spin" aria-hidden />}
-                  New link
+                  Nouveau lien
                 </Button>
               )}
             </div>
@@ -271,12 +272,12 @@ export function CheckoutConfirmation({
   const confirmed = result.status === 'confirmed'
   const remaining = Math.max(0, result.amount - result.paidNow)
 
-  const headline = confirmed ? 'Booking confirmed' : split ? 'Slot held, waiting for your players' : 'Your slot is reserved'
+  const headline = confirmed ? 'Réservation confirmée' : split ? 'Créneau retenu, en attente de vos joueurs' : 'Votre créneau est réservé'
   const sub = confirmed
-    ? `Paid in full · show the code at ${orgName}`
+    ? `Payé en totalité · présentez le code à ${orgName}`
     : split
-      ? 'Confirmed once every share is paid'
-      : `Pay at ${orgName} · show the code`
+      ? 'Confirmé dès que toutes les parts sont payées'
+      : `Paiement à ${orgName} · présentez le code`
 
   return (
     <motion.div
@@ -297,30 +298,30 @@ export function CheckoutConfirmation({
       </div>
 
       <div className="rounded-lg bg-card p-4 text-center">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Reference</p>
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Référence</p>
         <p className="mt-1 font-mono text-3xl font-bold tracking-widest">{result.reference}</p>
       </div>
 
       <dl className="space-y-2 text-sm">
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Court</dt>
+          <dt className="text-muted-foreground">Terrain</dt>
           <dd className="font-medium">{courtName}</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">When</dt>
+          <dt className="text-muted-foreground">Quand</dt>
           <dd className="font-medium tabular-nums">
             {formatVenueDate(date)}, {formatVenueTime(result.startsAt)} – {formatVenueTime(result.endsAt)}
           </dd>
         </div>
         {result.paidNow > 0 && (
           <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">Paid now</dt>
+            <dt className="text-muted-foreground">Payé maintenant</dt>
             <dd className="font-semibold tabular-nums">{formatTND(result.paidNow)}</dd>
           </div>
         )}
         {(result.payment === 'cash' || split) && (
           <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">{split ? 'Still to be paid by your players' : 'To pay at the club'}</dt>
+            <dt className="text-muted-foreground">{split ? 'Reste à payer par vos joueurs' : 'À payer au club'}</dt>
             <dd className="font-semibold tabular-nums">{formatTND(split ? remaining : result.amount)}</dd>
           </div>
         )}
@@ -330,8 +331,8 @@ export function CheckoutConfirmation({
         <p role="note" data-testid="risk-notice" className="flex items-start gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
           <ShieldAlert className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
           <span>
-            Please arrive on time: {orgName} may ask for a deposit at the desk, and a missed booking is recorded against your
-            account. Cancel in advance if your plans change.
+            Merci d&apos;arriver à l&apos;heure : {orgName} peut demander un acompte à l&apos;accueil, et une réservation non
+            honorée est enregistrée sur votre compte. Annulez à l&apos;avance si vos plans changent.
           </span>
         </p>
       )}
@@ -342,7 +343,7 @@ export function CheckoutConfirmation({
           <span className="min-w-0">
             {emailedTo && <strong className="break-all font-medium text-foreground">{emailedTo}</strong>}
             {emailedTo && invitesEmailed > 0 && ' · '}
-            {invitesEmailed > 0 && `${invitesEmailed} ${invitesEmailed === 1 ? 'invite' : 'invites'} sent`}
+            {invitesEmailed > 0 && `${invitesEmailed} ${invitesEmailed === 1 ? 'invitation envoyée' : 'invitations envoyées'}`}
           </span>
         </p>
       )}
@@ -350,10 +351,10 @@ export function CheckoutConfirmation({
       {split && result.invites.length > 0 && (
         <div className="space-y-2">
           <p className="flex items-center gap-2 text-sm font-medium">
-            Player links
-            <InfoTip label="About the payment links">
-              Each link works once. You can find your booking later under My reservations and create a new link if one is
-              lost.
+            Liens des joueurs
+            <InfoTip label="À propos des liens de paiement">
+              Chaque lien ne fonctionne qu&apos;une fois. Retrouvez votre réservation plus tard dans Mes réservations et créez
+              un nouveau lien si l&apos;un d&apos;eux est perdu.
             </InfoTip>
           </p>
           <InviteLinks invites={result.invites} />
@@ -380,11 +381,11 @@ export function CheckoutConfirmation({
         <Button asChild variant="outline" className="h-11 w-full">
           <Link href={result.passPath}>
             <Ticket aria-hidden />
-            View your pass
+            Voir votre pass
           </Link>
         </Button>
         <Button className="h-11 w-full" onClick={onDone}>
-          Done
+          Terminé
         </Button>
       </div>
     </motion.div>

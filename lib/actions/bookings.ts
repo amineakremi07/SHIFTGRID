@@ -22,7 +22,7 @@ const cancelSchema = z.object({
   reason: z
     .string()
     .trim()
-    .max(300, 'The reason is too long (300 characters max).')
+    .max(300, 'Le motif est trop long (300 caractères maximum).')
     .optional()
     .transform((v) => (v ? v : undefined)),
 })
@@ -52,7 +52,7 @@ export async function cancelBookingAction(...args: Parameters<typeof cancelBooki
 async function cancelBookingActionImpl(input: CancelBookingInput): Promise<CancelBookingResult> {
   const parsed = cancelSchema.safeParse(input)
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.issues[0]?.message ?? 'Invalid request.' }
+    return { ok: false, message: parsed.error.issues[0]?.message ?? 'Requête invalide.' }
   }
   const { bookingId, reason, guestToken } = parsed.data
 
@@ -64,7 +64,7 @@ async function cancelBookingActionImpl(input: CancelBookingInput): Promise<Cance
   }
 
   const { supabase, user, profile } = await getSessionProfile()
-  if (!user) return { ok: false, message: 'Please sign in to cancel a booking.' }
+  if (!user) return { ok: false, message: 'Connectez-vous pour annuler une réservation.' }
 
   // RLS already limits this to the caller's own bookings or their club's.
   const { data: booking } = await supabase
@@ -72,29 +72,29 @@ async function cancelBookingActionImpl(input: CancelBookingInput): Promise<Cance
     .select('id, org_id, booker_profile_id, status, ends_at, cancellation_deadline')
     .eq('id', bookingId)
     .maybeSingle()
-  if (!booking) return { ok: false, message: 'Booking not found.' }
+  if (!booking) return { ok: false, message: 'Réservation introuvable.' }
 
   const isOwner = booking.booker_profile_id === user.id
   const isStaff =
     (profile?.role === 'org_admin' || profile?.role === 'staff') && profile.org_id === booking.org_id
-  if (!isOwner && !isStaff) return { ok: false, message: 'You cannot cancel this booking.' }
+  if (!isOwner && !isStaff) return { ok: false, message: 'Vous ne pouvez pas annuler cette réservation.' }
   // Acting for a club needs the second factor, wherever this action was posted from.
   if (isStaff && !isOwner && (await sessionNeedsSecondFactor(supabase, user))) {
-    return { ok: false, message: 'Enter your two-factor code to continue.' }
+    return { ok: false, message: 'Saisissez votre code à deux facteurs pour continuer.' }
   }
 
   if (!(OPEN as readonly string[]).includes(booking.status)) {
-    return { ok: false, message: 'This booking is already cancelled or finished.' }
+    return { ok: false, message: 'Cette réservation est déjà annulée ou terminée.' }
   }
 
   const now = Date.now()
   if (now >= Date.parse(booking.ends_at)) {
-    return { ok: false, message: 'This booking has already taken place.' }
+    return { ok: false, message: 'Cette réservation a déjà eu lieu.' }
   }
   if (!isStaff && now >= Date.parse(booking.cancellation_deadline)) {
     return {
       ok: false,
-      message: 'Free cancellation closed 24 hours before the start. Please contact the club.',
+      message: 'L\'annulation gratuite est close 24 heures avant le début. Veuillez contacter le club.',
     }
   }
 
@@ -107,10 +107,10 @@ async function cancelBookingActionImpl(input: CancelBookingInput): Promise<Cance
 
   if (error) {
     console.error('cancelBookingAction failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not cancel the booking. Please try again.' }
+    return { ok: false, message: 'Impossible d\'annuler la réservation. Veuillez réessayer.' }
   }
   // Zero rows: lost a race with another cancellation, or RLS refused it.
-  if (!updated?.length) return { ok: false, message: 'This booking could not be cancelled. Please refresh.' }
+  if (!updated?.length) return { ok: false, message: 'Cette réservation n\'a pas pu être annulée. Veuillez actualiser la page.' }
 
   revalidatePath(`/courts/${booking.org_id}`)
   revalidatePath('/dashboard/org/bookings')
@@ -143,7 +143,7 @@ async function cancelBookingActionImpl(input: CancelBookingInput): Promise<Cance
  * Every failure to match says the same thing, so a probe learns nothing.
  */
 async function cancelAsGuest(bookingId: string, token: string, reason: string | undefined): Promise<CancelBookingResult> {
-  const invalid: CancelBookingResult = { ok: false, message: 'This cancellation link is not valid.' }
+  const invalid: CancelBookingResult = { ok: false, message: 'Ce lien d\'annulation n\'est pas valide.' }
   const admin = getSupabaseAdmin()
 
   const { data: booking } = await admin
@@ -155,12 +155,12 @@ async function cancelAsGuest(bookingId: string, token: string, reason: string | 
   if (!booking) return invalid
 
   if (!(OPEN as readonly string[]).includes(booking.status)) {
-    return { ok: false, message: 'This booking is already cancelled or finished.' }
+    return { ok: false, message: 'Cette réservation est déjà annulée ou terminée.' }
   }
   const now = Date.now()
-  if (now >= Date.parse(booking.ends_at)) return { ok: false, message: 'This booking has already taken place.' }
+  if (now >= Date.parse(booking.ends_at)) return { ok: false, message: 'Cette réservation a déjà eu lieu.' }
   if (now >= Date.parse(booking.cancellation_deadline)) {
-    return { ok: false, message: 'Free cancellation closed 24 hours before the start. Please contact the club.' }
+    return { ok: false, message: 'L\'annulation gratuite est close 24 heures avant le début. Veuillez contacter le club.' }
   }
 
   const { data: updated, error } = await admin
@@ -171,9 +171,9 @@ async function cancelAsGuest(bookingId: string, token: string, reason: string | 
     .select('id')
   if (error) {
     console.error('guest cancel failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not cancel the booking. Please try again.' }
+    return { ok: false, message: 'Impossible d\'annuler la réservation. Veuillez réessayer.' }
   }
-  if (!updated?.length) return { ok: false, message: 'This booking could not be cancelled. Please refresh.' }
+  if (!updated?.length) return { ok: false, message: 'Cette réservation n\'a pas pu être annulée. Veuillez actualiser la page.' }
 
   revalidatePath(`/courts/${booking.org_id}`)
   revalidatePath('/dashboard/org/bookings')

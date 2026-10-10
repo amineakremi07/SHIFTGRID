@@ -27,7 +27,7 @@ export function AcceptInvitationForm({ clubName, email }: { clubName: string; em
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (busy) return
-    if (name.trim().length < 2) return setError('Please enter your name')
+    if (name.trim().length < 2) return setError('Veuillez saisir votre nom')
     const parsed = newPasswordSchema.safeParse({ password, confirmPassword: confirm })
     if (!parsed.success) return setError(parsed.error.issues[0].message)
 
@@ -50,7 +50,7 @@ export function AcceptInvitationForm({ clubName, email }: { clubName: string; em
   }
 
   return (
-    <AuthCard title={`Join ${clubName}`} subtitle={`You were invited as staff. Choose a name and a password for ${email}.`}>
+    <AuthCard title={`Rejoindre ${clubName}`} subtitle={`Vous avez été invité comme membre de l'équipe. Choisissez un nom et un mot de passe pour ${email}.`}>
       <form onSubmit={submit} noValidate className="space-y-4" data-testid="accept-invitation-form">
         {error && (
           <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
@@ -58,19 +58,19 @@ export function AcceptInvitationForm({ clubName, email }: { clubName: string; em
           </div>
         )}
         <div>
-          <Label htmlFor="ai-name">Your name</Label>
+          <Label htmlFor="ai-name">Votre nom</Label>
           <Input id="ai-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" disabled={busy} autoFocus />
         </div>
         <div>
-          <Label htmlFor="ai-password">Password</Label>
+          <Label htmlFor="ai-password">Mot de passe</Label>
           <Input id="ai-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" disabled={busy} />
         </div>
         <div>
-          <Label htmlFor="ai-confirm">Confirm password</Label>
+          <Label htmlFor="ai-confirm">Confirmer le mot de passe</Label>
           <Input id="ai-confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" disabled={busy} />
         </div>
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Saving" /> : 'Create account and join'}
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Enregistrement" /> : 'Créer le compte et rejoindre'}
         </Button>
       </form>
     </AuthCard>

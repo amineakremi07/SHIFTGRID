@@ -57,7 +57,7 @@ export async function findGuestBooking(token: string | undefined | null): Promis
     id: b.id,
     orgId: b.org_id,
     clubName: org.data?.name ?? 'the club',
-    courtName: court.data?.name ?? 'Court',
+    courtName: court.data?.name ?? 'Terrain',
     sport: b.sport as Sport,
     startsAt: b.starts_at,
     endsAt: b.ends_at,

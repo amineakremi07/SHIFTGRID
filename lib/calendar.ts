@@ -59,7 +59,7 @@ export function icsContent(e: CalendarEvent, now: Date = new Date()): string {
     'BEGIN:VALARM',
     'TRIGGER:-PT2H',
     'ACTION:DISPLAY',
-    'DESCRIPTION:Your game starts in 2 hours',
+    'DESCRIPTION:Votre match commence dans 2 heures',
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR',
@@ -80,10 +80,10 @@ export function bookingCalendarEvent(p: {
 }): CalendarEvent {
   return {
     uid: p.bookingId,
-    title: `${p.sport ? p.sport.charAt(0).toUpperCase() + p.sport.slice(1) : 'Game'} at ${p.clubName}`,
+    title: `${p.sport ? p.sport.charAt(0).toUpperCase() + p.sport.slice(1) : 'Match'} à ${p.clubName}`,
     startsAt: p.startsAt,
     endsAt: p.endsAt,
     location: [p.clubName, p.address].filter(Boolean).join(', '),
-    description: `Court: ${p.courtName}${p.reference ? `\nReference: ${p.reference}` : ''}\nBooked with ShiftGrid`,
+    description: `Terrain : ${p.courtName}${p.reference ? `\nRéférence : ${p.reference}` : ''}\nRéservé avec ShiftGrid`,
   }
 }

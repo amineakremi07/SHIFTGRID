@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 /** The email box on /forgot-password. */
 export const forgotPasswordSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Please enter a valid email address'),
+  email: z.string().trim().toLowerCase().email('Veuillez saisir une adresse e-mail valide'),
 })
 
 /**
@@ -13,9 +13,9 @@ export const forgotPasswordSchema = z.object({
  */
 export const newPasswordSchema = z
   .object({
-    password: z.string().min(8, 'Password must be at least 8 characters').max(72, 'Password must be at most 72 characters'),
+    password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères').max(72, 'Le mot de passe ne doit pas dépasser 72 caractères'),
     confirmPassword: z.string(),
   })
-  .refine((v) => v.password === v.confirmPassword, { path: ['confirmPassword'], message: 'The two passwords do not match' })
+  .refine((v) => v.password === v.confirmPassword, { path: ['confirmPassword'], message: 'Les deux mots de passe ne correspondent pas' })
 
 export type NewPasswordInput = z.infer<typeof newPasswordSchema>

@@ -3,7 +3,9 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { BadgeCheck, Building2, CalendarClock, MapPin } from 'lucide-react'
 
+import { t } from '@/lib/i18n/messages'
 import { SPRING } from '@/components/ui/motion-button'
+import type { MessageKey } from '@/lib/i18n/messages'
 import { cn } from '@/lib/utils'
 
 /* ==========================================================================
@@ -13,33 +15,10 @@ import { cn } from '@/lib/utils'
    ========================================================================== */
 
 const STEPS = [
-  {
-    icon: MapPin,
-    title: 'Choose a Court',
-    description: 'Pick your sport and the area you want to play in.',
-    tags: ['Location', 'Sport'],
-  },
-  {
-    icon: Building2,
-    title: 'Explore Facilities',
-    description: 'Compare what each complex offers before you commit.',
-    tags: ['Surface type', 'Lighting', 'Amenities'],
-  },
-  {
-    icon: CalendarClock,
-    title: 'Select Time Slot',
-    description:
-      'Read live availability in the slot matrix. Booked and held slots are clearly marked.',
-    tags: ['Interactive matrix'],
-  },
-  {
-    icon: BadgeCheck,
-    title: 'Confirm & Play',
-    description:
-      'Your slot is locked the instant you confirm, with the total shown in TND.',
-    tags: ['Instant lock', 'TND confirmation'],
-    featured: true,
-  },
+  { icon: MapPin, id: 's1', tags: ['t1', 't2'] },
+  { icon: Building2, id: 's2', tags: ['t1', 't2', 't3'] },
+  { icon: CalendarClock, id: 's3', tags: ['t1'] },
+  { icon: BadgeCheck, id: 's4', tags: ['t1', 't2'], featured: true },
 ] as const
 
 export function HowItWorks() {
@@ -49,20 +28,21 @@ export function HowItWorks() {
     <section
       id="how-it-works"
       aria-labelledby="how-title"
-      className="mx-auto w-full max-w-[1920px] scroll-mt-6 px-4 pb-20 sm:px-6 lg:px-8 xl:px-12 pt-4 md:pb-28"
+      className="scroll-mt-24 border-t border-border/40 bg-muted/40"
     >
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-        How it works
+      <div className="mx-auto w-full max-w-[1920px] px-4 py-24 sm:px-6 md:py-32 lg:px-8 xl:px-12">
+      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        {t('how.eyebrow')}
       </p>
       <h2
         id="how-title"
-        className="mt-2 max-w-[20ch] text-3xl font-semibold tracking-tight md:text-4xl"
+        className="mt-3 max-w-[22ch] text-3xl font-semibold leading-[1.1] tracking-tight text-balance md:text-5xl"
       >
-        From search to game in four steps
+        {t('how.title')}
       </h2>
 
       <motion.ol
-        className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         initial={reduce ? false : 'hidden'}
         whileInView="show"
         viewport={{ once: true, margin: '-80px' }}
@@ -74,7 +54,7 @@ export function HowItWorks() {
 
           return (
             <motion.li
-              key={step.title}
+              key={step.id}
               variants={{
                 hidden: { opacity: 0, y: 16 },
                 show: { opacity: 1, y: 0 },
@@ -82,10 +62,10 @@ export function HowItWorks() {
               whileHover={reduce ? undefined : { y: -2 }}
               transition={SPRING}
               className={cn(
-                'flex flex-col rounded-xl p-6',
+                'flex flex-col rounded-2xl border p-6 transition-transform duration-300 hover:scale-[1.01]',
                 featured
-                  ? 'bg-forest-depths text-bone-linen'
-                  : 'bg-card text-card-foreground'
+                  ? 'border-black/5 bg-forest-depths text-bone-linen'
+                  : 'border-black/5 bg-card text-card-foreground'
               )}
             >
               <div className="flex items-center justify-between">
@@ -108,7 +88,7 @@ export function HowItWorks() {
               </div>
 
               <h3 className="mt-6 text-xl font-semibold leading-tight">
-                {step.title}
+                {t(`how.${step.id}.title` as MessageKey)}
               </h3>
               <p
                 className={cn(
@@ -116,7 +96,7 @@ export function HowItWorks() {
                   featured ? 'text-oat-milk' : 'text-muted-foreground'
                 )}
               >
-                {step.description}
+                {t(`how.${step.id}.body` as MessageKey)}
               </p>
 
               <ul className="mt-5 flex flex-wrap gap-1.5 pt-1">
@@ -130,7 +110,7 @@ export function HowItWorks() {
                         : 'bg-background text-muted-foreground'
                     )}
                   >
-                    {tag}
+                    {t(`how.${step.id}.${tag}` as MessageKey)}
                   </li>
                 ))}
               </ul>
@@ -138,6 +118,7 @@ export function HowItWorks() {
           )
         })}
       </motion.ol>
+      </div>
     </section>
   )
 }

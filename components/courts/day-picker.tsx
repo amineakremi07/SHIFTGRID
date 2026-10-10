@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { fr } from 'react-day-picker/locale'
 
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -48,7 +49,7 @@ export function DayPicker({
         variant="outline"
         size="icon"
         className="max-md:size-12"
-        aria-label="Previous day"
+        aria-label="Jour précédent"
         disabled={dateStr <= minDate}
         onClick={() => onChange(addDays(dateStr, -1))}
       >
@@ -65,6 +66,7 @@ export function DayPicker({
         <PopoverContent align="start" className="w-auto p-0">
           <Calendar
             mode="single"
+            locale={fr}
             selected={toCalendarDate(dateStr)}
             defaultMonth={toCalendarDate(dateStr)}
             onSelect={(date) => {
@@ -81,7 +83,7 @@ export function DayPicker({
         variant="outline"
         size="icon"
         className="max-md:size-12"
-        aria-label="Next day"
+        aria-label="Jour suivant"
         disabled={dateStr >= maxDate}
         onClick={() => onChange(addDays(dateStr, 1))}
       >
@@ -90,7 +92,7 @@ export function DayPicker({
 
       {dateStr !== minDate && (
         <Button variant="ghost" className="max-md:h-12 max-md:px-4" onClick={() => onChange(minDate)}>
-          Today
+          Aujourd&apos;hui
         </Button>
       )}
     </div>

@@ -8,7 +8,7 @@ import { safeRedirectPath } from '@/lib/safe-redirect'
 import { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/types/database'
 
-export const metadata = { title: 'Two-factor verification', robots: { index: false, follow: false } }
+export const metadata = { title: 'Vérification à deux facteurs', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
 
 /**
@@ -32,7 +32,7 @@ export default async function MfaVerifyPage({ searchParams }: { searchParams: Pr
   if (!hasVerifiedFactor(user.factors) || !factor || aal?.currentLevel === 'aal2') redirect(destination)
 
   return (
-    <AuthCard title="Two-factor verification" subtitle="Enter the 6-digit code from your authenticator app to continue.">
+    <AuthCard title="Vérification à deux facteurs" subtitle="Saisissez le code à 6 chiffres de votre application d'authentification pour continuer.">
       <MfaVerifyForm factorId={factor.id} destination={destination} />
     </AuthCard>
   )

@@ -17,8 +17,8 @@ import { createClient } from '@/lib/supabase/client'
 import { GoogleButton } from '@/components/auth/google-button'
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().email('Adresse e-mail invalide'),
+  password: z.string().min(1, 'Le mot de passe est obligatoire'),
   rememberMe: z.boolean().default(false),
 })
 type LoginFormData = z.infer<typeof loginSchema>
@@ -27,14 +27,23 @@ export type LoginPortal = 'general' | 'business'
 
 const COPY: Record<LoginPortal, { eyebrow?: string; title: string; placeholder: string }> = {
   general: {
-    title: 'Log in',
+    title: 'Connexion',
     placeholder: 'you@example.com',
   },
   business: {
     eyebrow: 'ShiftGrid Business',
-    title: 'Club Management Login',
+    title: 'Connexion gestion de club',
     placeholder: 'owner@sportcity.tn',
   },
+}
+
+/** Supabase answers in English; translate the cases a visitor can actually hit. */
+function frenchAuthError(message: string): string {
+  const m = message.toLowerCase()
+  if (m.includes('invalid login credentials')) return 'E-mail ou mot de passe incorrect.'
+  if (m.includes('email not confirmed')) return 'Votre adresse e-mail n\'est pas encore confirmée. Ouvrez le lien reçu par e-mail.'
+  if (m.includes('rate limit') || m.includes('too many')) return 'Trop de tentatives. Veuillez patienter un instant avant de réessayer.'
+  return 'La connexion a échoué. Veuillez réessayer.'
 }
 
 function LoginFormContent({ portal }: { portal: LoginPortal }) {
@@ -82,29 +91,29 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
       password: data.password,
     })
     if (authError || !auth.user) {
-      setError(authError?.message ?? 'Sign in failed. Please try again.')
+      setError(authError ? frenchAuthError(authError.message) : 'La connexion a échoué. Veuillez réessayer.')
       setIsLoading(false)
       return
     }
 
     const { data: profile } = await supabase.from('profiles').select('role, org_id').eq('id', auth.user.id).maybeSingle()
-    if (!profile) return fail('We could not find a ShiftGrid profile for this account. Please contact support.')
+    if (!profile) return fail('Aucun profil ShiftGrid n\'a été trouvé pour ce compte. Veuillez contacter le support.')
 
     // Club managers need an approved club; a pending or rejected one has nothing to manage yet.
     if (profile.role === 'org_admin' || profile.role === 'staff') {
       const { data: org } = await supabase.from('organizations').select('status, deleted_at').eq('id', profile.org_id).maybeSingle()
-      if (org?.deleted_at) return fail('This club has been closed. Please contact support.')
-      if (org?.status === 'pending') return fail('Your organization is still pending verification. Please wait for approval.')
-      if (org?.status === 'rejected') return fail('Your organization registration was rejected. Please contact support.')
-      if (org?.status !== 'approved') return fail('Your organization is not active. Please contact support.')
+      if (org?.deleted_at) return fail('Ce club a été fermé. Veuillez contacter le support.')
+      if (org?.status === 'pending') return fail('Votre organisation est en cours de vérification. Veuillez patienter jusqu\'à son approbation.')
+      if (org?.status === 'rejected') return fail('L\'inscription de votre organisation a été refusée. Veuillez contacter le support.')
+      if (org?.status !== 'approved') return fail('Votre organisation n\'est pas active. Veuillez contacter le support.')
     }
 
     if (portal === 'business' && profile.role === 'player') {
       return fail(
         <>
-          This portal is reserved for club management. Please log in via the{' '}
+          Ce portail est réservé à la gestion des clubs. Veuillez vous connecter via la{' '}
           <Link href="/login" className="font-medium underline underline-offset-2">
-            main login page
+            page de connexion principale
           </Link>
           .
         </>
@@ -124,46 +133,46 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
             <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{copy.eyebrow}</p>
           )}
           <h1 className={`text-2xl font-semibold ${copy.eyebrow ? 'mt-1' : 'mt-6'}`}>{copy.title}</h1>
-          <p className="text-muted-foreground mt-2">Welcome back! Please enter your details.</p>
+          <p className="text-muted-foreground mt-2">Bon retour ! Saisissez vos informations.</p>
         </div>
 
         <div className="bg-background border rounded-lg p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {linkProblem && !error && (
               <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive" data-testid="link-invalid">
-                That email link is invalid, has expired or was already used. Sign in below, or ask for a new link (a new invitation from the club owner, or{' '}
+                Ce lien e-mail est invalide, a expiré ou a déjà été utilisé. Connectez-vous ci-dessous, ou demandez un nouveau lien (une nouvelle invitation du propriétaire du club, ou{' '}
                 <Link href="/forgot-password" className="font-medium underline underline-offset-2">
-                  a password reset
+                  une réinitialisation du mot de passe
                 </Link>
                 ).
               </div>
             )}
             {googleNoClub && !error && (
               <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive" data-testid="google-no-club">
-                No ShiftGrid account uses that Google address yet. Open a club page and tap <strong>Continue with Google</strong> there to join that club, or{' '}
+                Aucun compte ShiftGrid n&apos;utilise encore cette adresse Google. Ouvrez la page d&apos;un club et touchez <strong>Continuer avec Google</strong> pour rejoindre ce club, ou{' '}
                 <Link href="/register" className="font-medium underline underline-offset-2">
-                  create an account
+                  créez un compte
                 </Link>
                 .
               </div>
             )}
             {googleUnverified && !error && (
               <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive" data-testid="google-unverified">
-                Google could not confirm that email address, so we did not sign you in. Use your password, or{' '}
+                Google n&apos;a pas pu confirmer cette adresse e-mail, nous ne vous avons donc pas connecté. Utilisez votre mot de passe, ou{' '}
                 <Link href="/forgot-password" className="font-medium underline underline-offset-2">
-                  reset it
+                  réinitialisez-le
                 </Link>
                 .
               </div>
             )}
             {justRegistered && !error && (
               <div role="status" className="rounded-md border border-[#0e634f]/30 bg-[#0e634f]/10 p-3 text-sm text-[#0e634f]" data-testid="check-your-email">
-                Almost there: we emailed you a confirmation link. Open it to activate your account, then sign in here.
+                Presque terminé : nous vous avons envoyé un lien de confirmation. Ouvrez-le pour activer votre compte, puis connectez-vous ici.
               </div>
             )}
             {passwordWasReset && !error && (
               <div role="status" className="rounded-md border border-[#0e634f]/30 bg-[#0e634f]/10 p-3 text-sm text-[#0e634f]">
-                Your password was updated. Please sign in with your new password.
+                Votre mot de passe a été mis à jour. Connectez-vous avec votre nouveau mot de passe.
               </div>
             )}
             {error && (
@@ -173,7 +182,7 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
             )}
 
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">E-mail</Label>
               <Input
                 id="email"
                 type="email"
@@ -187,7 +196,7 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Mot de passe</Label>
               <Input
                 id="password"
                 type="password"
@@ -200,7 +209,7 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
               {errors.password && <p className="text-sm text-destructive mt-1">{errors.password.message}</p>}
               <p className="mt-2 text-right">
                 <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                  Forgot password?
+                  Mot de passe oublié ?
                 </Link>
               </p>
             </div>
@@ -214,25 +223,25 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
                 disabled={isLoading}
               />
               <Label htmlFor="rememberMe" className="ml-2 text-sm cursor-pointer">
-                Remember me for 30 days
+                Se souvenir de moi pendant 30 jours
               </Label>
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Signing in" /> : 'Sign In'}
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Connexion en cours" /> : 'Se connecter'}
             </Button>
           </form>
 
           {portal === 'general' && (
             <div className="mt-5 space-y-3">
               <p className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
-                or
+                ou
               </p>
               <GoogleButton next={requested ?? undefined} disabled={isLoading} />
               <p className="text-center text-xs text-muted-foreground">
-                By continuing you accept the{' '}
-                <Link href="/terms" className="underline underline-offset-2">Terms</Link> and{' '}
-                <Link href="/privacy" className="underline underline-offset-2">Privacy Policy</Link>.
+                En continuant, vous acceptez les{' '}
+                <Link href="/terms" className="underline underline-offset-2">conditions d&apos;utilisation</Link> et la{' '}
+                <Link href="/privacy" className="underline underline-offset-2">politique de confidentialité</Link>.
               </p>
             </div>
           )}
@@ -241,30 +250,30 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
             {portal === 'general' ? (
               <>
                 <p>
-                  New here?{' '}
+                  Nouveau ici ?{' '}
                   <Link href="/register" className="text-primary hover:underline font-medium">
-                    Create an account
+                    Créer un compte
                   </Link>
                 </p>
                 <p className="mt-2">
-                  Run a club?{' '}
+                  Vous gérez un club ?{' '}
                   <Link href="/login-owner" className="text-primary hover:underline font-medium">
-                    Club management login
+                    Connexion gestion de club
                   </Link>
                 </p>
               </>
             ) : (
               <>
                 <p>
-                  Don&apos;t have an organization yet?{' '}
+                  Pas encore d&apos;organisation ?{' '}
                   <Link href="/register?role=owner" className="text-primary hover:underline font-medium">
-                    Register your sports complex
+                    Inscrivez votre complexe sportif
                   </Link>
                 </p>
                 <p className="mt-2">
-                  Are you a player?{' '}
+                  Vous êtes joueur ?{' '}
                   <Link href="/login" className="text-primary hover:underline font-medium">
-                    Log in here
+                    Connectez-vous ici
                   </Link>
                 </p>
               </>
@@ -279,7 +288,7 @@ function LoginFormContent({ portal }: { portal: LoginPortal }) {
 /** `useSearchParams()` needs a Suspense boundary or the production build fails at prerender. */
 export function LoginForm({ portal }: { portal: LoginPortal }) {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-muted-foreground">Chargement...</div>}>
       <LoginFormContent portal={portal} />
     </Suspense>
   )

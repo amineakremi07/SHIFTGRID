@@ -42,11 +42,11 @@ export type Reservation = {
 }
 
 const STATUS: Record<BookingStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'secondary' }> = {
-  confirmed: { label: 'Confirmed', variant: 'success' },
-  pending_payment: { label: 'Awaiting payment', variant: 'warning' },
-  cancelled: { label: 'Cancelled', variant: 'destructive' },
-  completed: { label: 'Completed', variant: 'secondary' },
-  no_show: { label: 'No-show', variant: 'destructive' },
+  confirmed: { label: 'Confirmée', variant: 'success' },
+  pending_payment: { label: 'En attente de paiement', variant: 'warning' },
+  cancelled: { label: 'Annulée', variant: 'destructive' },
+  completed: { label: 'Terminée', variant: 'secondary' },
+  no_show: { label: 'Absence', variant: 'destructive' },
 }
 
 function deadlineText(iso: string) {
@@ -74,7 +74,7 @@ export function ReservationCard({ reservation: r }: { reservation: Reservation }
       return
     }
     trackEvent('booking.cancelled', { booking_id: r.id, actor: 'player' })
-    toast.success('Booking cancelled. The slot is free for other players.')
+    toast.success('Réservation annulée. Le créneau est libre pour les autres joueurs.')
     setOpen(false)
     router.refresh()
   }
@@ -99,44 +99,44 @@ export function ReservationCard({ reservation: r }: { reservation: Reservation }
         </div>
         <div className="flex items-center gap-1.5">
           <Clock className="size-4 text-muted-foreground" aria-hidden />
-          <dt className="sr-only">Time</dt>
+          <dt className="sr-only">Heure</dt>
           <dd className="tabular-nums">
             {formatVenueTime(r.startsAt)}–{formatVenueTime(r.endsAt)}
           </dd>
         </div>
         <div className="flex items-center gap-1.5">
           <Users className="size-4 text-muted-foreground" aria-hidden />
-          <dt className="sr-only">Players</dt>
-          <dd>{r.playerCount} players</dd>
+          <dt className="sr-only">Joueurs</dt>
+          <dd>{r.playerCount} joueurs</dd>
         </div>
         <div>
-          <dt className="sr-only">Reference</dt>
+          <dt className="sr-only">Référence</dt>
           <dd className="font-mono text-xs text-muted-foreground">{r.reference}</dd>
         </div>
         <div>
           <Link href={`/reservations/${r.id}`} className="inline-flex items-center gap-1 text-xs underline underline-offset-4">
             <Ticket className="size-3.5" aria-hidden />
-            View pass
+            Voir le pass
           </Link>
         </div>
       </dl>
 
       {r.status === 'cancelled' && r.cancellationReason && (
-        <p className="mt-3 text-sm text-muted-foreground">Reason: {r.cancellationReason}</p>
+        <p className="mt-3 text-sm text-muted-foreground">Motif : {r.cancellationReason}</p>
       )}
 
       {r.upcoming && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           {r.canCancel ? (
             <>
-              <p className="text-xs text-muted-foreground">Free cancellation until {deadlineText(r.cancelDeadline)}</p>
+              <p className="text-xs text-muted-foreground">Annulation gratuite jusqu&apos;au {deadlineText(r.cancelDeadline)}</p>
               <Button variant="destructive" size="sm" onClick={() => setOpen(true)}>
-                Cancel booking
+                Annuler la réservation
               </Button>
             </>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Free cancellation closed 24 hours before the start. Contact the club to change this booking.
+              L&apos;annulation gratuite est close 24 heures avant le début. Contactez le club pour modifier cette réservation.
             </p>
           )}
         </div>
@@ -145,14 +145,14 @@ export function ReservationCard({ reservation: r }: { reservation: Reservation }
       <Dialog open={open} onOpenChange={(o) => !busy && setOpen(o)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Cancel this booking?</DialogTitle>
+            <DialogTitle>Annuler cette réservation ?</DialogTitle>
             <DialogDescription>
-              {r.courtName} · {day} · {formatVenueTime(r.startsAt)}–{formatVenueTime(r.endsAt)}. The slot is released
-              straight away and cannot be undone.
+              {r.courtName} · {day} · {formatVenueTime(r.startsAt)}–{formatVenueTime(r.endsAt)}. Le créneau est libéré
+              immédiatement et cette action est irréversible.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-1.5">
-            <Label htmlFor={`reason-${r.id}`}>Reason (optional)</Label>
+            <Label htmlFor={`reason-${r.id}`}>Motif (facultatif)</Label>
             <Textarea
               id={`reason-${r.id}`}
               value={reason}
@@ -163,11 +163,11 @@ export function ReservationCard({ reservation: r }: { reservation: Reservation }
           </div>
           <DialogFooter className="gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
-              Keep booking
+              Conserver la réservation
             </Button>
             <Button variant="destructive" onClick={cancel} disabled={busy}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
-              Cancel booking
+              Annuler la réservation
             </Button>
           </DialogFooter>
         </DialogContent>

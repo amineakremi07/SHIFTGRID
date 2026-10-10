@@ -16,9 +16,9 @@ import { submitOwnerSignup, checkRegistryNumber, geocodeAddress } from '@/lib/ac
 const TUNISIA_CENTER = [34.0, 9.5] as [number, number]
 
 const SPORT_OPTIONS = [
-  { value: 'padel', label: 'Padel (90 min, 4 players)' },
-  { value: 'tennis', label: 'Tennis (60 min, 2 or 4 players)' },
-  { value: 'football', label: 'Football (90 min, 12 or 14 players)' },
+  { value: 'padel', label: 'Padel (90 min, 4 joueurs)' },
+  { value: 'tennis', label: 'Tennis (60 min, 2 ou 4 joueurs)' },
+  { value: 'football', label: 'Football (90 min, 12 ou 14 joueurs)' },
 ] as const
 
 import type { MarkerPosition } from '@/components/auth/location-picker-map'
@@ -41,7 +41,7 @@ const LocationPickerMap = dynamic(
 type SportType = OwnerSignupData['company']['sportTypes'][number]
 
 const StepIndicator = ({ currentStep, totalSteps = 4 }: { currentStep: number; totalSteps?: number }) => (
-  <div className="mb-8 flex w-full items-center justify-center" role="list" aria-label="Registration progress">
+  <div className="mb-8 flex w-full items-center justify-center" role="list" aria-label="Progression de l'inscription">
     {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
       <div key={step} role="listitem" className={cn('flex items-center', step < totalSteps && 'flex-1')}>
         <div
@@ -71,7 +71,7 @@ const StepIndicator = ({ currentStep, totalSteps = 4 }: { currentStep: number; t
 
 const StepLabel = ({ step, label }: { step: number; label: string }) => (
   <div className="text-center mb-2">
-    <span className="text-sm text-muted-foreground">Step {step} of 4</span>
+    <span className="text-sm text-muted-foreground">Étape {step} sur 4</span>
     <h3 className="text-lg font-semibold">{label}</h3>
   </div>
 )
@@ -131,13 +131,13 @@ export function OwnerSignupForm() {
 
   useEffect(() => {
     if (watchedCompany.address && watchedCompany.city) {
-      const fullAddr = `${watchedCompany.address}, ${watchedCompany.city}${watchedCompany.postalCode ? `, ${watchedCompany.postalCode}` : ''}, Tunisia`
+      const fullAddr = `${watchedCompany.address}, ${watchedCompany.city}${watchedCompany.postalCode ? `, ${watchedCompany.postalCode}` : ''}, Tunisie`
       setValue('location.addressConfirm', fullAddr)
     }
   }, [watchedCompany.address, watchedCompany.city, watchedCompany.postalCode, setValue])
 
   const handleAddressBlur = async () => {
-    const address = `${watchedCompany.address}, ${watchedCompany.city}${watchedCompany.postalCode ? `, ${watchedCompany.postalCode}` : ''}, Tunisia`
+    const address = `${watchedCompany.address}, ${watchedCompany.city}${watchedCompany.postalCode ? `, ${watchedCompany.postalCode}` : ''}, Tunisie`
     if (address.trim().length > 10) {
       const result = await geocodeAddress(address)
       if (result) {
@@ -183,7 +183,7 @@ export function OwnerSignupForm() {
   const validateAndNext = async (section: 'company' | 'location' | 'document') => {
     const ok = await trigger(section)
     if (!ok) {
-      setStepError('Some required fields are missing or invalid. Please fix the highlighted fields below.')
+      setStepError('Certains champs obligatoires sont manquants ou invalides. Veuillez corriger les champs signalés ci-dessous.')
       // Bring the first problem into view once the error text has rendered.
       requestAnimationFrame(() =>
         document.querySelector('[aria-invalid="true"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
@@ -214,7 +214,7 @@ export function OwnerSignupForm() {
       setCurrentStep(1)
       setMapPosition({ latitude: TUNISIA_CENTER[0], longitude: TUNISIA_CENTER[1] })
     } else {
-      setSubmitError(result.error || 'Registration failed')
+      setSubmitError(result.error || 'L\'inscription a échoué')
     }
 
     setIsSubmitting(false)
@@ -224,16 +224,16 @@ export function OwnerSignupForm() {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Registration Submitted!</h2>
+        <h2 className="text-2xl font-bold mb-2">Inscription envoyée !</h2>
         <p className="text-muted-foreground mb-6">
-          Your organization registration for <strong>{watchedCompany.companyName}</strong> has been received.
+          L&apos;inscription de votre organisation <strong>{watchedCompany.companyName}</strong> a bien été reçue.
         </p>
         <p className="text-muted-foreground mb-6">
-          Our team will review your application and contact you at <strong>{watchedCompany.email}</strong>
-          to complete the verification process.
+          Notre équipe examinera votre demande et vous contactera à l&apos;adresse <strong>{watchedCompany.email}</strong>
+          pour finaliser la vérification.
         </p>
         <Button onClick={() => { setSubmitSuccess(false); setCurrentStep(1); }}>
-          Register Another Organization
+          Inscrire une autre organisation
         </Button>
       </div>
     )
@@ -242,9 +242,9 @@ export function OwnerSignupForm() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold">Register Your Sports Complex</h1>
+        <h1 className="text-3xl font-bold">Inscrivez votre complexe sportif</h1>
         <p className="text-muted-foreground mt-2">
-          Complete the 4-step registration to join ShiftGrid
+          Complétez l&apos;inscription en 4 étapes pour rejoindre ShiftGrid
         </p>
       </div>
 
@@ -260,11 +260,11 @@ export function OwnerSignupForm() {
 
         {currentStep === 1 && (
           <div className="space-y-6">
-            <StepLabel step={1} label="Company Details" />
+            <StepLabel step={1} label="Informations de l'entreprise" />
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <Label htmlFor="companyName">Company Name *</Label>
+                <Label htmlFor="companyName">Nom de l&apos;entreprise *</Label>
                 <Input
                   id="companyName"
                   placeholder="SportCity Tunis"
@@ -277,22 +277,22 @@ export function OwnerSignupForm() {
               </div>
 
               <div>
-                <Label htmlFor="registryNumber">Registry Number (Registre de Commerce) *</Label>
+                <Label htmlFor="registryNumber">Numéro de registre (Registre de commerce) *</Label>
                 <Input
                   id="registryNumber"
-                  placeholder="14 digits"
+                  placeholder="14 chiffres"
                   maxLength={14}
                   {...register('company.registryNumber', { onBlur: (e) => handleRegistryCheck(e.target.value) })}
                   error={!!errors.company?.registryNumber}
                 />
-                <p className="text-xs text-muted-foreground mt-1">14-digit Tunisia business registry number</p>
+                <p className="text-xs text-muted-foreground mt-1">Numéro de registre de commerce tunisien à 14 chiffres</p>
                 {errors.company?.registryNumber && (
                   <p className="text-sm text-destructive">{errors.company.registryNumber.message}</p>
                 )}
               </div>
 
               <div>
-                <Label htmlFor="companyPhone">Company Phone *</Label>
+                <Label htmlFor="companyPhone">Téléphone de l&apos;entreprise *</Label>
                 <Input
                   id="companyPhone"
                   placeholder="+216 20 123 456"
@@ -305,7 +305,7 @@ export function OwnerSignupForm() {
               </div>
 
               <div>
-                <Label htmlFor="companyEmail">Company Email *</Label>
+                <Label htmlFor="companyEmail">E-mail de l&apos;entreprise *</Label>
                 <Input
                   id="companyEmail"
                   type="email"
@@ -319,7 +319,7 @@ export function OwnerSignupForm() {
               </div>
 
               <div className="md:col-span-2">
-                <Label htmlFor="address">Address *</Label>
+                <Label htmlFor="address">Adresse *</Label>
                 <Input
                   id="address"
                   placeholder="123 Avenue Habib Bourguiba"
@@ -333,7 +333,7 @@ export function OwnerSignupForm() {
               </div>
 
               <div>
-                <Label htmlFor="city">City *</Label>
+                <Label htmlFor="city">Ville *</Label>
                 <Input
                   id="city"
                   placeholder="Tunis"
@@ -347,7 +347,7 @@ export function OwnerSignupForm() {
               </div>
 
               <div>
-                <Label htmlFor="postalCode">Postal Code</Label>
+                <Label htmlFor="postalCode">Code postal</Label>
                 <Input
                   id="postalCode"
                   placeholder="1000"
@@ -363,7 +363,7 @@ export function OwnerSignupForm() {
             </div>
 
             <div>
-              <Label>Sport Types *</Label>
+              <Label>Sports proposés *</Label>
               <div className="flex flex-wrap gap-3 mt-2">
                 {SPORT_OPTIONS.map((sport) => (
                   <label
@@ -398,7 +398,7 @@ export function OwnerSignupForm() {
 
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <Label htmlFor="padelCount">Padel Courts</Label>
+                <Label htmlFor="padelCount">Terrains de padel</Label>
                 <Input
                   id="padelCount"
                   type="number"
@@ -408,7 +408,7 @@ export function OwnerSignupForm() {
                 />
               </div>
               <div>
-                <Label htmlFor="tennisCount">Tennis Courts</Label>
+                <Label htmlFor="tennisCount">Terrains de tennis</Label>
                 <Input
                   id="tennisCount"
                   type="number"
@@ -418,7 +418,7 @@ export function OwnerSignupForm() {
                 />
               </div>
               <div>
-                <Label htmlFor="footballCount">Football Courts</Label>
+                <Label htmlFor="footballCount">Terrains de football</Label>
                 <Input
                   id="footballCount"
                   type="number"
@@ -431,7 +431,7 @@ export function OwnerSignupForm() {
 
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <Label htmlFor="openTime">Opening Time *</Label>
+                <Label htmlFor="openTime">Heure d&apos;ouverture *</Label>
                 <Input
                   id="openTime"
                   type="time"
@@ -443,7 +443,7 @@ export function OwnerSignupForm() {
                 )}
               </div>
               <div>
-                <Label htmlFor="closeTime">Closing Time *</Label>
+                <Label htmlFor="closeTime">Heure de fermeture *</Label>
                 <Input
                   id="closeTime"
                   type="time"
@@ -455,7 +455,7 @@ export function OwnerSignupForm() {
                 )}
               </div>
               <div>
-                <Label htmlFor="employeeCount">Employee Count *</Label>
+                <Label htmlFor="employeeCount">Nombre d&apos;employés *</Label>
                 <Input
                   id="employeeCount"
                   type="number"
@@ -474,10 +474,10 @@ export function OwnerSignupForm() {
 
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={prevStep} disabled={currentStep === 1}>
-                Back
+                Retour
               </Button>
               <Button type="button" onClick={() => validateAndNext('company')}>
-                Next
+                Suivant
               </Button>
             </div>
           </div>
@@ -485,9 +485,9 @@ export function OwnerSignupForm() {
 
         {currentStep === 2 && (
           <div className="space-y-6">
-            <StepLabel step={2} label="Confirm Location" />
+            <StepLabel step={2} label="Confirmer l'emplacement" />
             <p className="text-muted-foreground">
-              Drag the marker to your exact location. The address will be verified against your company address.
+              Déplacez le repère à votre emplacement exact. L&apos;adresse sera vérifiée par rapport à l&apos;adresse de votre entreprise.
             </p>
 
             <LocationPickerMap
@@ -516,7 +516,7 @@ export function OwnerSignupForm() {
             </div>
 
             <div>
-              <Label htmlFor="addressConfirm">Confirmed Address *</Label>
+              <Label htmlFor="addressConfirm">Adresse confirmée *</Label>
               <Input
                 id="addressConfirm"
                 {...register('location.addressConfirm')}
@@ -526,20 +526,20 @@ export function OwnerSignupForm() {
                 <p className="text-sm text-destructive">{errors.location.addressConfirm.message}</p>
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                This should match your company address above
+                Elle doit correspondre à l&apos;adresse de votre entreprise ci-dessus
               </p>
             </div>
 
             <div className="flex justify-between pt-4">
               <Button type="button" variant="outline" onClick={prevStep}>
-                Back
+                Retour
               </Button>
               <Button type="button" onClick={() => {
                 setValue('location.latitude', mapPosition.latitude)
                 setValue('location.longitude', mapPosition.longitude)
                 void validateAndNext('location')
               }}>
-                Next
+                Suivant
               </Button>
             </div>
           </div>
@@ -547,10 +547,10 @@ export function OwnerSignupForm() {
 
         {currentStep === 3 && (
           <div className="space-y-6">
-            <StepLabel step={3} label="Verification Document" />
+            <StepLabel step={3} label="Document de vérification" />
             <p className="text-muted-foreground">
-              Upload a proof of existence (utility bill, commercial register extract, or similar).
-              Max 5MB. PDF, JPEG, or PNG.
+              Téléversez une preuve d&apos;existence (facture, extrait du registre de commerce ou équivalent).
+              5 Mo maximum. PDF, JPEG ou PNG.
             </p>
 
             <div
@@ -582,15 +582,15 @@ export function OwnerSignupForm() {
               />
               <label htmlFor="verificationDoc" className="cursor-pointer">
                 <MapPin className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
-                <p className="text-lg font-medium">Click to upload or drag and drop</p>
-                <p className="mt-1 text-sm text-muted-foreground">PDF, JPEG, PNG up to 5MB</p>
+                <p className="text-lg font-medium">Cliquez pour téléverser ou glissez-déposez</p>
+                <p className="mt-1 text-sm text-muted-foreground">PDF, JPEG, PNG jusqu&apos;à 5 Mo</p>
               </label>
 
               {docFile && !docError && (
                 <p className="mt-4 inline-flex items-center gap-2 rounded-md bg-[#eae6df] px-3 py-1.5 text-sm">
                   <CheckCircle className="h-4 w-4 text-green-600" aria-hidden />
                   <span className="max-w-[28ch] truncate">{docFile.name}</span>
-                  <span className="text-muted-foreground">({(docFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                  <span className="text-muted-foreground">({(docFile.size / 1024 / 1024).toFixed(2)} Mo)</span>
                 </p>
               )}
               {docError && (
@@ -602,19 +602,19 @@ export function OwnerSignupForm() {
 
             <div className="flex justify-between pt-4">
               <Button type="button" variant="outline" onClick={prevStep}>
-                Back
+                Retour
               </Button>
               <Button
                 type="button"
                 onClick={() => {
                   if (!docFile || docError) {
-                    setDocError(docError ?? 'Please upload your verification document to continue.')
+                    setDocError(docError ?? 'Veuillez téléverser votre document de vérification pour continuer.')
                     return
                   }
                   void validateAndNext('document')
                 }}
               >
-                Next
+                Suivant
               </Button>
             </div>
           </div>
@@ -622,14 +622,14 @@ export function OwnerSignupForm() {
 
         {currentStep === 4 && (
           <div className="space-y-6">
-            <StepLabel step={4} label="Owner Account" />
+            <StepLabel step={4} label="Compte propriétaire" />
             <p className="text-muted-foreground">
-              Create your owner account. You&apos;ll use this to log in and manage your sports complex.
+              Créez votre compte propriétaire. Vous l&apos;utiliserez pour vous connecter et gérer votre complexe sportif.
             </p>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="ownerName">Full Name *</Label>
+                <Label htmlFor="ownerName">Nom complet *</Label>
                 <Input
                   id="ownerName"
                   placeholder="Mohamed Ben Salem"
@@ -642,7 +642,7 @@ export function OwnerSignupForm() {
               </div>
 
               <div>
-                <Label htmlFor="ownerEmail">Email *</Label>
+                <Label htmlFor="ownerEmail">E-mail *</Label>
                 <Input
                   id="ownerEmail"
                   type="email"
@@ -656,7 +656,7 @@ export function OwnerSignupForm() {
               </div>
 
               <div>
-                <Label htmlFor="ownerPhone">Phone *</Label>
+                <Label htmlFor="ownerPhone">Téléphone *</Label>
                 <Input
                   id="ownerPhone"
                   placeholder="+216 20 123 456"
@@ -669,7 +669,7 @@ export function OwnerSignupForm() {
               </div>
 
               <div>
-                <Label htmlFor="password">Password *</Label>
+                <Label htmlFor="password">Mot de passe *</Label>
                 <Input
                   id="password"
                   type="password"
@@ -683,7 +683,7 @@ export function OwnerSignupForm() {
               </div>
 
               <div className="md:col-span-2">
-                <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <Label htmlFor="confirmPassword">Confirmer le mot de passe *</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -707,18 +707,18 @@ export function OwnerSignupForm() {
                   onChange={field.onChange}
                   error={errors.owner?.acceptTerms?.message}
                 >
-                  I accept the <LegalLinks />. I confirm I am authorised to register this club, and I consent to ShiftGrid
-                  processing my details and the uploaded registration document to verify it.
+                  J&apos;accepte les <LegalLinks />. Je confirme être autorisé à inscrire ce club, et je consens à ce que ShiftGrid
+                  traite mes informations et le document d&apos;inscription téléversé pour le vérifier.
                 </ConsentCheckbox>
               )}
             />
 
             <div className="flex justify-between pt-4">
               <Button type="button" variant="outline" onClick={prevStep}>
-                Back
+                Retour
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit Registration'}
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Envoyer l\'inscription'}
               </Button>
             </div>
           </div>

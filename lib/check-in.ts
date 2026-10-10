@@ -46,15 +46,15 @@ export type CheckInSuccess = {
 }
 
 const MESSAGES: Record<Exclude<CheckInFailure['code'], 'unknown'>, { status: CheckInFailure['status']; message: string }> = {
-  invalid_input: { status: 400, message: 'Enter the 6-digit check-in code, the booking reference or scan the QR code.' },
-  booking_not_found: { status: 404, message: 'No open booking matches this code at your club.' },
-  already_checked_in: { status: 409, message: 'This booking is already checked in.' },
-  booking_cancelled: { status: 409, message: 'This booking was cancelled.' },
-  booking_no_show: { status: 409, message: 'This booking was already marked as a no-show.' },
-  ambiguous_code: { status: 409, message: 'Two bookings share this code. Use the booking reference instead.' },
-  too_early: { status: 422, message: 'Too early: check-in opens 60 minutes before the slot.' },
-  too_late: { status: 422, message: 'This slot has already ended, so it can no longer be checked in. You can mark it as a no-show.' },
-  already_no_show: { status: 409, message: 'This booking was already marked as a no-show.' },
+  invalid_input: { status: 400, message: 'Saisissez le code d\'arrivée à 6 chiffres, la référence de la réservation ou scannez le QR code.' },
+  booking_not_found: { status: 404, message: 'Aucune réservation ouverte ne correspond à ce code dans votre club.' },
+  already_checked_in: { status: 409, message: 'L\'arrivée est déjà enregistrée pour cette réservation.' },
+  booking_cancelled: { status: 409, message: 'Cette réservation a été annulée.' },
+  booking_no_show: { status: 409, message: 'Cette réservation a déjà été marquée comme absence.' },
+  ambiguous_code: { status: 409, message: 'Deux réservations partagent ce code. Utilisez plutôt la référence de la réservation.' },
+  too_early: { status: 422, message: 'Trop tôt : l\'enregistrement ouvre 60 minutes avant le créneau.' },
+  too_late: { status: 422, message: 'Ce créneau est terminé : l\'arrivée ne peut plus être enregistrée. Vous pouvez le marquer comme absence.' },
+  already_no_show: { status: 409, message: 'Cette réservation a déjà été marquée comme absence.' },
 }
 
 function mapError(area: string, error: { code?: string; message?: string }): CheckInFailure {
@@ -64,7 +64,7 @@ function mapError(area: string, error: { code?: string; message?: string }): Che
   }
   console.error(`${area} failed`, { code: error.code, message: text })
   reportServerError(area, new Error(`${area} failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
-  return { ok: false, status: 500, code: 'unknown', message: 'Something went wrong. Please try again.' }
+  return { ok: false, status: 500, code: 'unknown', message: 'Une erreur est survenue. Veuillez réessayer.' }
 }
 
 /** Find a booking of this club by its 8-character reference (the first 8 hex of its id). */
@@ -132,11 +132,11 @@ async function checkInBookingImpl(orgId: string, rawInput: string): Promise<Chec
     ok: true,
     bookingId: row.booking_id,
     reference: row.reference,
-    courtName: court.data?.name ?? 'Court',
+    courtName: court.data?.name ?? 'Terrain',
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     checkedInAt: row.checked_in_at,
-    bookerName: member.data?.display_name ?? guest.data?.name ?? 'Player',
+    bookerName: member.data?.display_name ?? guest.data?.name ?? 'Joueur',
     isMember: Boolean(row.booker_profile_id),
     cashDue: unpaid && row.payment_provider === 'cash' ? Number(row.amount ?? 0) : 0,
     paymentPending: unpaid && row.payment_provider !== 'cash',
@@ -159,7 +159,7 @@ async function markNoShowImpl(orgId: string, bookingId: string): Promise<NoShowS
   const { data, error } = await getSupabaseAdmin().rpc('mark_booking_no_show', { p_org_id: orgId, p_booking_id: bookingId })
   if (error) {
     if (error.message?.includes('too_early')) {
-      return { ok: false, status: 422, code: 'too_early', message: 'A no-show can be recorded 15 minutes after the slot starts.' }
+      return { ok: false, status: 422, code: 'too_early', message: 'Une absence peut être enregistrée 15 minutes après le début du créneau.' }
     }
     return mapError('noshow.rpc', error)
   }

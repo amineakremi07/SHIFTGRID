@@ -1,28 +1,28 @@
 import { z } from 'zod'
 import { stripHtml } from '@/lib/sanitize-text'
 
-const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM (24h)')
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Utilisez le format HH:MM (24 h)')
 
 /** TND amount with at most 2 decimals, typed as text in a form (comma or dot). */
 const tnd = (label: string) =>
   z
     .string()
     .trim()
-    .min(1, `${label} is required`)
+    .min(1, `${label} est obligatoire`)
     .transform((v) => Number(v.replace(',', '.')))
     .pipe(
       z
-        .number({ invalid_type_error: `${label} must be a number` })
-        .min(0, `${label} cannot be negative`)
-        .max(10000, `${label} is too high`)
-        .refine((n) => Math.round(n * 100) / 100 === n, `${label} can have at most 2 decimals`)
+        .number({ invalid_type_error: `${label} doit être un nombre` })
+        .min(0, `${label} ne peut pas être négatif`)
+        .max(10000, `${label} est trop élevé`)
+        .refine((n) => Math.round(n * 100) / 100 === n, `${label} accepte au plus 2 décimales`)
     )
 
 export const courtFormSchema = z.object({
-  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(80, 'Name is too long').transform(stripHtml),
+  name: z.string().trim().min(2, 'Le nom doit contenir au moins 2 caractères').max(80, 'Le nom est trop long').transform(stripHtml),
   sport: z.enum(['padel', 'tennis', 'football']),
-  pricePerSlot: tnd('Slot price'),
-  nightSurchargePerHour: tnd('Surcharge'),
+  pricePerSlot: tnd('Le prix du créneau'),
+  nightSurchargePerHour: tnd('Le supplément'),
   nightStartsAt: hhmm,
   status: z.enum(['active', 'maintenance']),
 })
@@ -48,11 +48,11 @@ export type CourtFormValues = z.output<typeof courtFormSchema>
 const apiTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Use HH:MM')
 const apiMoney = (label: string) =>
   z
-    .number({ invalid_type_error: `${label} must be a number` })
-    .finite(`${label} must be a number`)
-    .min(0, `${label} cannot be negative`)
-    .max(10000, `${label} is too high`)
-    .refine((n) => Math.round(n * 100) / 100 === n, `${label} can have at most 2 decimals`)
+    .number({ invalid_type_error: `${label} doit être un nombre` })
+    .finite(`${label} doit être un nombre`)
+    .min(0, `${label} ne peut pas être négatif`)
+    .max(10000, `${label} est trop élevé`)
+    .refine((n) => Math.round(n * 100) / 100 === n, `${label} accepte au plus 2 décimales`)
 
 export const apiCourtCreateSchema = z
   .object({

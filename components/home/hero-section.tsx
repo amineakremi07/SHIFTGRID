@@ -6,8 +6,9 @@ import { ArrowRight, Trophy, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Navbar } from '@/components/nav/navbar'
+import { t } from '@/lib/i18n/messages'
 import { SPRING } from '@/components/ui/motion-button'
+import { scrollToSection } from '@/lib/scroll'
 import { cn } from '@/lib/utils'
 
 /* ==========================================================================
@@ -81,8 +82,12 @@ export function HeroSection() {
   const reduce = useReducedMotion()
 
   return (
-    <section className="mx-auto w-full max-w-[1920px] px-3 pt-3 sm:px-5 md:pt-5 xl:px-9" aria-labelledby="hero-title">
-      <div className="relative isolate w-full overflow-hidden rounded-2xl bg-forest-depths text-bone-linen">
+    <section
+      id="home"
+      aria-labelledby="hero-title"
+      className="mx-auto w-full max-w-[1920px] scroll-mt-0 px-3 pb-16 pt-3 sm:px-5 md:pb-24 md:pt-5 xl:px-9"
+    >
+      <div className="relative isolate w-full overflow-hidden rounded-3xl border border-black/5 bg-forest-depths text-bone-linen">
         {/* Atmosphere: a deep teal wash and court linework. Both decorative. */}
         <div
           aria-hidden
@@ -90,10 +95,8 @@ export function HeroSection() {
         />
         <CourtLines className="pointer-events-none absolute -bottom-10 right-10 -z-10 hidden h-[560px] rotate-6 text-bone-linen/10 lg:block" />
 
-        <Navbar />
-
         {/* ----------------------------- content ---------------------------- */}
-        <div className="relative px-5 pb-14 pt-8 md:px-10 md:pb-20 md:pt-14 lg:pb-28">
+        <div className="relative px-5 pb-14 pt-32 md:px-10 md:pb-20 md:pt-40 lg:pb-28">
           {/* Top-left social-proof badge. Figure is placeholder copy. */}
           <Floating bob={4}>
             <div className="inline-flex items-center gap-3 rounded-xl border border-bone-linen/20 bg-bone-linen/10 py-2 pl-2 pr-4 backdrop-blur-md">
@@ -111,33 +114,35 @@ export function HeroSection() {
                 ))}
               </div>
               <p className="text-sm leading-tight">
-                <span className="font-semibold">25k+ Active Players</span>
-                <span className="block text-bone-linen/70">Tunisia</span>
+                <span className="font-semibold">{t('hero.players')}</span>
+                <span className="block text-bone-linen/70">{t('hero.country')}</span>
               </p>
             </div>
           </Floating>
 
           <h1
             id="hero-title"
-            className="mt-8 max-w-[14ch] text-5xl font-semibold uppercase leading-[0.92] tracking-tight sm:text-6xl md:max-w-[16ch] md:text-7xl lg:max-w-[18ch] lg:text-[5.5rem]"
+            className="mt-8 max-w-[15ch] text-5xl font-semibold uppercase leading-[0.95] tracking-tighter sm:text-6xl md:max-w-[18ch] md:text-7xl lg:max-w-[20ch] lg:text-[5.25rem]"
           >
-            Reserve your ideal court in seconds
+            {t('hero.title')}
           </h1>
 
-          <p className="mt-6 max-w-[420px] text-base leading-relaxed text-oat-milk md:text-lg">
-            Padel, tennis and football courts across Tunisia. See live
-            availability, pick a slot, and lock it in — priced in TND.
+          <p className="mt-6 max-w-[460px] text-base leading-relaxed text-oat-milk md:text-lg">
+            {t('hero.body')}
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild className="h-12 px-6 text-base">
               <motion.a
                 href="#discover"
+                onClick={(e) => {
+                  if (scrollToSection('discover')) e.preventDefault()
+                }}
                 whileHover={reduce ? undefined : { y: -1 }}
                 whileTap={reduce ? undefined : { scale: 0.97 }}
                 transition={SPRING}
               >
-                Find a court
+                {t('hero.cta')}
                 <ArrowRight aria-hidden />
               </motion.a>
             </Button>
@@ -146,7 +151,14 @@ export function HeroSection() {
               variant="ghost"
               className="h-12 px-5 text-base text-bone-linen hover:bg-bone-linen/10 hover:text-bone-linen"
             >
-              <a href="#how-it-works">How it works</a>
+              <a
+                href="#how-it-works"
+                onClick={(e) => {
+                  if (scrollToSection('how-it-works')) e.preventDefault()
+                }}
+              >
+                {t('hero.how')}
+              </a>
             </Button>
           </div>
 
@@ -163,21 +175,21 @@ export function HeroSection() {
                   <Trophy className="size-5" aria-hidden />
                 </span>
                 <Badge className="bg-bone-linen/15 text-bone-linen">
-                  4 spots left
+                  {t('hero.match.spots')}
                 </Badge>
               </div>
               <p className="mt-3 text-xs uppercase tracking-wide text-bone-linen/70">
-                Featured match
+                {t('hero.match.label')}
               </p>
               <p className="mt-0.5 text-lg font-semibold leading-tight">
-                Tunis Padel Open
+                {t('hero.match.name')}
               </p>
               <p className="mt-1 text-sm text-bone-linen/75">
-                Sat · 18:30 · Lac 2
+                {t('hero.match.when')}
               </p>
               <p className="mt-3 flex items-center gap-1.5 border-t border-bone-linen/15 pt-3 text-sm text-bone-linen/75">
                 <Users className="size-4" aria-hidden />
-                12 / 16 players joined
+                {t('hero.match.joined')}
               </p>
             </div>
           </Floating>

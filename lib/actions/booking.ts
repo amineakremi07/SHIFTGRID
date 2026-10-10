@@ -77,27 +77,27 @@ function mapDatabaseError(error: { code?: string; message?: string }): BookingRe
   if (error.code === '23P01' || (error.code === '23505' && error.message?.includes('court_slot_locks'))) {
     // Lost the race for a slot: reported like a throttle (limit 1 per slot, none left).
     captureRateLimit({ route: 'booking.create', limit: 1, remaining: 0, source: 'slot_lock' })
-    return fail('slot_taken', 'This slot was just taken by another player. Please select another time.')
+    return fail('slot_taken', 'Ce créneau vient d\'être réservé par un autre joueur. Veuillez choisir un autre horaire.')
   }
   const message = error.message ?? ''
   if (message.includes('too_many_pending')) {
-    return fail('too_many_pending', 'You already have 2 unpaid bookings at this club. Please pay or cancel one before booking again.')
+    return fail('too_many_pending', 'Vous avez déjà 2 réservations impayées dans ce club. Veuillez en payer ou en annuler une avant de réserver à nouveau.')
   }
   if (message.includes('slot_in_past')) {
-    return fail('slot_in_past', 'That time has already passed. Please select another slot.')
+    return fail('slot_in_past', 'Cet horaire est déjà passé. Veuillez choisir un autre créneau.')
   }
   if (message.includes('not_a_member')) {
-    return fail('not_a_member', 'Your account is not a member of this club. You can book as a guest instead.')
+    return fail('not_a_member', 'Votre compte n\'est pas membre de ce club. Vous pouvez réserver en tant qu\'invité.')
   }
   if (message.includes('invalid_court')) {
-    return fail('unavailable', 'This court is no longer available for booking.')
+    return fail('unavailable', 'Ce terrain n\'est plus disponible à la réservation.')
   }
   if (error.code === '23514') {
-    return fail('invalid_input', 'That number of players is not allowed for this sport.')
+    return fail('invalid_input', 'Ce nombre de joueurs n\'est pas autorisé pour ce sport.')
   }
   console.error('create_booking failed', { code: error.code, message })
   reportServerError('booking.create', new Error(`create_booking failed: ${error.code ?? 'unknown'}`), { code: error.code ?? null })
-  return fail('unknown', 'Something went wrong while booking. Please try again.')
+  return fail('unknown', 'Une erreur est survenue lors de la réservation. Veuillez réessayer.')
 }
 
 /**
@@ -153,7 +153,7 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
     return {
       ok: false,
       code: 'invalid_input',
-      message: 'Please check your details and try again.',
+      message: 'Veuillez vérifier vos informations et réessayer.',
       fieldErrors: parsed.error.flatten().fieldErrors,
     }
   }
@@ -225,16 +225,16 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
   const choice = data.payment
   const provider = onlineProvider(onlinePaymentMode())
   if (choice !== 'cash' && !provider) {
-    return fail('payment_unavailable', 'Online payment is not available yet. Please choose to pay at the venue.')
+    return fail('payment_unavailable', 'Le paiement en ligne n\'est pas encore disponible. Veuillez choisir de payer sur place.')
   }
   if (choice === 'split' && !canSplit(data.playerCount)) {
-    return fail('invalid_input', 'Splitting the payment is available for up to 4 players.')
+    return fail('invalid_input', 'Le paiement partagé est disponible jusqu\'à 4 joueurs.')
   }
 
   // --- who is booking --------------------------------------------------------
   let profileId: string | undefined
   if (isMember) {
-    if (!session?.user) return fail('not_signed_in', 'Please sign in to book as a member, or continue as a guest.')
+    if (!session?.user) return fail('not_signed_in', 'Connectez-vous pour réserver en tant que membre, ou continuez en tant qu\'invité.')
     profileId = session.user.id
   }
 
@@ -260,7 +260,7 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
       const until = suspended?.suspended_until ? formatVenueDate(venueDateString(new Date(suspended.suspended_until))) : null
       return fail(
         'account_suspended',
-        `Your account is suspended from booking${until ? ` until ${until}` : ''} because of repeated no-shows. Please contact the club if you think this is a mistake.`
+        `Votre compte est suspendu des réservations${until ? ` jusqu\'au ${until}` : ''} en raison d\'absences répétées. Veuillez contacter le club si vous pensez qu\'il s\'agit d\'une erreur.`
       )
     }
     return mapDatabaseError(error)
@@ -298,15 +298,15 @@ async function createBookingImpl(input: CreateBookingInput): Promise<BookingResu
       reportServerError('booking.payment', new Error(`payment step failed: ${paid.error.code ?? 'unknown'}`), { code: paid.error.code ?? null, choice })
       const released = await releaseHeldSlot(admin, row.booking_id)
       if (released === 'released') {
-        return fail('payment_failed', 'The payment could not be completed, so the slot was released. Please try again.')
+        return fail('payment_failed', 'Le paiement n\'a pas pu être finalisé, le créneau a donc été libéré. Veuillez réessayer.')
       }
       captureAudit({ action: 'booking.release_failed', status: released, booking_id: row.booking_id, org_id: data.orgId, actor: data.mode })
       reportServerError('booking.release', new Error(`held slot not released after payment failure: ${released}`), { booking_id: row.booking_id, state: released })
       return fail(
         'payment_failed',
         released === 'confirmed'
-          ? `We could not confirm the payment status of booking ${row.reference}. Please check My reservations, or contact the club, before paying again.`
-          : `The payment could not be completed, and we could not release the slot automatically (reference ${row.reference}). Please contact the club or try again in a few minutes.`
+          ? `Impossible de confirmer l\'état du paiement de la réservation ${row.reference}. Consultez Mes réservations, ou contactez le club, avant de payer à nouveau.`
+          : `Le paiement n\'a pas pu être finalisé et le créneau n\'a pas pu être libéré automatiquement (référence ${row.reference}). Veuillez contacter le club ou réessayer dans quelques minutes.`
       )
     }
 

@@ -33,9 +33,9 @@ type Alert = { id: string; kind: AlertKind; title: string; detail: string; at: n
 const MAX_ALERTS = 20
 
 const TITLE: Record<AlertKind, string> = {
-  new: 'New booking',
-  paid: 'Booking confirmed',
-  cancelled: 'Booking cancelled',
+  new: 'Nouvelle réservation',
+  paid: 'Réservation confirmée',
+  cancelled: 'Réservation annulée',
 }
 
 type Row = Record<string, unknown>
@@ -80,7 +80,7 @@ export function Notifications({ orgId }: { orgId: string }) {
 
     const describe = async (row: Row): Promise<string> => {
       await courtsReady
-      const court = courtNames.get(String(row.court_id)) ?? 'Court'
+      const court = courtNames.get(String(row.court_id)) ?? 'Terrain'
       const start = String(row.starts_at)
       const when = `${formatVenueDate(venueDateString(new Date(start)))}, ${formatVenueTime(start)}`
 
@@ -200,7 +200,7 @@ export function Notifications({ orgId }: { orgId: string }) {
           variant="ghost"
           size="icon"
           className="relative text-[#f7f5f2] hover:bg-[#f7f5f2]/10 hover:text-[#f7f5f2]"
-          aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}
+          aria-label={unread ? `Notifications, ${unread} nouvelle${unread > 1 ? 's' : ''}` : 'Notifications'}
           data-testid="alerts-bell"
         >
           <Bell aria-hidden />
@@ -216,15 +216,15 @@ export function Notifications({ orgId }: { orgId: string }) {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <p className="text-sm font-semibold">Alerts</p>
+          <p className="text-sm font-semibold">Alertes</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span aria-hidden className={cn('size-2 rounded-full', live ? 'bg-success' : 'bg-muted-foreground/40')} />
-            {live ? 'Live' : 'Reconnecting · checking every 10 s'}
+            {live ? 'En direct' : 'Reconnexion · vérification toutes les 10 s'}
           </p>
         </div>
         {alerts.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-            New bookings and cancellations appear here as they happen.
+            Les nouvelles réservations et annulations apparaissent ici au fur et à mesure.
           </p>
         ) : (
           <ul aria-live="polite" className="max-h-80 divide-y divide-border overflow-y-auto">
@@ -247,7 +247,7 @@ export function Notifications({ orgId }: { orgId: string }) {
                       href={a.href}
                       onClick={() => setOpen(false)}
                       className="block px-4 py-3 outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
-                      aria-label={`${a.title}: ${a.detail}. Show on the schedule`}
+                      aria-label={`${a.title} : ${a.detail}. Afficher sur le planning`}
                     >
                       {content}
                     </Link>

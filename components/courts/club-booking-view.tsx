@@ -80,7 +80,7 @@ export function ClubBookingView({
     setMatrixKey((k) => k + 1)
   }
   React.useEffect(() => {
-    if (selectedSlotTaken) toast.error('That slot was just taken. Please pick another time.')
+    if (selectedSlotTaken) toast.error('Ce créneau vient d\'être pris. Veuillez choisir un autre horaire.')
   }, [selectedSlotTaken])
 
   const changeDate = (next: string) => {
@@ -227,7 +227,7 @@ function StickyBookingBar({
   return (
     <div
       role="region"
-      aria-label="Your selection"
+      aria-label="Votre sélection"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 pt-3 shadow-none backdrop-blur md:hidden"
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
@@ -238,11 +238,11 @@ function StickyBookingBar({
             {formatVenueDate(selection.date)} · {timeSlotLabel(selection.startsAt, selection.endsAt)} · {formatTND(price.total)}
           </p>
         </div>
-        <Button type="button" variant="ghost" className="h-12 min-w-12" aria-label="Clear selection" onClick={onClear}>
+        <Button type="button" variant="ghost" className="h-12 min-w-12" aria-label="Effacer la sélection" onClick={onClear}>
           ✕
         </Button>
         <Button type="button" className="h-12 px-5 text-base" onClick={onBook}>
-          Book now
+          Réserver
         </Button>
       </div>
     </div>

@@ -32,7 +32,7 @@ export function GoogleButton({
   next,
   disabled = false,
   className,
-  label = 'Continue with Google',
+  label = 'Continuer avec Google',
 }: {
   /** The club a NEW Google account joins as a player. Without it only existing accounts can sign in. */
   orgId?: string
@@ -57,7 +57,7 @@ export function GoogleButton({
     })
     if (error) {
       setBusy(false)
-      toast.error('Google sign-in is not available right now. Please use another way to continue.')
+      toast.error('La connexion avec Google n\'est pas disponible pour le moment. Veuillez utiliser une autre méthode.')
     }
   }
 

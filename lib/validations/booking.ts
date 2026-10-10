@@ -22,13 +22,13 @@ export function normalizeTunisianMobile(input: string): string | null {
 export const guestPhoneSchema = z
   .string()
   .trim()
-  .min(1, 'Phone number is required')
+  .min(1, 'Le numéro de téléphone est obligatoire')
   .transform((value, ctx) => {
     const normalized = normalizeTunisianMobile(value)
     if (!normalized) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Enter a valid Tunisian mobile number (8 digits starting with 2, 4, 5 or 9)',
+        message: 'Saisissez un numéro de mobile tunisien valide (8 chiffres commençant par 2, 4, 5 ou 9)',
       })
       return z.NEVER
     }
@@ -39,12 +39,12 @@ export const guestPhoneSchema = z
 export const optionalEmailSchema = z
   .string()
   .trim()
-  .max(254, 'Email is too long')
+  .max(254, 'L\'adresse e-mail est trop longue')
   .optional()
   .transform((value, ctx) => {
     if (!value) return undefined
     if (!z.string().email().safeParse(value).success) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter a valid email address, or leave it blank' })
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Saisissez une adresse e-mail valide, ou laissez le champ vide' })
       return z.NEVER
     }
     return value.toLowerCase()
@@ -53,16 +53,16 @@ export const optionalEmailSchema = z
 /** A guest must agree to the Terms/Privacy and to being contacted about the booking. */
 export const guestConsentSchema = z
   .boolean()
-  .refine((v) => v === true, 'Please accept the Terms and Privacy Policy to book')
+  .refine((v) => v === true, 'Veuillez accepter les conditions d\'utilisation et la politique de confidentialité pour réserver')
 
 export const guestDetailsSchema = z.object({
   fullName: z
     .string()
     .trim()
-    .min(2, 'Please enter your full name')
-    .max(100, 'Name is too long')
+    .min(2, 'Veuillez saisir votre nom complet')
+    .max(100, 'Le nom est trop long')
     .transform(stripHtml)
-    .refine((v) => v.length >= 2, 'Please enter your full name'),
+    .refine((v) => v.length >= 2, 'Veuillez saisir votre nom complet'),
   phone: guestPhoneSchema,
   /** Optional: where the confirmation, reminders and cancellation notice are sent. */
   email: optionalEmailSchema,
@@ -74,21 +74,21 @@ const MAX_PLAYERS = 30 // outer sanity bound; the sport's own limits are enforce
 /** A real calendar day, YYYY-MM-DD (rejects 2026-02-31). */
 export const calendarDaySchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date')
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date invalide')
   .refine((value) => {
     const d = new Date(`${value}T00:00:00Z`)
     return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(value)
-  }, 'Invalid date')
+  }, 'Date invalide')
 
 /** An ISO instant with offset, within a sane booking horizon (not older than a day, not beyond 180 days). */
 export const bookingInstantSchema = z
   .string()
-  .datetime({ offset: true, message: 'Invalid start time' })
+  .datetime({ offset: true, message: 'Heure de début invalide' })
   .refine((value) => {
     const t = Date.parse(value)
     const now = Date.now()
     return t > now - 24 * 60 * 60 * 1000 && t < now + MAX_BOOKING_AHEAD_MS
-  }, 'Start time is outside the bookable range')
+  }, 'L\'heure de début est hors de la période réservable')
 
 /** The fields that identify a slot, shared by the player flow and staff walk-ins. */
 export const slotFields = {
@@ -104,11 +104,11 @@ export const slotFields = {
 const inviteEmailSchema = z
   .string()
   .trim()
-  .max(254, 'Email is too long')
+  .max(254, 'L\'adresse e-mail est trop longue')
   .transform((value, ctx) => {
     if (!value) return ''
     if (!z.string().email().safeParse(value).success) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter a valid email address, or leave it blank' })
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Saisissez une adresse e-mail valide, ou laissez le champ vide' })
       return z.NEVER
     }
     return value.toLowerCase()
@@ -138,10 +138,10 @@ export const createBookingSchema = z
   ])
   .superRefine((value, ctx) => {
     if (value.payment !== 'split' && value.inviteEmails?.some(Boolean)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['inviteEmails'], message: 'Invite emails apply only to split payments' })
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['inviteEmails'], message: 'Les e-mails d\'invitation ne concernent que le paiement partagé' })
     }
     if (value.inviteEmails && value.inviteEmails.length > Math.max(0, value.playerCount - 1)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['inviteEmails'], message: 'More invite addresses than other players' })
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['inviteEmails'], message: 'Plus d\'adresses d\'invitation que d\'autres joueurs' })
     }
   })
 
@@ -168,26 +168,26 @@ export const manualBookingSchema = z
     court_id: z.string().uuid(),
     date: calendarDaySchema,
     starts_at: bookingInstantSchema.optional(),
-    start_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM').optional(),
+    start_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Utilisez le format HH:MM').optional(),
     /** Defaults to the sport's first allowed size (padel 4, tennis 2, football 12). */
     player_count: z.number().int().min(1).max(MAX_PLAYERS).optional(),
     full_name: z
       .string()
       .trim()
-      .min(2, 'Please enter the customer name')
-      .max(100, 'Name is too long')
+      .min(2, 'Veuillez saisir le nom du client')
+      .max(100, 'Le nom est trop long')
       .transform(stripHtml)
-      .refine((v) => v.length >= 2, 'Please enter the customer name'),
+      .refine((v) => v.length >= 2, 'Veuillez saisir le nom du client'),
     phone: z.preprocess(blankToUndefined, guestPhoneSchema.optional()),
     email: z.preprocess(blankToUndefined, optionalEmailSchema),
     payment_status: z.enum(MANUAL_PAYMENT_STATUSES),
-    notes: z.preprocess(blankToUndefined, z.string().trim().max(300, 'Notes are limited to 300 characters').transform(stripHtml).optional()),
+    notes: z.preprocess(blankToUndefined, z.string().trim().max(300, 'Les notes sont limitées à 300 caractères').transform(stripHtml).optional()),
     source: z.enum(MANUAL_SOURCES).default('manual'),
   })
   .strict()
   .refine((v) => (v.starts_at === undefined) !== (v.start_time === undefined), {
     path: ['start_time'],
-    message: 'Provide exactly one of starts_at or start_time',
+    message: 'Fournissez exactement un champ parmi starts_at ou start_time',
   })
 
 export type GuestDetailsInput = z.input<typeof guestDetailsSchema>

@@ -83,7 +83,7 @@ export async function loadBookingContext(admin: Admin, bookingId: string): Promi
   }
 
   const clubName = org.data?.name ?? 'the club'
-  const courtName = court.data?.name ?? 'Court'
+  const courtName = court.data?.name ?? 'Terrain'
   const date = formatVenueDate(venueDateString(new Date(b.starts_at)))
   const time = `${formatVenueTime(b.starts_at)} – ${formatVenueTime(b.ends_at)}`
   const reference = b.id.replace(/-/g, '').slice(0, 8).toUpperCase()

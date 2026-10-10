@@ -127,28 +127,28 @@ export function RegisterFlow({
               tabIndex={-1}
               className="text-3xl font-semibold tracking-tight outline-none md:text-4xl"
             >
-              Join ShiftGrid
+              Rejoindre ShiftGrid
             </h1>
             <p className="mt-2 max-w-[56ch] text-muted-foreground">
-              Choose how you&apos;ll use ShiftGrid. You can switch at any time before you submit.
+              Choisissez comment vous utiliserez ShiftGrid. Vous pouvez changer à tout moment avant de valider.
             </p>
 
-            <div role="group" aria-label="Account type" className="mt-8 grid gap-4 md:grid-cols-2">
+            <div role="group" aria-label="Type de compte" className="mt-8 grid gap-4 md:grid-cols-2">
               <RoleCard
                 icon={CalendarCheck}
-                eyebrow="I'm a Player"
-                title="Book & Play"
-                description="Discover padel, tennis, and football courts near you and manage instant reservations."
-                cta="Create a player account"
+                eyebrow="Je suis joueur"
+                title="Réserver et jouer"
+                description="Découvrez des terrains de padel, de tennis et de football près de chez vous et gérez vos réservations instantanées."
+                cta="Créer un compte joueur"
                 onSelect={() => changeRole('player')}
                 animate={animate}
               />
               <RoleCard
                 icon={Building2}
-                eyebrow="I own a Venue / Club"
-                title="Register Your Club"
-                description="Manage courts, schedules, pricing, staff, and view analytics."
-                cta="Start club registration"
+                eyebrow="Je possède un site / un club"
+                title="Inscrire mon club"
+                description="Gérez vos terrains, plannings, tarifs et équipe, et consultez vos statistiques."
+                cta="Commencer l'inscription du club"
                 onSelect={() => changeRole('owner')}
                 animate={animate}
               />
@@ -161,9 +161,9 @@ export function RegisterFlow({
             <div className="mb-6 flex items-center justify-between gap-3">
               <Button variant="ghost" onClick={() => changeRole(null)} className="-ml-3">
                 <ArrowLeft aria-hidden />
-                Switch role
+                Changer de rôle
               </Button>
-              <Badge variant="secondary">Registering as a player</Badge>
+              <Badge variant="secondary">Inscription en tant que joueur</Badge>
             </div>
 
             <h1
@@ -172,10 +172,10 @@ export function RegisterFlow({
               tabIndex={-1}
               className="text-3xl font-semibold tracking-tight outline-none"
             >
-              Create your player account
+              Créez votre compte joueur
             </h1>
             <p className="mb-6 mt-2 text-muted-foreground">
-              Book courts in a few taps and keep your reservations in one place.
+              Réservez des terrains en quelques clics et retrouvez vos réservations au même endroit.
             </p>
 
             <PlayerSignupForm clubs={clubs} initialClubId={initialClubId} next={next} />
@@ -184,7 +184,7 @@ export function RegisterFlow({
 
         {role === 'owner' && (
           <section
-            aria-label="Club registration"
+            aria-label="Inscription du club"
             ref={ownerSectionRef}
             tabIndex={-1}
             className="outline-none"
@@ -192,9 +192,9 @@ export function RegisterFlow({
             <div className="mb-6 flex items-center justify-between gap-3">
               <Button variant="ghost" onClick={() => changeRole(null)} className="-ml-3">
                 <ArrowLeft aria-hidden />
-                Switch role
+                Changer de rôle
               </Button>
-              <Badge variant="secondary">Registering a club</Badge>
+              <Badge variant="secondary">Inscription d&apos;un club</Badge>
             </div>
 
             {/* The existing multi-step B2B onboarding wizard (it renders the page's h1). */}

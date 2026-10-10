@@ -18,11 +18,11 @@ export const PRESETS = ['7d', '30d', 'month', 'ytd', 'custom'] as const
 export type RangePreset = (typeof PRESETS)[number]
 
 export const PRESET_LABEL: Record<RangePreset, string> = {
-  '7d': 'Last 7 days',
-  '30d': 'Last 30 days',
-  month: 'This month',
-  ytd: 'Year to date',
-  custom: 'Custom',
+  '7d': '7 derniers jours',
+  '30d': '30 derniers jours',
+  month: 'Ce mois-ci',
+  ytd: 'Depuis le 1er janvier',
+  custom: 'Personnalisée',
 }
 
 export const MAX_RANGE_DAYS = 366
@@ -152,7 +152,7 @@ export type HourStat = { hour: number; label: string; booked: number; available:
 export type CourtStat = { id: string; name: string; sport: string; bookings: number; revenue: number; occupancy: number | null }
 
 const HOUR_MS = 3_600_000
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 
 export const isPeakHour = (hour: number) => hour >= 17 || hour < 5
 
@@ -171,7 +171,7 @@ function bucketOf(date: string, granularity: 'day' | 'week' | 'month'): { key: s
   if (granularity === 'day') return { key: date, label: shortDate(date) }
   if (granularity === 'week') {
     const start = weekStart(date)
-    return { key: start, label: `Wk ${shortDate(start)}` }
+    return { key: start, label: `Sem. ${shortDate(start)}` }
   }
   const [y, m] = date.split('-').map(Number)
   return { key: date.slice(0, 7), label: `${MONTHS[m - 1]} ${y}` }
@@ -264,11 +264,11 @@ export function computeAnalytics(input: {
   const guests = { bookings: 0, revenue: 0 }
   const bookerCounts = new Map<string, number>()
   const paymentRows = new Map<string, { key: string; label: string; count: number; amount: number }>([
-    ['paid_online', { key: 'paid_online', label: 'Paid online', count: 0, amount: 0 }],
-    ['paid_cash', { key: 'paid_cash', label: 'Paid in cash', count: 0, amount: 0 }],
-    ['pending_cash', { key: 'pending_cash', label: 'Cash due at the club', count: 0, amount: 0 }],
-    ['pending_online', { key: 'pending_online', label: 'Online, awaiting payment', count: 0, amount: 0 }],
-    ['refunded', { key: 'refunded', label: 'Refunded', count: 0, amount: 0 }],
+    ['paid_online', { key: 'paid_online', label: 'Payé en ligne', count: 0, amount: 0 }],
+    ['paid_cash', { key: 'paid_cash', label: 'Payé en espèces', count: 0, amount: 0 }],
+    ['pending_cash', { key: 'pending_cash', label: 'Espèces à encaisser au club', count: 0, amount: 0 }],
+    ['pending_online', { key: 'pending_online', label: 'En ligne, en attente de paiement', count: 0, amount: 0 }],
+    ['refunded', { key: 'refunded', label: 'Remboursé', count: 0, amount: 0 }],
   ])
 
   for (const b of bookings) {
@@ -340,7 +340,7 @@ export function computeAnalytics(input: {
     if (!stat) {
       stat = {
         id: courtKey,
-        name: 'Removed court',
+        name: 'Terrain supprimé',
         sport: '',
         bookings: 0,
         revenue: 0,

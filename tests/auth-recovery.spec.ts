@@ -35,7 +35,7 @@ test.describe('forgot / reset password schemas', () => {
     expect(newPasswordSchema.safeParse({ password: 'x'.repeat(72), confirmPassword: 'x'.repeat(72) }).success).toBe(true)
     const mismatch = newPasswordSchema.safeParse({ password: 'longenough1', confirmPassword: 'longenough2' })
     expect(mismatch.success).toBe(false)
-    if (!mismatch.success) expect(mismatch.error.flatten().fieldErrors.confirmPassword?.[0]).toBe('The two passwords do not match')
+    if (!mismatch.success) expect(mismatch.error.flatten().fieldErrors.confirmPassword?.[0]).toBe('Les deux mots de passe ne correspondent pas')
   })
 })
 
@@ -51,7 +51,7 @@ test.describe('booking pass link in emails', () => {
     expect(guestCancelUrl(ORIGIN, TOKEN)).toBe(`${ORIGIN}/reservations/cancel-guest?token=${TOKEN}`)
   })
 
-  test('the confirmation email button "View your booking pass" points at that link', () => {
+  test('the confirmation email button "Voir votre pass de réservation" points at that link', () => {
     for (const guestToken of [null, TOKEN]) {
       const passUrl = bookingPassUrl(ORIGIN, ID, guestToken)
       const mail = confirmationEmail({
@@ -65,8 +65,8 @@ test.describe('booking pass link in emails', () => {
         checkInCode: '782910',
       })
       expect(mail.html).toContain(`href="${passUrl}"`)
-      expect(mail.html).toContain('View your booking pass')
-      expect(mail.text).toContain(`Your pass: ${passUrl}`)
+      expect(mail.html).toContain('Voir votre pass de réservation')
+      expect(mail.text).toContain(`Votre pass : ${passUrl}`)
       expect(mail.html).toContain('<strong>782910</strong>')
     }
   })

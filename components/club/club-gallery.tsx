@@ -52,19 +52,19 @@ export function ClubGallery({ urls, name }: { urls: string[]; name: string }) {
   if (count === 0) return null
 
   return (
-    <section aria-label={`Photos of ${name}`} className="space-y-3" data-testid="club-gallery">
+    <section aria-label={`Photos de ${name}`} className="space-y-3" data-testid="club-gallery">
       <div
         className="group relative"
         role="group"
         aria-roledescription="carousel"
-        aria-label={`${name} photo gallery`}
+        aria-label={`Galerie photo de ${name}`}
         onKeyDown={onKeyDown}
       >
         <div
           ref={track}
           onScroll={onScroll}
           tabIndex={0}
-          aria-label={`Photo ${index + 1} of ${count}. Use the left and right arrow keys to browse.`}
+          aria-label={`Photo ${index + 1} sur ${count}. Utilisez les flèches gauche et droite pour parcourir.`}
           className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-xl bg-muted outline-offset-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {urls.map((url, i) => (
@@ -95,7 +95,7 @@ export function ClubGallery({ urls, name }: { urls: string[]; name: string }) {
               type="button"
               onClick={() => goTo(index - 1)}
               disabled={index === 0}
-              aria-label="Previous photo"
+              aria-label="Photo précédente"
               className="absolute left-2 top-1/2 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow transition-opacity disabled:opacity-0"
             >
               <ChevronLeft className="size-5" aria-hidden />
@@ -104,7 +104,7 @@ export function ClubGallery({ urls, name }: { urls: string[]; name: string }) {
               type="button"
               onClick={() => goTo(index + 1)}
               disabled={index === count - 1}
-              aria-label="Next photo"
+              aria-label="Photo suivante"
               className="absolute right-2 top-1/2 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow transition-opacity disabled:opacity-0"
             >
               <ChevronRight className="size-5" aria-hidden />
@@ -117,13 +117,13 @@ export function ClubGallery({ urls, name }: { urls: string[]; name: string }) {
       </div>
 
       {count > 1 && (
-        <ul className="flex gap-2 overflow-x-auto pb-1" aria-label="Choose a photo">
+        <ul className="flex gap-2 overflow-x-auto pb-1" aria-label="Choisir une photo">
           {urls.map((url, i) => (
             <li key={url} className="shrink-0">
               <button
                 type="button"
                 onClick={() => goTo(i)}
-                aria-label={`Show photo ${i + 1}`}
+                aria-label={`Afficher la photo ${i + 1}`}
                 aria-current={i === index}
                 className={cn(
                   'relative block h-14 w-20 overflow-hidden rounded-md ring-offset-2 transition-opacity',

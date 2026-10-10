@@ -5,9 +5,9 @@ import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const CHECKOUT_STEPS = [
-  { n: 1, label: 'Slot' },
-  { n: 2, label: 'Payment' },
-  { n: 3, label: 'Confirm' },
+  { n: 1, label: 'Créneau' },
+  { n: 2, label: 'Paiement' },
+  { n: 3, label: 'Confirmation' },
 ] as const
 
 export type CheckoutStep = 1 | 2 | 3
@@ -29,7 +29,7 @@ export function CheckoutStepper({
   disabled?: boolean
 }) {
   return (
-    <nav aria-label="Booking steps" className="px-4 pb-4">
+    <nav aria-label="Étapes de la réservation" className="px-4 pb-4">
       <ol className="flex items-center gap-2">
         {CHECKOUT_STEPS.map(({ n, label }, i) => {
           const done = n < step
@@ -40,7 +40,7 @@ export function CheckoutStepper({
                 type="button"
                 disabled={!reachable}
                 aria-current={n === step ? 'step' : undefined}
-                aria-label={`Step ${n}: ${label}${done ? ' (done)' : ''}`}
+                aria-label={`Étape ${n} : ${label}${done ? ' (terminée)' : ''}`}
                 data-testid={`step-${n}`}
                 onClick={() => onStep(n)}
                 className={cn(

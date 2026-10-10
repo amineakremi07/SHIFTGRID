@@ -131,15 +131,15 @@ export function PriceSummary({ selection }: { selection: BookingDrawerSelection 
 
   return (
     <section
-      aria-label="Price summary"
+      aria-label="Récapitulatif du prix"
       className="rounded-lg bg-card p-4 text-card-foreground"
     >
       <dl className="space-y-2 text-sm">
         <div className="flex items-baseline justify-between gap-4">
           <dt className="text-muted-foreground">
-            Court fee
+            Tarif du terrain
             <span className="block text-xs tabular-nums">
-              {slotHoursLabel(price.durationMinutes)} slot · {formatTND(slotPrice(selection.pricePerHour, price.durationMinutes))}
+              Créneau de {slotHoursLabel(price.durationMinutes)} · {formatTND(slotPrice(selection.pricePerHour, price.durationMinutes))}
             </span>
           </dt>
           <dd className="font-medium tabular-nums">{formatTND(price.base)}</dd>
@@ -148,9 +148,9 @@ export function PriceSummary({ selection }: { selection: BookingDrawerSelection 
         {price.surcharge > 0 && (
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-muted-foreground">
-              Night lighting surcharge
+              Supplément d&apos;éclairage de nuit
               <span className="block text-xs tabular-nums">
-                Flat fee for slots from {selection.nightStartsAt.slice(0, 5)}
+                Forfait pour les créneaux à partir de {selection.nightStartsAt.slice(0, 5)}
               </span>
             </dt>
             <dd className="font-medium tabular-nums">{formatTND(price.surcharge)}</dd>
@@ -217,7 +217,7 @@ export function DrawerBody({
     durationMinutes: SPORT_DURATION_MIN[selection.sport],
   })
   const dueNow = payNow(choice, price.total, playerCount)
-  const reserveLabel = choice === 'cash' ? 'Confirm & Reserve' : `Pay ${formatTND(dueNow)} & Reserve`
+  const reserveLabel = choice === 'cash' ? 'Confirmer et réserver' : `Payer ${formatTND(dueNow)} et réserver`
 
   const meta = SPORT_META[selection.sport]
   const SportIcon = meta.icon
@@ -240,7 +240,7 @@ export function DrawerBody({
         (e) => e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
       )
       if (bad) {
-        setError(`"${bad}" does not look like an email address. Fix it or leave it blank.`)
+        setError(`« ${bad} » ne ressemble pas à une adresse e-mail. Corrigez-la ou laissez le champ vide.`)
         return
       }
     }
@@ -252,7 +252,7 @@ export function DrawerBody({
   // A member has no form to fill in, but still accepts the Terms.
   const confirmAsMember = () => {
     if (!form.getValues('consent')) {
-      form.setError('consent', { type: 'custom', message: 'Please accept the Terms and Privacy Policy to book' })
+      form.setError('consent', { type: 'custom', message: 'Veuillez accepter les conditions d\'utilisation et la politique de confidentialité pour réserver' })
       return
     }
     void submit({ mode: 'member' })
@@ -265,7 +265,7 @@ export function DrawerBody({
     const invites = choice === 'split' ? Array.from({ length: playerCount - 1 }, (_, i) => (inviteEmails[i] ?? '').trim()) : []
     const bad = invites.find((e) => e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
     if (bad) {
-      setError(`"${bad}" does not look like an email address. Fix it or leave it blank.`)
+      setError(`« ${bad} » ne ressemble pas à une adresse e-mail. Corrigez-la ou laissez le champ vide.`)
       return
     }
 
@@ -313,7 +313,7 @@ export function DrawerBody({
           status: outcome.status,
           actor: who.mode,
         })
-        toast.success('Slot reserved', { description: `Reference ${outcome.reference}` })
+        toast.success('Créneau réservé', { description: `Référence ${outcome.reference}` })
         onBooked?.()
         return
       }
@@ -325,7 +325,7 @@ export function DrawerBody({
         onSlotUnavailable?.()
       }
     } catch {
-      const message = 'We could not reach the server. Please check your connection and try again.'
+      const message = 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.'
       setError(message)
       toast.error(message)
     } finally {
@@ -360,7 +360,7 @@ export function DrawerBody({
         {step === 1 && (
           <>
             {/* ---- step 1: the court and slot ---- */}
-            <section aria-label="Selected slot" className="space-y-3">
+            <section aria-label="Créneau sélectionné" className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -381,31 +381,31 @@ export function DrawerBody({
                   <dd className="mt-0.5 font-medium">{formatVenueDate(selection.date)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Time</dt>
+                  <dt className="text-xs text-muted-foreground">Heure</dt>
                   <dd className="mt-0.5 font-medium tabular-nums">
                     {formatVenueTime(selection.startsAt)} – {formatVenueTime(selection.endsAt)}
                   </dd>
                 </div>
                 <div className="col-span-2">
-                  <dt className="text-xs text-muted-foreground">Duration</dt>
+                  <dt className="text-xs text-muted-foreground">Durée</dt>
                   <dd className="mt-0.5 flex items-center gap-1.5 font-medium tabular-nums">
                     <Badge variant="outline" className="gap-1">
                       <Clock aria-hidden />
                       {duration} min
                     </Badge>
-                    <InfoTip label="About the changeover">
-                      {BUFFER_MIN} min changeover is kept free before the next booking, so slots start {duration + BUFFER_MIN} min
-                      apart.
+                    <InfoTip label="À propos du battement">
+                      Un battement de {BUFFER_MIN} min est laissé libre avant la réservation suivante : les créneaux commencent donc
+                      toutes les {duration + BUFFER_MIN} min.
                     </InfoTip>
                   </dd>
                 </div>
               </dl>
 
               {playerOptions.length > 1 && (
-                <div role="group" aria-label="Number of players" className="flex items-center gap-2">
+                <div role="group" aria-label="Nombre de joueurs" className="flex items-center gap-2">
                   <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Users className="size-3.5" aria-hidden />
-                    Players
+                    Joueurs
                   </span>
                   {playerOptions.map((count) => (
                     <Button
@@ -431,7 +431,7 @@ export function DrawerBody({
             <PriceSummary selection={selection} />
 
             <Button type="button" data-testid="step-next" className="h-12 w-full text-base" onClick={() => advance(2)}>
-              Continue to payment
+              Continuer vers le paiement
             </Button>
           </>
         )}
@@ -461,9 +461,9 @@ export function DrawerBody({
             {choice === 'split' && (
               <fieldset className="space-y-2" disabled={submitting}>
                 <legend className="flex items-center gap-1 text-sm font-medium">
-                  Email the invites (optional)
-                  <InfoTip label="About the invite emails">
-                    We can email each player their payment link. You also get the links on the next screen.
+                  Envoyer les invitations par e-mail (facultatif)
+                  <InfoTip label="À propos des e-mails d'invitation">
+                    Nous pouvons envoyer à chaque joueur son lien de paiement par e-mail. Vous recevez aussi les liens à l&apos;écran suivant.
                   </InfoTip>
                 </legend>
                 {Array.from({ length: playerCount - 1 }, (_, i) => (
@@ -472,8 +472,8 @@ export function DrawerBody({
                     type="email"
                     inputMode="email"
                     autoComplete="off"
-                    placeholder={`Player ${i + 2} email`}
-                    aria-label={`Email for player ${i + 2}`}
+                    placeholder={`E-mail du joueur ${i + 2}`}
+                    aria-label={`E-mail du joueur ${i + 2}`}
                     className="max-md:h-12"
                     value={inviteEmails[i] ?? ''}
                     onChange={(e) =>
@@ -496,10 +496,10 @@ export function DrawerBody({
 
             <div className="grid grid-cols-[auto_1fr] gap-2">
               <Button type="button" variant="outline" className="h-12 px-5" onClick={() => goTo(1)}>
-                Back
+                Retour
               </Button>
               <Button type="button" data-testid="step-next" className="h-12 text-base" onClick={() => advance(3)}>
-                Continue
+                Continuer
               </Button>
             </div>
           </>
@@ -515,7 +515,7 @@ export function DrawerBody({
                   next={typeof window === 'undefined' ? undefined : window.location.pathname + window.location.search}
                 />
                 <p className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
-                  or
+                  ou
                 </p>
               </div>
             )}
@@ -530,9 +530,10 @@ export function DrawerBody({
                   onChange={field.onChange}
                   error={form.formState.errors.consent?.message}
                 >
-                  I accept the <LegalLinks />. I agree that ShiftGrid and this club may use my name and phone number to manage
-                  this booking and contact me about it, including by email (confirmation, reminder, cancellation notice) if I
-                  gave one, and by SMS or phone call if needed. I can ask to stop at any time.
+                  J&apos;accepte les <LegalLinks />. J&apos;accepte que ShiftGrid et ce club utilisent mon nom et mon numéro de
+                  téléphone pour gérer cette réservation et me contacter à ce sujet, y compris par e-mail (confirmation,
+                  rappel, avis d&apos;annulation) si j&apos;en ai indiqué un, et par SMS ou appel téléphonique si nécessaire. Je
+                  peux demander à tout moment l&apos;arrêt de ces contacts.
                 </ConsentCheckbox>
               )}
             />
@@ -540,10 +541,10 @@ export function DrawerBody({
             <Tabs value={tab} onValueChange={(v) => setTab(v as 'member' | 'guest')}>
               <TabsList className="w-full">
                 <TabsTrigger value="member" className="flex-1 max-md:min-h-12">
-                  Member
+                  Membre
                 </TabsTrigger>
                 <TabsTrigger value="guest" className="flex-1 max-md:min-h-12">
-                  Guest
+                  Invité
                 </TabsTrigger>
               </TabsList>
 
@@ -563,9 +564,9 @@ export function DrawerBody({
                           {[member.email, member.phone].filter(Boolean).join(' · ')}
                         </p>
                       </div>
-                      <Badge variant="success" className="shrink-0 gap-1" title={`Member of ${orgName}`}>
+                      <Badge variant="success" className="shrink-0 gap-1" title={`Membre de ${orgName}`}>
                         <ShieldCheck aria-hidden />
-                        Member · {orgName}
+                        Membre · {orgName}
                       </Badge>
                     </div>
                     <Button className="h-12 w-full text-base" disabled={submitting} onClick={confirmAsMember}>
@@ -577,23 +578,23 @@ export function DrawerBody({
                   <>
                     <p className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span className="min-w-0 truncate">
-                        Signed in as <strong>{member.displayName}</strong>
+                        Connecté en tant que <strong>{member.displayName}</strong>
                       </span>
-                      <InfoTip label="Why can't I book as a member?">
-                        Member booking is only available to players registered with {orgName}. You can still book as a guest.
+                      <InfoTip label="Pourquoi ne puis-je pas réserver en tant que membre ?">
+                        La réservation en tant que membre est réservée aux joueurs inscrits auprès de {orgName}. Vous pouvez toujours réserver en tant qu&apos;invité.
                       </InfoTip>
                     </p>
                     <Button variant="outline" className="h-12 w-full" onClick={() => setTab('guest')}>
-                      Book as a guest instead
+                      Réserver en tant qu&apos;invité
                     </Button>
                   </>
                 ) : (
                   <>
                     <Button variant="outline" className="h-12 w-full" onClick={onRequestSignIn}>
-                      Sign in with your email
+                      Se connecter avec votre e-mail
                     </Button>
                     <p className="text-center text-xs text-muted-foreground">
-                      No account? Use the <strong>Guest</strong> tab.
+                      Pas de compte ? Utilisez l&apos;onglet <strong>Invité</strong>.
                     </p>
                   </>
                 )}
@@ -608,7 +609,7 @@ export function DrawerBody({
                 >
                   {/* Honeypot: off-screen, unreachable by keyboard and screen readers; only bots fill it. */}
                   <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
-                    <label htmlFor="guest-website">Website</label>
+                    <label htmlFor="guest-website">Site web</label>
                     <input
                       id="guest-website"
                       name="website"
@@ -620,7 +621,7 @@ export function DrawerBody({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="guest-name">Full name</Label>
+                    <Label htmlFor="guest-name">Nom complet</Label>
                     <Input
                       id="guest-name"
                       autoComplete="name"
@@ -639,9 +640,9 @@ export function DrawerBody({
 
                   <div className="space-y-1.5">
                     <Label htmlFor="guest-phone" className="flex items-center gap-1">
-                      Mobile number
-                      <InfoTip label="About the mobile number">
-                        8 digits starting with 2, 4, 5 or 9. The club uses it to reach you about this booking.
+                      Numéro de mobile
+                      <InfoTip label="À propos du numéro de mobile">
+                        8 chiffres commençant par 2, 4, 5 ou 9. Le club l&apos;utilise pour vous joindre au sujet de cette réservation.
                       </InfoTip>
                     </Label>
                     <div className="flex">
@@ -669,9 +670,9 @@ export function DrawerBody({
 
                   <div className="space-y-1.5">
                     <Label htmlFor="guest-email" className="flex items-center gap-1">
-                      Email (optional)
-                      <InfoTip label="About the email">
-                        For your confirmation, a reminder two hours before, and a cancellation notice. Not shared.
+                      E-mail (facultatif)
+                      <InfoTip label="À propos de l'e-mail">
+                        Pour votre confirmation, un rappel deux heures avant et un avis d&apos;annulation. Non partagé.
                       </InfoTip>
                     </Label>
                     <Input
@@ -679,7 +680,7 @@ export function DrawerBody({
                       type="email"
                       inputMode="email"
                       autoComplete="email"
-                      placeholder="you@example.com"
+                      placeholder="vous@exemple.com"
                       className="max-md:h-12"
                       aria-invalid={!!form.formState.errors.email}
                       {...form.register('email')}
@@ -704,7 +705,7 @@ export function DrawerBody({
             )}
 
             <Button type="button" variant="ghost" className="h-12 w-full" disabled={submitting} onClick={() => goTo(2)}>
-              Back to payment
+              Retour au paiement
             </Button>
           </>
         )}
@@ -740,9 +741,9 @@ export function BookingDrawer({
         )}
       >
         <SheetHeader>
-          <SheetTitle>Reserve your slot</SheetTitle>
+          <SheetTitle>Réservez votre créneau</SheetTitle>
           <SheetDescription className="sr-only">
-            Check the details, then confirm. Your slot is held the moment you book.
+            Vérifiez les détails, puis confirmez. Votre créneau est retenu dès la réservation.
           </SheetDescription>
         </SheetHeader>
 

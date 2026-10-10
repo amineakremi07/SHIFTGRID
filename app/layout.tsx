@@ -19,9 +19,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ShiftGrid — Book sports courts in Tunisia",
+  title: "ShiftGrid — Réservez des terrains de sport en Tunisie",
   description:
-    "Reserve padel, tennis and football courts across Tunisia. Live availability, instant slot locking, priced in TND.",
+    "Réservez des terrains de padel, de tennis et de football partout en Tunisie. Disponibilités en direct, verrouillage instantané du créneau, prix en TND.",
   applicationName: "ShiftGrid",
   manifest: "/manifest.json",
   icons: {
@@ -44,7 +44,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
-      lang="en"
+      lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >

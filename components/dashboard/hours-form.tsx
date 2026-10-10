@@ -47,18 +47,18 @@ export function HoursForm({ initial, configured }: { initial: WeeklyHours; confi
       }
       return void toast.error(result.error)
     }
-    toast.success('Operating hours saved')
+    toast.success('Horaires d\'ouverture enregistrés')
     router.refresh()
   }
 
   return (
     <form onSubmit={submit} className="mx-auto max-w-3xl space-y-6" noValidate>
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Operating hours</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Horaires d&apos;ouverture</h2>
         <p className="text-sm text-[#645757]">
-          Players can only book inside these hours. A closing time at or before the opening time means the club
-          closes after midnight (00:00 = midnight).
-          {!configured && ' Until you save, each court uses its own default hours.'}
+          Les joueurs ne peuvent réserver que pendant ces horaires. Une heure de fermeture égale ou antérieure à l&apos;heure
+          d&apos;ouverture signifie que le club ferme après minuit (00:00 = minuit).
+          {!configured && ' Tant que vous n\'enregistrez pas, chaque terrain utilise ses propres horaires par défaut.'}
         </p>
       </div>
 
@@ -72,7 +72,7 @@ export function HoursForm({ initial, configured }: { initial: WeeklyHours; confi
                 <Switch
                   checked={d.open}
                   onCheckedChange={(v) => update(day, { open: v })}
-                  aria-label={`${WEEKDAY_LABELS[day]} open`}
+                  aria-label={`${WEEKDAY_LABELS[day]} ouvert`}
                 />
                 <span className="font-medium">{WEEKDAY_LABELS[day]}</span>
               </div>
@@ -84,21 +84,21 @@ export function HoursForm({ initial, configured }: { initial: WeeklyHours; confi
                     value={d.from}
                     onChange={(e) => update(day, { from: e.target.value })}
                     className="w-32"
-                    aria-label={`${WEEKDAY_LABELS[day]} opening time`}
+                    aria-label={`${WEEKDAY_LABELS[day]} heure d'ouverture`}
                     error={Boolean(error)}
                   />
-                  <span className="text-[#645757]">to</span>
+                  <span className="text-[#645757]">à</span>
                   <Input
                     type="time"
                     value={d.to}
                     onChange={(e) => update(day, { to: e.target.value })}
                     className="w-32"
-                    aria-label={`${WEEKDAY_LABELS[day]} closing time`}
+                    aria-label={`${WEEKDAY_LABELS[day]} heure de fermeture`}
                     error={Boolean(error)}
                   />
                 </div>
               ) : (
-                <span className="text-sm text-[#645757]">Closed</span>
+                <span className="text-sm text-[#645757]">Fermé</span>
               )}
 
               {error && (
@@ -114,10 +114,10 @@ export function HoursForm({ initial, configured }: { initial: WeeklyHours; confi
       <div className="flex flex-wrap gap-3">
         <Button type="submit" disabled={saving} className="h-9 bg-[#1d3023] px-4 text-[#f7f5f2] hover:bg-[#1d3023]/90">
           {saving && <Loader2 className="animate-spin" aria-hidden />}
-          Save hours
+          Enregistrer les horaires
         </Button>
         <Button type="button" variant="outline" className="h-9" onClick={copyMondayToAll}>
-          Copy Monday to all days
+          Copier le lundi sur tous les jours
         </Button>
       </div>
     </form>

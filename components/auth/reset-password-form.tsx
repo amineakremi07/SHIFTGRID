@@ -15,7 +15,7 @@ import { newPasswordSchema } from '@/lib/validations/password-reset'
 type Phase = 'checking' | 'ready' | 'invalid'
 
 const INVALID =
-  'This reset link is invalid or has expired. Reset links work once, only for a short time, and (unless your email template was changed) in the browser where you asked for them.'
+  'Ce lien de réinitialisation est invalide ou a expiré. Ces liens ne fonctionnent qu\'une fois, pendant un court délai et (sauf si le modèle d\'e-mail a été modifié) dans le navigateur où vous les avez demandés.'
 
 /**
  * Step 2: the page the emailed link opens. A recovery arrives in one of two ways and both are
@@ -100,12 +100,12 @@ export function ResetPasswordForm() {
       setErrors({
         form:
           code === 'same_password'
-            ? 'Your new password must be different from the old one.'
+            ? 'Votre nouveau mot de passe doit être différent de l\'ancien.'
             : code === 'weak_password'
-              ? 'That password is too weak or has appeared in a data breach. Please choose another.'
+              ? 'Ce mot de passe est trop faible ou a fuité lors d\'une violation de données. Veuillez en choisir un autre.'
               : error.status === 401 || error.status === 403
-                ? 'Your reset session has expired. Please request a new link.'
-                : error.message || 'We could not change your password. Please try again.',
+                ? 'Votre session de réinitialisation a expiré. Veuillez demander un nouveau lien.'
+                : 'Impossible de modifier votre mot de passe. Veuillez réessayer.',
       })
       return
     }
@@ -116,9 +116,9 @@ export function ResetPasswordForm() {
 
   if (phase === 'checking') {
     return (
-      <AuthCard title="Reset your password">
+      <AuthCard title="Réinitialiser votre mot de passe">
         <p role="status" className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" aria-hidden /> Checking your link…
+          <Loader2 className="size-4 animate-spin" aria-hidden /> Vérification de votre lien…
         </p>
       </AuthCard>
     )
@@ -126,11 +126,11 @@ export function ResetPasswordForm() {
 
   if (phase === 'invalid') {
     return (
-      <AuthCard title="Link not valid">
+      <AuthCard title="Lien non valide">
         <div role="alert" className="space-y-4 text-sm" data-testid="reset-invalid">
           <p>{INVALID}</p>
           <Button asChild className="w-full">
-            <Link href="/forgot-password">Request a new link</Link>
+            <Link href="/forgot-password">Demander un nouveau lien</Link>
           </Button>
         </div>
       </AuthCard>
@@ -138,7 +138,7 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <AuthCard title="Choose a new password" subtitle="Use at least 8 characters.">
+    <AuthCard title="Choisissez un nouveau mot de passe" subtitle="Utilisez au moins 8 caractères.">
       <form onSubmit={submit} className="space-y-4" noValidate data-testid="reset-form">
         {errors.form && (
           <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
@@ -146,7 +146,7 @@ export function ResetPasswordForm() {
           </div>
         )}
         <div>
-          <Label htmlFor="rp-password">New password</Label>
+          <Label htmlFor="rp-password">Nouveau mot de passe</Label>
           <Input
             id="rp-password"
             type="password"
@@ -160,7 +160,7 @@ export function ResetPasswordForm() {
           {errors.password && <p className="mt-1 text-sm text-destructive">{errors.password}</p>}
         </div>
         <div>
-          <Label htmlFor="rp-confirm">Confirm new password</Label>
+          <Label htmlFor="rp-confirm">Confirmer le nouveau mot de passe</Label>
           <Input
             id="rp-confirm"
             type="password"
@@ -173,7 +173,7 @@ export function ResetPasswordForm() {
           {errors.confirmPassword && <p className="mt-1 text-sm text-destructive">{errors.confirmPassword}</p>}
         </div>
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Saving" /> : 'Update password'}
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Enregistrement" /> : 'Mettre à jour le mot de passe'}
         </Button>
       </form>
     </AuthCard>

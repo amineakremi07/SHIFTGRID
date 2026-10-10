@@ -125,7 +125,7 @@ export async function loadPass(bookingId: string, guestToken?: string | null): P
     clubName: org.data?.name ?? 'the club',
     clubAddress: [org.data?.address, org.data?.city].filter(Boolean).join(', ') || null,
     clubWhatsapp: org.data?.whatsapp_number ?? null,
-    courtName: court.data?.name ?? 'Court',
+    courtName: court.data?.name ?? 'Terrain',
     sport: b.sport as Sport,
     startsAt: b.starts_at,
     endsAt: b.ends_at,
@@ -192,7 +192,7 @@ export async function findShareInvite(token: string | undefined | null): Promise
   const statuses = all.data ?? []
   return {
     clubName: org.data?.name ?? 'the club',
-    courtName: court.data?.name ?? 'Court',
+    courtName: court.data?.name ?? 'Terrain',
     sport: b.sport as Sport,
     startsAt: b.starts_at,
     endsAt: b.ends_at,

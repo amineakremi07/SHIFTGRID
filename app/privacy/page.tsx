@@ -5,231 +5,267 @@ import { LegalDocument, P, Section, UL } from '@/components/legal/legal-document
 import { LEGAL_CONTACT_EMAIL, LEGAL_ENTITY, LEGAL_ENTITY_DETAILS } from '@/lib/legal'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy',
+  title: 'Politique de confidentialité',
   description:
-    'How ShiftGrid collects and protects personal data when you book padel, tennis and football courts in Tunisia, and how to exercise your rights under Tunisian law.',
+    'Comment ShiftGrid collecte et protège les données personnelles lorsque vous réservez des terrains de padel, de tennis et de football en Tunisie, et comment exercer vos droits en vertu du droit tunisien.',
 }
 
 const TOC = [
-  { id: 'controller', title: 'Who is responsible for your data' },
-  { id: 'data', title: 'What we collect' },
-  { id: 'purposes', title: 'Why we use it' },
-  { id: 'sharing', title: 'Who receives it' },
-  { id: 'transfers', title: 'Storage and transfers outside Tunisia' },
-  { id: 'retention', title: 'How long we keep it' },
-  { id: 'rights', title: 'Your rights' },
-  { id: 'security', title: 'Security' },
-  { id: 'cookies', title: 'Cookies, analytics and your choices' },
-  { id: 'minors', title: 'Minors' },
-  { id: 'changes', title: 'Changes to this policy' },
-  { id: 'contact', title: 'Contact and complaints' },
+  { id: 'controller', title: 'Qui est responsable de vos données' },
+  { id: 'data', title: 'Ce que nous collectons' },
+  { id: 'purposes', title: 'Pourquoi nous les utilisons' },
+  { id: 'sharing', title: 'Qui les reçoit' },
+  { id: 'transfers', title: 'Stockage et transferts hors de Tunisie' },
+  { id: 'retention', title: 'Combien de temps nous les conservons' },
+  { id: 'rights', title: 'Vos droits' },
+  { id: 'security', title: 'Sécurité' },
+  { id: 'cookies', title: 'Cookies, mesure d’audience et vos choix' },
+  { id: 'minors', title: 'Mineurs' },
+  { id: 'changes', title: 'Modifications de cette politique' },
+  { id: 'contact', title: 'Contact et réclamations' },
 ]
 
 export default function PrivacyPage() {
   return (
     <LegalDocument
-      title="Privacy Policy"
-      intro="ShiftGrid is a booking platform for padel, tennis and football courts in Tunisia. This policy sets out what personal data we collect from players, guests and club staff, why we collect it, who receives it, and how you can exercise your rights under Loi organique n° 2004-63 du 27 juillet 2004 portant sur la protection des données à caractère personnel (the Tunisian Data Protection Law)."
+      title="Politique de confidentialité"
+      intro="ShiftGrid est une plateforme de réservation de terrains de padel, de tennis et de football en Tunisie. Cette politique décrit les données personnelles que nous collectons auprès des joueurs, des invités et du personnel des clubs, pourquoi nous les collectons, qui les reçoit, et comment vous pouvez exercer vos droits en vertu de la loi organique n° 2004-63 du 27 juillet 2004 portant sur la protection des données à caractère personnel (la loi tunisienne sur la protection des données)."
       toc={TOC}
     >
-      <Section id="controller" title="1. Who is responsible for your data">
+      <Section id="controller" title="1. Qui est responsable de vos données">
         <P>
-          {LEGAL_ENTITY}, a société unipersonnelle à responsabilité limitée (SUARL) organised under the laws of the Republic of
-          Tunisia, operates ShiftGrid and is the data controller (« responsable du traitement ») for the data described
-          below.{LEGAL_ENTITY_DETAILS ? ` ${LEGAL_ENTITY_DETAILS}.` : ''}
+          {LEGAL_ENTITY}, société unipersonnelle à responsabilité limitée (SUARL) régie par le droit de la République tunisienne,
+          exploite ShiftGrid et est le responsable du traitement des données décrites ci-dessous.
+          {LEGAL_ENTITY_DETAILS ? ` ${LEGAL_ENTITY_DETAILS}.` : ''}
         </P>
         <P>
-          This policy applies to players and guests who book courts, and to the owners and staff of the clubs that use the
-          management dashboard. When you book, the club you book at also receives your booking details and uses them to run its
-          venue. For the data it receives, that club is a controller in its own right and answers for its own use of it.
-        </P>
-      </Section>
-
-      <Section id="data" title="2. What we collect">
-        <UL>
-          <li>
-            <strong>Players with an account:</strong> full name, email address, Tunisian mobile number (+216XXXXXXXX), password (stored only as a
-            salted hash by our authentication provider), the club your account is linked to, and the time you accepted our Terms
-            and this policy.
-          </li>
-          <li>
-            <strong>Guests (no account):</strong> full name, mobile number (in the form +216XXXXXXXX) and, optionally, an email address. A secret link lets
-            you view or cancel the booking; we store only a hash of it.
-          </li>
-          <li>
-            <strong>Bookings:</strong> club, court, date and time, number of players, price in TND, status (awaiting payment,
-            confirmed, cancelled, completed, no-show), payment method and payment status, cancellation reason and time, your
-            check-in status at the venue (whether and when you were checked in on arrival), and your booking history.
-          </li>
-          <li>
-            <strong>Split payments:</strong> for each other player, the amount and whether it was paid; an email address only if
-            the organiser types one in to send the payment link.
-          </li>
-          <li>
-            <strong>Club owners and staff:</strong> owner name, email and phone; the club&apos;s name, commercial registry number,
-            address, map coordinates and opening hours; the registration document you upload (kept in private storage and visible
-            only to ShiftGrid administrators who verify clubs); staff invitation email addresses.
-          </li>
-          <li>
-            <strong>Technical data:</strong> IP address and device metadata (browser, operating system and device type), used to limit
-            abuse, secure the service and diagnose problems, and error reports. If a page crashes, a recording of that session may be sent to our error-monitoring provider with all text,
-            form fields and images masked. We never see or store card numbers: online payments are entered on the pages of the payment gateway
-            (such as Konnect or Flouci), which tells us only whether the payment succeeded.
-          </li>
-          <li>
-            <strong>Notification records:</strong> which email was sent, when, and whether it was delivered (without the secret
-            links it contained).
-          </li>
-        </UL>
-      </Section>
-
-      <Section id="purposes" title="3. Why we use it">
-        <UL>
-          <li>To create and manage your account and to let you book, pay for and cancel courts (performance of the booking).</li>
-          <li>
-            To send you service messages about a booking: confirmation, a reminder before it starts, payment links for friends, and
-            cancellation or refund notices. We use email today; we may also contact you by phone or SMS about a booking if needed.
-            We do not send marketing messages without separate consent.
-          </li>
-          <li>To let clubs run their venue, verify arrivals at the front desk and record attendance, and to let us verify that clubs are genuine.</li>
-          <li>To prevent fraud, slot hogging and abuse, to keep the service secure and to diagnose errors.</li>
-          <li>To meet legal, accounting and tax obligations, and to establish or defend legal claims.</li>
-        </UL>
-        <P>
-          Where the law requires your consent, we rely on the consent you give when you tick the box on the registration or booking
-          form. You may withdraw it at any time (see Your rights); this does not affect processing already carried out, and we may
-          not be able to provide the booking without the data it needs. Name and mobile number are required to book; everything marked
-          optional is left to you.
+          Cette politique s’applique aux joueurs et invités qui réservent des terrains, ainsi qu’aux propriétaires et au personnel des
+          clubs qui utilisent le tableau de bord de gestion. Lorsque vous réservez, le club auprès duquel vous réservez reçoit
+          également les détails de votre réservation et les utilise pour exploiter son site. Pour les données qu’il reçoit, ce club est
+          lui-même responsable de traitement et répond de son propre usage.
         </P>
       </Section>
 
-      <Section id="sharing" title="4. Who receives it">
-        <P>We do not sell personal data. We share it only with:</P>
+      <Section id="data" title="2. Ce que nous collectons">
         <UL>
           <li>
-            <strong>The club you book at</strong> (and its staff), and only that club: your name, phone number, email if given, and
-            the details of your booking, its payment status and your check-in status, so that it can verify you for the court. We
-            do not pass your data to other clubs.
+            <strong>Joueurs avec un compte :</strong> nom complet, adresse e-mail, numéro de mobile tunisien (+216XXXXXXXX), mot de
+            passe (conservé uniquement sous forme d’empreinte salée par notre prestataire d’authentification), le club auquel votre
+            compte est lié, et l’heure à laquelle vous avez accepté nos conditions et cette politique.
           </li>
           <li>
-            <strong>Service providers acting on our instructions (processors):</strong> database, authentication, file storage and
-            realtime updates (Supabase); hosting (Vercel); online payment processing (Konnect or Flouci, where enabled); transactional email (our SMTP email provider); rate limiting (Upstash); error monitoring
-            (Sentry) and product analytics (PostHog), the last two only when enabled, with personal data filtered out of error
-            reports.
+            <strong>Invités (sans compte) :</strong> nom complet, numéro de mobile (sous la forme +216XXXXXXXX) et, facultativement,
+            une adresse e-mail. Un lien secret vous permet de consulter ou d’annuler la réservation ; nous n’en conservons qu’une
+            empreinte.
           </li>
-          <li>Competent authorities where the law requires it.</li>
+          <li>
+            <strong>Réservations :</strong> club, terrain, date et heure, nombre de joueurs, prix en TND, statut (en attente de
+            paiement, confirmée, annulée, terminée, absence), mode et statut de paiement, motif et heure d’annulation, votre statut
+            d’arrivée sur le site (si et quand votre arrivée a été enregistrée), et votre historique de réservations.
+          </li>
+          <li>
+            <strong>Paiements partagés :</strong> pour chaque autre joueur, le montant et s’il a été payé ; une adresse e-mail
+            uniquement si l’organisateur la saisit pour envoyer le lien de paiement.
+          </li>
+          <li>
+            <strong>Propriétaires et personnel de clubs :</strong> nom, e-mail et téléphone du propriétaire ; nom du club, numéro de
+            registre de commerce, adresse, coordonnées géographiques et horaires d’ouverture ; le document d’inscription que vous
+            téléversez (conservé dans un stockage privé et visible uniquement des administrateurs ShiftGrid qui vérifient les clubs) ;
+            adresses e-mail des invitations du personnel.
+          </li>
+          <li>
+            <strong>Données techniques :</strong> adresse IP et métadonnées de l’appareil (navigateur, système d’exploitation et type
+            d’appareil), utilisées pour limiter les abus, sécuriser le service et diagnostiquer les problèmes, ainsi que les rapports
+            d’erreur. Si une page plante, un enregistrement de cette session peut être transmis à notre prestataire de supervision
+            des erreurs, avec tous les textes, champs de formulaire et images masqués. Nous ne voyons ni ne conservons jamais les
+            numéros de carte : les paiements en ligne sont saisis sur les pages de la passerelle de paiement (telle que Konnect ou
+            Flouci), qui nous indique seulement si le paiement a abouti.
+          </li>
+          <li>
+            <strong>Historique des notifications :</strong> quel e-mail a été envoyé, quand, et s’il a été remis (sans les liens
+            secrets qu’il contenait).
+          </li>
         </UL>
       </Section>
 
-      <Section id="transfers" title="5. Storage and transfers outside Tunisia">
+      <Section id="purposes" title="3. Pourquoi nous les utilisons">
+        <UL>
+          <li>Créer et gérer votre compte et vous permettre de réserver, payer et annuler des terrains (exécution de la réservation).</li>
+          <li>
+            Vous envoyer des messages de service concernant une réservation : confirmation, rappel avant le début, liens de paiement
+            pour vos amis, et avis d’annulation ou de remboursement. Nous utilisons aujourd’hui l’e-mail ; nous pouvons aussi vous
+            contacter par téléphone ou SMS au sujet d’une réservation si nécessaire. Nous n’envoyons pas de messages commerciaux sans
+            consentement distinct.
+          </li>
+          <li>Permettre aux clubs d’exploiter leur site, de vérifier les arrivées à l’accueil et d’enregistrer la présence, et nous permettre de vérifier que les clubs sont authentiques.</li>
+          <li>Prévenir la fraude, l’accaparement de créneaux et les abus, sécuriser le service et diagnostiquer les erreurs.</li>
+          <li>Respecter nos obligations légales, comptables et fiscales, et établir ou défendre des droits en justice.</li>
+        </UL>
         <P>
-          Our providers may store or process data on servers outside Tunisia. Transfers are made only as permitted by Tunisian law,
-          including any authorisation of the Instance Nationale de Protection des Données Personnelles (INPDP) that applies, and
-          under contracts requiring the provider to protect the data and use it only on our instructions.
+          Lorsque la loi exige votre consentement, nous nous appuyons sur celui que vous donnez en cochant la case du formulaire
+          d’inscription ou de réservation. Vous pouvez le retirer à tout moment (voir Vos droits) ; cela n’affecte pas les traitements
+          déjà effectués, et nous pourrions ne pas pouvoir fournir la réservation sans les données nécessaires. Le nom et le numéro de
+          mobile sont requis pour réserver ; tout ce qui est indiqué comme facultatif est laissé à votre choix.
         </P>
       </Section>
 
-      <Section id="retention" title="6. How long we keep it">
+      <Section id="sharing" title="4. Qui les reçoit">
+        <P>Nous ne vendons pas de données personnelles. Nous ne les partageons qu’avec :</P>
         <UL>
           <li>
-            Account data: while your account is open. When you delete your account (&ldquo;Delete my account&rdquo; on the My reservations page, or on
-            request) your name, phone number, email, login and password are erased and your profile becomes anonymous (&ldquo;Joueur Anonyme&rdquo;).
-            What we keep, without any personal data: your past bookings (for the clubs&apos; accounting), the number of bookings, and your no-show
-            count and trust score as anonymous statistics. Upcoming bookings are cancelled.
+            <strong>Le club auprès duquel vous réservez</strong> (et son personnel), et uniquement ce club : votre nom, votre numéro
+            de téléphone, votre e-mail s’il est fourni, et les détails de votre réservation, son statut de paiement et votre statut
+            d’arrivée, afin qu’il puisse vous identifier pour le terrain. Nous ne transmettons pas vos données aux autres clubs.
           </li>
           <li>
-            Booking and payment records: as long as needed for accounting, tax and dispute purposes, for the periods Tunisian law
-            requires; after that they are deleted or anonymised.
+            <strong>Prestataires agissant sur nos instructions (sous-traitants) :</strong> base de données, authentification,
+            stockage de fichiers et mises à jour en temps réel (Supabase) ; hébergement (Vercel) ; traitement des paiements en ligne
+            (Konnect ou Flouci, lorsqu’ils sont activés) ; e-mail transactionnel (notre prestataire SMTP) ; limitation de débit
+            (Upstash) ; supervision des erreurs (Sentry) et mesure d’audience produit (PostHog), ces deux derniers uniquement lorsqu’ils
+            sont activés, avec filtrage des données personnelles dans les rapports d’erreur.
           </li>
-          <li>Guest bookers: kept with the bookings they relate to, for the same periods; on request the name, phone number and email are erased and the booking stays anonymous.</li>
-          <li>Clubs and courts that are closed are archived, not deleted: their booking history stays for the clubs&apos; accounting, but they are no longer listed or bookable.</li>
-          <li>Club verification documents: while the club is active, then for the period needed to answer disputes or legal requests.</li>
-          <li>Technical logs and rate-limit counters: short-lived (minutes to weeks).</li>
+          <li>Les autorités compétentes lorsque la loi l’exige.</li>
         </UL>
       </Section>
 
-      <Section id="rights" title="7. Your rights">
-        <P>Under the Tunisian Data Protection Law you have the right to:</P>
+      <Section id="transfers" title="5. Stockage et transferts hors de Tunisie">
+        <P>
+          Nos prestataires peuvent stocker ou traiter des données sur des serveurs situés hors de Tunisie. Les transferts ne sont
+          effectués que dans la mesure permise par le droit tunisien, y compris toute autorisation de l’Instance Nationale de
+          Protection des Données Personnelles (INPDP) applicable, et dans le cadre de contrats imposant au prestataire de protéger les
+          données et de ne les utiliser que sur nos instructions.
+        </P>
+      </Section>
+
+      <Section id="retention" title="6. Combien de temps nous les conservons">
         <UL>
-          <li>access the personal data we hold about you and obtain a copy;</li>
-          <li>have inaccurate or incomplete data corrected, updated or completed;</li>
-          <li>have your data deleted where we no longer need it or processing is unlawful;</li>
-          <li>object, for legitimate reasons, to the processing of your data, and withdraw your consent;</li>
-          <li>refuse the use of your data for direct marketing.</li>
+          <li>
+            Données du compte : tant que votre compte est ouvert. Lorsque vous supprimez votre compte («&nbsp;Supprimer mon
+            compte&nbsp;» sur la page Mes réservations, ou sur demande), votre nom, numéro de téléphone, e-mail, identifiant et mot de
+            passe sont effacés et votre profil devient anonyme («&nbsp;Joueur Anonyme&nbsp;»). Ce que nous conservons, sans aucune
+            donnée personnelle : vos réservations passées (pour la comptabilité des clubs), le nombre de réservations, et votre nombre
+            d’absences et votre score de confiance sous forme de statistiques anonymes. Les réservations à venir sont annulées.
+          </li>
+          <li>
+            Données de réservation et de paiement : aussi longtemps que nécessaire à des fins comptables, fiscales et de règlement de
+            litiges, pour les durées exigées par le droit tunisien ; ensuite elles sont supprimées ou anonymisées.
+          </li>
+          <li>Réservants invités : conservés avec les réservations auxquelles ils se rapportent, pour les mêmes durées ; sur demande, le nom, le numéro de téléphone et l’e-mail sont effacés et la réservation reste anonyme.</li>
+          <li>Les clubs et terrains fermés sont archivés, non supprimés : leur historique de réservations est conservé pour la comptabilité des clubs, mais ils ne sont plus listés ni réservables.</li>
+          <li>Documents de vérification des clubs : tant que le club est actif, puis pendant la durée nécessaire pour répondre aux litiges ou aux demandes légales.</li>
+          <li>Journaux techniques et compteurs de limitation de débit : de courte durée (de quelques minutes à quelques semaines).</li>
+        </UL>
+      </Section>
+
+      <Section id="rights" title="7. Vos droits">
+        <P>En vertu de la loi tunisienne sur la protection des données, vous avez le droit de :</P>
+        <UL>
+          <li>accéder aux données personnelles que nous détenons à votre sujet et en obtenir une copie ;</li>
+          <li>faire corriger, mettre à jour ou compléter les données inexactes ou incomplètes ;</li>
+          <li>faire supprimer vos données lorsque nous n’en avons plus besoin ou que le traitement est illicite ;</li>
+          <li>vous opposer, pour des motifs légitimes, au traitement de vos données, et retirer votre consentement ;</li>
+          <li>refuser l’utilisation de vos données à des fins de prospection commerciale.</li>
         </UL>
         <P>
-          To exercise a right, write to{' '}
+          Pour exercer un droit, écrivez à{' '}
           <a className="underline underline-offset-2" href={`mailto:${LEGAL_CONTACT_EMAIL}`}>
             {LEGAL_CONTACT_EMAIL}
           </a>{' '}
-          from the email address on your account (or, for a guest booking, quote the booking reference and phone number). We may
-          ask you to prove your identity and we aim to answer within 30 days. Cancelling a booking does not delete the record of
-          it; ask us if you want that data removed as well.
+          depuis l’adresse e-mail de votre compte (ou, pour une réservation d’invité, indiquez la référence de la réservation et le
+          numéro de téléphone). Nous pouvons vous demander de justifier votre identité et nous visons une réponse sous 30 jours.
+          Annuler une réservation n’en supprime pas l’enregistrement ; demandez-nous si vous souhaitez aussi retirer ces données.
         </P>
       </Section>
 
-      <Section id="security" title="8. Security">
+      <Section id="security" title="8. Sécurité">
         <P>
-          Access to data is restricted by role and by club (a club sees only its own bookings), connections use HTTPS, passwords are
-          hashed, verification documents are in private storage with short-lived links, and requests are rate limited. No system is
-          perfectly secure; if a breach affects your data we will notify you and the authorities as the law requires.
+          L’accès aux données est restreint par rôle et par club (un club ne voit que ses propres réservations), les connexions
+          utilisent HTTPS, les mots de passe sont hachés, les documents de vérification sont dans un stockage privé avec des liens de
+          courte durée, et les requêtes sont limitées en débit. Aucun système n’est parfaitement sûr ; si une violation touche vos
+          données, nous vous en informerons ainsi que les autorités, comme la loi l’exige.
         </P>
+        <P>En pratique :</P>
+        <UL>
+          <li>
+            <strong>Base de données (Supabase).</strong> Vos données sont stockées dans une base PostgreSQL gérée par Supabase, qui
+            assure également l’authentification et le stockage de fichiers. Les données sont chiffrées en transit (HTTPS/TLS) et au repos
+            par le prestataire.
+          </li>
+          <li>
+            <strong>Sécurité au niveau des lignes (RLS).</strong> Les tables contenant des données personnelles sont protégées par des
+            règles de sécurité au niveau des lignes appliquées par la base elle-même : un joueur ne peut lire que ses propres
+            réservations, le personnel d’un club ne peut lire et modifier que les données de son club, et aucun compte ne peut s’attribuer
+            lui-même des droits supplémentaires. Ces règles s’appliquent même si l’application était mal sollicitée.
+          </li>
+          <li>
+            <strong>Accès privilégiés.</strong> Les opérations qui dépassent ces règles (par exemple la vérification d’un club par un
+            administrateur de la plateforme) sont exécutées côté serveur, après vérification du rôle de l’appelant, et jamais exposées au
+            navigateur. Les clés d’accès privilégiées ne figurent pas dans le code distribué aux utilisateurs.
+          </li>
+          <li>
+            <strong>Minimisation.</strong> Les liens secrets (annulation, paiement, pass) ne sont conservés que sous forme d’empreinte,
+            et ne figurent pas dans l’historique des notifications.
+          </li>
+        </UL>
       </Section>
 
-      <Section id="cookies" title="9. Cookies, analytics and your choices">
+      <Section id="cookies" title="9. Cookies, mesure d’audience et vos choix">
         <P>
-          <strong>Always on (strictly necessary):</strong> cookies that keep you signed in and secure, and a note in your browser
-          remembering your privacy choices. We do not use advertising cookies.
+          <strong>Toujours actifs (strictement nécessaires) :</strong> les cookies qui vous maintiennent connecté et en sécurité, et
+          une mention dans votre navigateur qui retient vos choix de confidentialité. Nous n’utilisons pas de cookies publicitaires.
         </P>
         <P>
-          <strong>Optional, only with your consent</strong> (asked when you first visit, provider PostHog). Until you choose,
-          nothing optional is loaded or stored:
+          <strong>Facultatifs, uniquement avec votre consentement</strong> (demandé lors de votre première visite, prestataire
+          PostHog). Tant que vous n’avez pas choisi, rien de facultatif n’est chargé ni stocké :
         </P>
         <UL>
           <li>
-            <strong>Usage analytics:</strong> anonymous page views, to see which pages are used. Secret parts of links (for
-            example a guest&apos;s cancellation link) are removed before anything is sent, and no profile is created for visitors
-            who are not signed in.
+            <strong>Mesure d’audience :</strong> pages vues anonymes, pour voir quelles pages sont utilisées. Les parties secrètes des
+            liens (par exemple le lien d’annulation d’un invité) sont retirées avant tout envoi, et aucun profil n’est créé pour les
+            visiteurs non connectés.
           </li>
           <li>
-            <strong>Session recordings:</strong> recordings of how pages are used, with all text, everything you type, uploaded
-            files and images hidden. Never recorded: sign-in and registration, reservations and passes, payment and invitation
-            links, and club or admin dashboards.
+            <strong>Enregistrements de session :</strong> enregistrements de l’utilisation des pages, avec tous les textes, tout ce
+            que vous saisissez, les fichiers téléversés et les images masqués. Jamais enregistrés : connexion et inscription,
+            réservations et pass, liens de paiement et d’invitation, et tableaux de bord de club ou d’administration.
           </li>
         </UL>
         <P>
-          Refusing changes nothing about booking. You can change or withdraw your consent at any time with &ldquo;Cookie
-          settings&rdquo; at the bottom of our pages; withdrawing stops collection and deletes the analytics data stored in your
-          browser. <CookieSettingsButton className="underline underline-offset-2 hover:text-primary" />
+          Refuser ne change rien à la réservation. Vous pouvez modifier ou retirer votre consentement à tout moment avec
+          «&nbsp;Paramètres des cookies&nbsp;» en bas de nos pages ; le retrait arrête la collecte et supprime les données de mesure
+          d’audience stockées dans votre navigateur.{' '}
+          <CookieSettingsButton className="underline underline-offset-2 hover:text-primary" />
         </P>
         <P>
-          Our error-monitoring provider (Sentry) receives technical error reports, with personal data filtered out, to keep the
-          service working and secure; a masked recording of the session can be attached when a page crashes.
-        </P>
-      </Section>
-
-      <Section id="minors" title="10. Minors">
-        <P>
-          ShiftGrid accounts are for people aged 18 or over. A minor may play on a booking made by an adult, but must not create an
-          account or book without the authorisation of a parent or guardian, who is responsible for that use.
+          Notre prestataire de supervision des erreurs (Sentry) reçoit des rapports d’erreur techniques, avec filtrage des données
+          personnelles, afin de maintenir le service en état de marche et sécurisé ; un enregistrement masqué de la session peut être
+          joint lorsqu’une page plante.
         </P>
       </Section>
 
-      <Section id="changes" title="11. Changes to this policy">
+      <Section id="minors" title="10. Mineurs">
         <P>
-          If we change this policy materially we will update the version above and, where the law requires, ask you to accept it
-          again.
+          Les comptes ShiftGrid sont réservés aux personnes âgées de 18 ans ou plus. Un mineur peut jouer sur une réservation faite par
+          un adulte, mais ne doit pas créer de compte ni réserver sans l’autorisation d’un parent ou tuteur, qui est responsable de cet
+          usage.
         </P>
       </Section>
 
-      <Section id="contact" title="12. Contact and complaints">
+      <Section id="changes" title="11. Modifications de cette politique">
         <P>
-          Data-protection questions and requests:{' '}
+          Si nous modifions cette politique de manière importante, nous mettrons à jour la version ci-dessus et, lorsque la loi
+          l’exige, nous vous demanderons de l’accepter à nouveau.
+        </P>
+      </Section>
+
+      <Section id="contact" title="12. Contact et réclamations">
+        <P>
+          Questions et demandes relatives à la protection des données :{' '}
           <a className="underline underline-offset-2" href={`mailto:${LEGAL_CONTACT_EMAIL}`}>
             {LEGAL_CONTACT_EMAIL}
           </a>
-          . If you believe your rights have not been respected you may complain to the Instance Nationale de Protection des
-          Données Personnelles (INPDP), Tunis (inpdp.nat.tn).
+          . Si vous estimez que vos droits n’ont pas été respectés, vous pouvez déposer une réclamation auprès de l’Instance Nationale
+          de Protection des Données Personnelles (INPDP), Tunis (inpdp.nat.tn).
         </P>
       </Section>
     </LegalDocument>

@@ -24,8 +24,8 @@ const ASH = '#645757'
 const GRID = '#d7d2cc'
 const AXIS = { fontSize: 12, fill: ASH } as const
 
-const tnd = (n: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 }).format(n)} TND`
-const pct = (n: number | null) => (n === null ? 'n/a' : `${Math.round(n * 100)}%`)
+const tnd = (n: number) => `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3 }).format(n)} TND`
+const pct = (n: number | null) => (n === null ? 'n/d' : `${Math.round(n * 100)} %`)
 
 function TooltipCard({ title, rows }: { title: string; rows: { label: string; value: string; color?: string }[] }) {
   return (
@@ -64,8 +64,8 @@ export function TrendChart({ points, granularity }: { points: TrendPoint[]; gran
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-[#645757]">Per {granularity}, by the day the game starts</p>
-        <div role="group" aria-label="Chart metric" className="flex gap-1 rounded-lg bg-[#f7f5f2] p-1">
+        <p className="text-sm text-[#645757]">Par {granularity === 'day' ? 'jour' : granularity === 'week' ? 'semaine' : 'mois'}, selon le jour de début du match</p>
+        <div role="group" aria-label="Indicateur du graphique" className="flex gap-1 rounded-lg bg-[#f7f5f2] p-1">
           {(['bookings', 'revenue'] as const).map((m) => (
             <button
               key={m}
@@ -77,17 +77,17 @@ export function TrendChart({ points, granularity }: { points: TrendPoint[]; gran
                 metric === m ? 'bg-[#1d3023] text-[#f7f5f2]' : 'text-[#645757] hover:text-[#2a1a1d]'
               )}
             >
-              {m}
+              {m === 'bookings' ? 'Réservations' : 'Revenus'}
             </button>
           ))}
         </div>
       </div>
 
       {empty ? (
-        <p className="py-16 text-center text-sm text-[#645757]">No bookings in this period.</p>
+        <p className="py-16 text-center text-sm text-[#645757]">Aucune réservation sur cette période.</p>
       ) : (
         <>
-          <div role="img" aria-label={`${metric} per ${granularity}`} className="h-72 w-full">
+          <div role="img" aria-label={`${metric === 'bookings' ? 'Réservations' : 'Revenus'} par ${granularity === 'day' ? 'jour' : granularity === 'week' ? 'semaine' : 'mois'}`} className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               {metric === 'bookings' ? (
                 <BarChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
@@ -102,8 +102,8 @@ export function TrendChart({ points, granularity }: { points: TrendPoint[]; gran
                         <TooltipCard
                           title={p.label}
                           rows={[
-                            { label: 'Bookings', value: String(p.bookings), color: TEAL },
-                            { label: 'Cancelled', value: String(p.cancelled), color: ASH },
+                            { label: 'Réservations', value: String(p.bookings), color: TEAL },
+                            { label: 'Annulées', value: String(p.cancelled), color: ASH },
                           ]}
                         />
                       ) : null
@@ -121,7 +121,7 @@ export function TrendChart({ points, granularity }: { points: TrendPoint[]; gran
                     content={({ active, payload }) => {
                       const p = active ? (payload?.[0]?.payload as TrendPoint | undefined) : undefined
                       return p ? (
-                        <TooltipCard title={p.label} rows={[{ label: 'Revenue', value: tnd(p.revenue), color: TEAL }]} />
+                        <TooltipCard title={p.label} rows={[{ label: 'Revenus', value: tnd(p.revenue), color: TEAL }]} />
                       ) : null
                     }}
                   />
@@ -133,8 +133,8 @@ export function TrendChart({ points, granularity }: { points: TrendPoint[]; gran
           {metric === 'bookings' && (
             <Legend
               items={[
-                { label: 'Bookings', color: TEAL },
-                { label: 'Cancelled', color: ASH, opacity: 0.45 },
+                { label: 'Réservations', color: TEAL },
+                { label: 'Annulées', color: ASH, opacity: 0.45 },
               ]}
             />
           )}
@@ -147,11 +147,11 @@ export function TrendChart({ points, granularity }: { points: TrendPoint[]; gran
 export function HoursChart({ hours }: { hours: HourStat[] }) {
   const data = hours.map((h) => ({ ...h, pct: h.rate === null ? 0 : Math.round(h.rate * 100) }))
   if (data.length === 0) {
-    return <p className="py-16 text-center text-sm text-[#645757]">No opening hours or bookings in this period.</p>
+    return <p className="py-16 text-center text-sm text-[#645757]">Aucun horaire d&apos;ouverture ni réservation sur cette période.</p>
   }
   return (
     <div>
-      <div role="img" aria-label="Occupancy by hour of day" className="h-64 w-full">
+      <div role="img" aria-label="Occupation par heure de la journée" className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
             <CartesianGrid vertical={false} stroke={GRID} />
@@ -170,11 +170,11 @@ export function HoursChart({ hours }: { hours: HourStat[] }) {
                 const h = active ? (payload?.[0]?.payload as (typeof data)[number] | undefined) : undefined
                 return h ? (
                   <TooltipCard
-                    title={`${h.label} · ${h.peak ? 'Peak' : 'Off-peak'}`}
+                    title={`${h.label} · ${h.peak ? 'Pointe' : 'Heures creuses'}`}
                     rows={[
-                      { label: 'Occupancy', value: pct(h.rate), color: h.peak ? TEAL : ASH },
-                      { label: 'Booked', value: `${Math.round(h.booked / 60)} h` },
-                      { label: 'Open', value: `${Math.round(h.available / 60)} h` },
+                      { label: 'Occupation', value: pct(h.rate), color: h.peak ? TEAL : ASH },
+                      { label: 'Réservé', value: `${Math.round(h.booked / 60)} h` },
+                      { label: 'Ouvert', value: `${Math.round(h.available / 60)} h` },
                     ]}
                   />
                 ) : null
@@ -190,8 +190,8 @@ export function HoursChart({ hours }: { hours: HourStat[] }) {
       </div>
       <Legend
         items={[
-          { label: 'Peak (17:00 to 04:59)', color: TEAL },
-          { label: 'Off-peak', color: ASH, opacity: 0.55 },
+          { label: 'Pointe (17 h 00 à 04 h 59)', color: TEAL },
+          { label: 'Heures creuses', color: ASH, opacity: 0.55 },
         ]}
       />
     </div>

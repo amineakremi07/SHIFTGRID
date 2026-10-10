@@ -19,7 +19,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
 
   const validated = ownerSignupSchema.safeParse(formData)
   if (!validated.success) {
-    return { success: false, error: 'Invalid form data', details: validated.error.flatten() }
+    return { success: false, error: 'Données du formulaire invalides', details: validated.error.flatten() }
   }
 
   const { company, location, document, owner } = validated.data
@@ -38,7 +38,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
       console.error('Owner signup blocked:', keyProblem)
       return {
         success: false,
-        error: 'Registration is temporarily unavailable (server configuration). Please contact support.',
+        error: 'L\'inscription est temporairement indisponible (configuration du serveur). Veuillez contacter le support.',
       }
     }
     const supabaseAdmin = createAdminClient()
@@ -62,7 +62,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     })
 
     if (authError || !authData.user) {
-      return { success: false, error: authError?.message || 'Failed to create user account' }
+      return { success: false, error: (authError?.message?.toLowerCase().includes('already') ? 'Un compte existe déjà avec cet e-mail.' : 'Impossible de créer le compte utilisateur.') }
     }
 
     const ownerId = authData.user.id
@@ -81,7 +81,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
       if (uploadError) {
         console.error('Verification document upload failed:', uploadError.message)
         await rollback()
-        return { success: false, error: 'Failed to upload verification document' }
+        return { success: false, error: 'Échec du téléversement du document de vérification' }
       }
       docPath = uploadData.path
       created.docPath = docPath
@@ -110,7 +110,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     if (orgError || !orgData) {
       console.error('Organization insert failed:', { code: orgError?.code, message: orgError?.message })
       await rollback()
-      return { success: false, error: 'Failed to create organization. Please try again.' }
+      return { success: false, error: 'Impossible de créer l\'organisation. Veuillez réessayer.' }
     }
 
     const orgId = orgData.id
@@ -129,7 +129,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     if (profileError) {
       console.error('Owner profile insert failed:', { code: profileError.code, message: profileError.message })
       await rollback()
-      return { success: false, error: 'Failed to create owner profile' }
+      return { success: false, error: 'Impossible de créer le profil du propriétaire' }
     }
 
     const courtsToInsert: Database['public']['Tables']['courts']['Insert'][] = []
@@ -157,7 +157,7 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
       if (courtsError) {
         console.error('Courts creation failed:', { code: courtsError.code, message: courtsError.message })
         await rollback()
-        return { success: false, error: 'Failed to create your courts. Please try again.' }
+        return { success: false, error: 'Impossible de créer vos terrains. Veuillez réessayer.' }
       }
     }
 
@@ -196,15 +196,15 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     const ownerEmail = await deliver({
       type: 'owner_registration_received',
       to: owner.ownerEmail,
-      subject: 'Your ShiftGrid Organization Registration Received',
+      subject: 'Votre demande d\'inscription ShiftGrid a bien été reçue',
       html: `
-        <h2>Registration Received</h2>
-        <p>Hi ${esc(owner.ownerName)},</p>
-        <p>We've received your registration for <strong>${esc(company.companyName)}</strong>.</p>
-        <p>Your application is now <strong>pending verification</strong>. Our team will review your details and documents, then contact you to complete the setup.</p>
-        <p>You'll receive another email once your organization is approved and ready to use.</p>
+        <h2>Inscription reçue</h2>
+        <p>Bonjour ${esc(owner.ownerName)},</p>
+        <p>Nous avons bien reçu votre inscription pour <strong>${esc(company.companyName)}</strong>.</p>
+        <p>Votre demande est désormais <strong>en cours de vérification</strong>. Notre équipe examinera vos informations et documents, puis vous contactera pour finaliser la configuration.</p>
+        <p>Vous recevrez un autre e-mail dès que votre organisation sera approuvée et prête à l'emploi.</p>
         <hr>
-        <p>Contact: support@shiftgrid.tn</p>
+        <p>Contact : support@shiftgrid.tn</p>
       `,
     })
     if (ownerEmail.status !== 'sent') {
@@ -212,13 +212,13 @@ export async function submitOwnerSignup(formData: OwnerSignupData) {
     }
 
     revalidatePath('/admin/verification')
-    return { success: true, orgId, message: 'Registration submitted successfully. You will be contacted for verification.' }
+    return { success: true, orgId, message: 'Inscription envoyée avec succès. Vous serez contacté pour la vérification.' }
 
   } catch (error) {
     console.error('Owner signup error:', error instanceof Error ? error.message : 'unknown')
     // An exception after some records exist must not leave them orphaned.
     await rollback().catch((e) => console.error('Owner signup rollback failed:', e instanceof Error ? e.message : 'unknown'))
-    return { success: false, error: 'An unexpected error occurred. Please try again.' }
+    return { success: false, error: 'Une erreur inattendue est survenue. Veuillez réessayer.' }
   }
 }
 
@@ -227,9 +227,9 @@ export async function checkRegistryNumber(registryNumber: string) {
   if (limited) return { valid: false, message: limited }
 
   if (!/^\d{14}$/.test(registryNumber)) {
-    return { valid: false, message: 'Registry number must be 14 digits' }
+    return { valid: false, message: 'Le numéro de registre doit comporter 14 chiffres' }
   }
-  return { valid: true, message: 'Format valid (manual verification required)' }
+  return { valid: true, message: 'Format valide (vérification manuelle requise)' }
 }
 
 export async function geocodeAddress(address: string) {

@@ -47,27 +47,29 @@ export function ConsentBanner() {
       {consent === null && !customizing && (
         <section
           role="region"
-          aria-label="Privacy choices"
+          aria-label="Choix de confidentialité"
           className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card px-4 py-4 sm:px-6"
         >
           <div className="mx-auto flex max-w-[1200px] flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <p className="max-w-3xl text-sm leading-relaxed text-foreground">
-              We use optional analytics to understand how ShiftGrid is used and improve it, and, only if you allow it,
-              session recordings with all text and typing hidden. Booking works the same whatever you choose. See our{' '}
+              Nous utilisons des mesures d&apos;audience facultatives pour comprendre l&apos;usage de ShiftGrid et
+              l&apos;améliorer, et, uniquement si vous l&apos;autorisez, des enregistrements de session dont tous les
+              textes et saisies sont masqués. La réservation fonctionne de la même façon quel que soit votre choix.
+              Consultez notre{' '}
               <Link href="/privacy#cookies" className="underline underline-offset-2 hover:text-primary">
-                Privacy Policy
+                politique de confidentialité
               </Link>
               .
             </p>
             <div className="flex shrink-0 flex-wrap gap-2">
               <Button variant="ghost" className="h-10" onClick={() => setCustomizing(true)}>
-                Customize
+                Personnaliser
               </Button>
               <Button variant="outline" className="h-10 min-w-28" onClick={() => choose(false, false)}>
-                Reject all
+                Tout refuser
               </Button>
               <Button variant="outline" className="h-10 min-w-28" onClick={() => choose(true, true)}>
-                Accept all
+                Tout accepter
               </Button>
             </div>
           </div>
@@ -104,18 +106,18 @@ function ConsentDialog({
     <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Privacy choices</DialogTitle>
+          <DialogTitle>Choix de confidentialité</DialogTitle>
           <DialogDescription>
-            Strictly necessary cookies (keeping you signed in and secure) are always on. The rest is up to you, and you
-            can change it any time from &ldquo;Cookie settings&rdquo;.
+            Les cookies strictement nécessaires (connexion et sécurité) sont toujours actifs. Le reste dépend de vous, et
+            vous pouvez changer d&apos;avis à tout moment via « Paramètres des cookies ».
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <Choice
             id="consent-analytics"
-            label="Usage analytics"
-            description="Anonymous page views, so we can see which pages are used. Links never include their secret part."
+            label="Mesure d'audience"
+            description="Pages vues de façon anonyme, pour savoir quelles pages sont utilisées. Les liens n'incluent jamais leur partie secrète."
             checked={analytics}
             onChange={(v) => {
               setAnalytics(v)
@@ -124,16 +126,16 @@ function ConsentDialog({
           />
           <Choice
             id="consent-replay"
-            label="Session recordings"
-            description="Recordings of how pages are used, with all text and everything you type hidden. Never on sign-in, reservation, payment-link or club dashboard pages. Requires usage analytics."
+            label="Enregistrements de session"
+            description="Enregistrements de l'utilisation des pages, avec tous les textes et saisies masqués. Jamais sur les pages de connexion, de réservation, de lien de paiement ou du tableau de bord du club. Nécessite la mesure d'audience."
             checked={replay}
             disabled={!analytics}
             onChange={setReplay}
           />
           <p className="text-sm text-muted-foreground">
-            Provider: PostHog. Details in our{' '}
+            Prestataire : PostHog. Détails dans notre{' '}
             <Link href="/privacy#cookies" className="underline underline-offset-2 hover:text-primary">
-              Privacy Policy
+              politique de confidentialité
             </Link>
             .
           </p>
@@ -141,9 +143,9 @@ function ConsentDialog({
 
         <DialogFooter className="gap-2 sm:justify-between">
           <Button variant="outline" onClick={() => onSave(false, false)}>
-            Reject all
+            Tout refuser
           </Button>
-          <Button onClick={() => onSave(analytics, replay)}>Save choices</Button>
+          <Button onClick={() => onSave(analytics, replay)}>Enregistrer mes choix</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -188,8 +190,14 @@ function Choice({
   )
 }
 
-/** "Cookie settings" link-style button for footers and the privacy page. */
-export function CookieSettingsButton({ className }: { className?: string }) {
+/** "Paramètres des cookies" link-style button for footers and the privacy page. */
+export function CookieSettingsButton({
+  className,
+  children,
+}: {
+  className?: string
+  children?: React.ReactNode
+}) {
   if (!TRACKING_CONFIGURED) return null
   return (
     <button
@@ -197,7 +205,7 @@ export function CookieSettingsButton({ className }: { className?: string }) {
       onClick={openConsentSettings}
       className={className ?? 'hover:text-foreground'}
     >
-      Cookie settings
+      {children ?? 'Paramètres des cookies'}
     </button>
   )
 }

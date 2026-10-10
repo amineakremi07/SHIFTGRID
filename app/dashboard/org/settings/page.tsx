@@ -26,12 +26,12 @@ export default async function OrgSettingsPage() {
   const saved = parseWeeklyHours(org.weekly_hours)
   return (
     <div className="mx-auto max-w-3xl space-y-14">
-      <nav aria-label="Settings sections" className="flex gap-4 text-sm">
+      <nav aria-label="Sections des paramètres" className="flex gap-4 text-sm">
         <a href="#profile" className="underline-offset-4 hover:underline">
-          Club profile
+          Profil du club
         </a>
         <a href="#hours" className="underline-offset-4 hover:underline">
-          Opening hours
+          Horaires d&apos;ouverture
         </a>
       </nav>
 

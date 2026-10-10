@@ -23,7 +23,7 @@ export async function saveWeeklyHours(input: WeeklyHours): Promise<SettingsResul
 
   const parsed = weeklyHoursSchema.safeParse(input)
   if (!parsed.success) {
-    return actionFailFromZod('Please fix the highlighted days.', parsed.error)
+    return actionFailFromZod('Veuillez corriger les jours signalés.', parsed.error)
   }
 
   const { error } = await getSupabaseAdmin()
@@ -32,7 +32,7 @@ export async function saveWeeklyHours(input: WeeklyHours): Promise<SettingsResul
     .eq('id', auth.ctx.orgId)
   if (error) {
     console.error('saveWeeklyHours failed', { code: error.code, message: error.message })
-    return actionFail('Could not save the hours. Please try again.')
+    return actionFail('Impossible d\'enregistrer les horaires. Veuillez réessayer.')
   }
 
   revalidatePath('/dashboard/org/settings')

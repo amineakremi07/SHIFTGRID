@@ -53,7 +53,7 @@ async function emailHasAccount(email: string): Promise<boolean> {
 }
 
 const inviteSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Enter a valid email address').max(254),
+  email: z.string().trim().toLowerCase().email('Saisissez une adresse e-mail valide').max(254),
 })
 
 async function mintToken(): Promise<string | null> {
@@ -78,7 +78,7 @@ async function sendInvite(args: {
     token: args.token,
     organizationName: org?.name ?? 'ShiftGrid',
     role: 'staff',
-    invitedByName: inviter?.display_name ?? 'The club owner',
+    invitedByName: inviter?.display_name ?? 'Le propriétaire du club',
     inviteUrl,
   })
   return { inviteUrl, emailSent: sent.success }
@@ -103,7 +103,7 @@ export async function inviteStaff(input: { email: string }): Promise<InviteActio
     .gt('expires_at', new Date().toISOString())
     .limit(1)
   if (open?.length) {
-    return { ok: false, message: 'This email already has a pending invitation. Use Resend to get a fresh link.' }
+    return { ok: false, message: 'Cet e-mail a déjà une invitation en attente. Utilisez Renvoyer pour obtenir un nouveau lien.' }
   }
 
   // An account that already exists (a player, another club's owner...) cannot be
@@ -111,12 +111,12 @@ export async function inviteStaff(input: { email: string }): Promise<InviteActio
   if (await emailHasAccount(email)) {
     return {
       ok: false,
-      message: 'That email already has a ShiftGrid account. Invite a different email address for staff access.',
+      message: 'Cet e-mail a déjà un compte ShiftGrid. Invitez une autre adresse e-mail pour l\'accès équipe.',
     }
   }
 
   const token = await mintToken()
-  if (!token) return { ok: false, message: 'Could not create the invitation. Please try again.' }
+  if (!token) return { ok: false, message: 'Impossible de créer l\'invitation. Veuillez réessayer.' }
 
   const { error } = await admin.from('staff_invites').insert({
     org_id: auth.ctx.orgId,
@@ -128,7 +128,7 @@ export async function inviteStaff(input: { email: string }): Promise<InviteActio
   })
   if (error) {
     console.error('inviteStaff insert failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not create the invitation. Please try again.' }
+    return { ok: false, message: 'Impossible de créer l\'invitation. Veuillez réessayer.' }
   }
 
   const { inviteUrl, emailSent } = await sendInvite({
@@ -145,11 +145,11 @@ export async function inviteStaff(input: { email: string }): Promise<InviteActio
 export async function resendStaffInvite(inviteId: string): Promise<InviteActionResult> {
   const auth = await requireOrgAction(['org_admin'])
   if (!auth.ok) return auth
-  if (!z.string().uuid().safeParse(inviteId).success) return { ok: false, message: 'Invalid invitation.' }
+  if (!z.string().uuid().safeParse(inviteId).success) return { ok: false, message: 'Invitation invalide.' }
 
   const admin = getSupabaseAdmin()
   const token = await mintToken()
-  if (!token) return { ok: false, message: 'Could not refresh the invitation. Please try again.' }
+  if (!token) return { ok: false, message: 'Impossible d\'actualiser l\'invitation. Veuillez réessayer.' }
 
   const { data, error } = await admin
     .from('staff_invites')
@@ -160,10 +160,10 @@ export async function resendStaffInvite(inviteId: string): Promise<InviteActionR
     .select('email')
   if (error) {
     console.error('resendStaffInvite failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not refresh the invitation. Please try again.' }
+    return { ok: false, message: 'Impossible d\'actualiser l\'invitation. Veuillez réessayer.' }
   }
   const row = data?.[0]
-  if (!row) return { ok: false, message: 'That invitation was not found or was already accepted.' }
+  if (!row) return { ok: false, message: 'Cette invitation est introuvable ou a déjà été acceptée.' }
 
   const { inviteUrl, emailSent } = await sendInvite({
     email: row.email,
@@ -179,7 +179,7 @@ export async function resendStaffInvite(inviteId: string): Promise<InviteActionR
 export async function revokeStaffInvite(inviteId: string): Promise<StaffResult> {
   const auth = await requireOrgAction(['org_admin'])
   if (!auth.ok) return auth
-  if (!z.string().uuid().safeParse(inviteId).success) return { ok: false, message: 'Invalid invitation.' }
+  if (!z.string().uuid().safeParse(inviteId).success) return { ok: false, message: 'Invitation invalide.' }
 
   const { data, error } = await getSupabaseAdmin()
     .from('staff_invites')
@@ -190,9 +190,9 @@ export async function revokeStaffInvite(inviteId: string): Promise<StaffResult> 
     .select('id')
   if (error) {
     console.error('revokeStaffInvite failed', { code: error.code, message: error.message })
-    return { ok: false, message: 'Could not revoke the invitation. Please try again.' }
+    return { ok: false, message: 'Impossible de révoquer l\'invitation. Veuillez réessayer.' }
   }
-  if (!data?.length) return { ok: false, message: 'That invitation was not found or was already accepted.' }
+  if (!data?.length) return { ok: false, message: 'Cette invitation est introuvable ou a déjà été acceptée.' }
 
   revalidatePath('/dashboard/org/staff')
   return { ok: true }
@@ -207,8 +207,8 @@ export async function revokeStaffInvite(inviteId: string): Promise<StaffResult> 
 export async function removeStaffMember(profileId: string): Promise<StaffResult> {
   const auth = await requireOrgAction(['org_admin'])
   if (!auth.ok) return auth
-  if (!z.string().uuid().safeParse(profileId).success) return { ok: false, message: 'Invalid team member.' }
-  if (profileId === auth.ctx.userId) return { ok: false, message: 'You cannot remove yourself.' }
+  if (!z.string().uuid().safeParse(profileId).success) return { ok: false, message: 'Membre de l\'équipe invalide.' }
+  if (profileId === auth.ctx.userId) return { ok: false, message: 'Vous ne pouvez pas vous retirer vous-même.' }
 
   const admin = getSupabaseAdmin()
   const { data: member } = await admin
@@ -217,13 +217,13 @@ export async function removeStaffMember(profileId: string): Promise<StaffResult>
     .eq('id', profileId)
     .maybeSingle()
   if (!member || member.org_id !== auth.ctx.orgId || member.role !== 'staff') {
-    return { ok: false, message: 'That team member was not found.' }
+    return { ok: false, message: 'Ce membre de l\'équipe est introuvable.' }
   }
 
   const { error } = await admin.auth.admin.deleteUser(profileId)
   if (error) {
     console.error('removeStaffMember failed', { message: error.message })
-    return { ok: false, message: 'Could not remove that team member. Please try again.' }
+    return { ok: false, message: 'Impossible de retirer ce membre de l\'équipe. Veuillez réessayer.' }
   }
 
   revalidatePath('/dashboard/org/staff')
@@ -246,7 +246,7 @@ async function loadUsableInvite(token: string) {
   return invite ?? null
 }
 
-const INVALID = 'This invitation link is not valid.'
+const INVALID = 'Ce lien d\'invitation n\'est pas valide.'
 
 /** What the invitation page shows before the invitee picks a password. */
 export async function previewStaffInvite(token: string): Promise<InvitePreview> {
@@ -255,23 +255,23 @@ export async function previewStaffInvite(token: string): Promise<InvitePreview> 
 
   const invite = await loadUsableInvite(token)
   if (!invite) return { ok: false, message: INVALID }
-  if (invite.accepted_at) return { ok: false, message: 'This invitation has already been used.' }
+  if (invite.accepted_at) return { ok: false, message: 'Cette invitation a déjà été utilisée.' }
   if (Date.parse(invite.expires_at) < Date.now()) {
-    return { ok: false, message: 'This invitation has expired. Ask the club owner to send a new one.' }
+    return { ok: false, message: 'Cette invitation a expiré. Demandez au propriétaire du club d\'en envoyer une nouvelle.' }
   }
   const { data: org } = await getSupabaseAdmin()
     .from('organizations')
     .select('name, status')
     .eq('id', invite.org_id)
     .maybeSingle()
-  if (org?.status !== 'approved') return { ok: false, message: 'This club is not active right now.' }
+  if (org?.status !== 'approved') return { ok: false, message: 'Ce club n\'est pas actif pour le moment.' }
   return { ok: true, email: invite.email, clubName: org.name }
 }
 
 const acceptSchema = z.object({
   token: z.string().regex(TOKEN),
-  displayName: z.string().trim().min(2, 'Please enter your name').max(100).transform(stripHtml),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(72),
+  displayName: z.string().trim().min(2, 'Veuillez saisir votre nom').max(100).transform(stripHtml),
+  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères').max(72),
 })
 
 /**
@@ -300,7 +300,7 @@ export async function acceptStaffInvite(input: {
     .is('accepted_at', null)
     .select('id, org_id, email')
   const invite = claimed?.[0]
-  if (!invite) return { ok: false, message: 'This invitation has already been used.' }
+  if (!invite) return { ok: false, message: 'Cette invitation a déjà été utilisée.' }
 
   const release = () => admin.from('staff_invites').update({ accepted_at: null }).eq('id', invite.id)
 
@@ -316,8 +316,8 @@ export async function acceptStaffInvite(input: {
     return {
       ok: false,
       message: exists
-        ? 'An account with this email already exists. Ask the club owner to invite a different address.'
-        : 'Could not create your account. Please try again.',
+        ? 'Un compte existe déjà avec cet e-mail. Demandez au propriétaire du club d\'inviter une autre adresse.'
+        : 'Impossible de créer votre compte. Veuillez réessayer.',
     }
   }
 
@@ -331,7 +331,7 @@ export async function acceptStaffInvite(input: {
     console.error('acceptStaffInvite profile failed', { code: profileError.code, message: profileError.message })
     await admin.auth.admin.deleteUser(created.data.user.id)
     await release()
-    return { ok: false, message: 'Could not finish setting up your account. Please try again.' }
+    return { ok: false, message: 'Impossible de terminer la configuration de votre compte. Veuillez réessayer.' }
   }
 
   revalidatePath('/dashboard/org/staff')
@@ -341,8 +341,8 @@ export async function acceptStaffInvite(input: {
 /* --------------- the invitee's side when the link came from Supabase Auth ------------------ */
 
 const completeSchema = z.object({
-  displayName: z.string().trim().min(2, 'Please enter your name').max(100).transform(stripHtml),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(72),
+  displayName: z.string().trim().min(2, 'Veuillez saisir votre nom').max(100).transform(stripHtml),
+  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères').max(72),
 })
 
 /**
@@ -358,22 +358,22 @@ export async function completeInvitationAction(input: {
   password: string
 }): Promise<{ ok: true } | { ok: false; message: string }> {
   const parsed = completeSchema.safeParse(input)
-  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? 'Please check your details.' }
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? 'Veuillez vérifier vos informations.' }
 
   const {
     data: { user },
   } = await (await createClient()).auth.getUser()
-  if (!user?.email) return { ok: false, message: 'Your invitation link has expired. Please open it again from your email.' }
+  if (!user?.email) return { ok: false, message: 'Votre lien d\'invitation a expiré. Veuillez le rouvrir depuis votre e-mail.' }
 
   const limited = await actionRateLimit('auth', user.id)
   if (limited) return { ok: false, message: limited }
 
   const admin = getSupabaseAdmin()
   const { data: existing } = await admin.from('profiles').select('id').eq('id', user.id).maybeSingle()
-  if (existing) return { ok: false, message: 'This account already belongs to a club. Ask the club owner to invite a different address.' }
+  if (existing) return { ok: false, message: 'Ce compte appartient déjà à un club. Demandez au propriétaire du club d\'inviter une autre adresse.' }
 
   const pending = await findPendingInviteForEmail(user.email)
-  if (!pending) return { ok: false, message: 'There is no open invitation for this email address. Ask the club owner to send a new one.' }
+  if (!pending) return { ok: false, message: 'Il n\'y a aucune invitation ouverte pour cette adresse e-mail. Demandez au propriétaire du club d\'en envoyer une nouvelle.' }
 
   const { data: claimed } = await admin
     .from('staff_invites')
@@ -381,7 +381,7 @@ export async function completeInvitationAction(input: {
     .eq('id', pending.id)
     .is('accepted_at', null)
     .select('id')
-  if (!claimed?.length) return { ok: false, message: 'This invitation has already been used.' }
+  if (!claimed?.length) return { ok: false, message: 'Cette invitation a déjà été utilisée.' }
   const release = () => admin.from('staff_invites').update({ accepted_at: null }).eq('id', pending.id)
 
   const { error: updateError } = await admin.auth.admin.updateUserById(user.id, {
@@ -392,7 +392,7 @@ export async function completeInvitationAction(input: {
   if (updateError) {
     await release()
     const weak = (updateError as { code?: string }).code === 'weak_password'
-    return { ok: false, message: weak ? 'That password is too weak or has appeared in a data breach. Please choose another.' : 'Could not set your password. Please try again.' }
+    return { ok: false, message: weak ? 'Ce mot de passe est trop faible ou a fuité lors d\'une violation de données. Veuillez en choisir un autre.' : 'Impossible de définir votre mot de passe. Veuillez réessayer.' }
   }
 
   const { error: profileError } = await admin.from('profiles').insert({
@@ -404,7 +404,7 @@ export async function completeInvitationAction(input: {
   if (profileError) {
     console.error('completeInvitation profile failed', { code: profileError.code, message: profileError.message })
     await release()
-    return { ok: false, message: 'Could not finish setting up your account. Please try again.' }
+    return { ok: false, message: 'Impossible de terminer la configuration de votre compte. Veuillez réessayer.' }
   }
 
   revalidatePath('/dashboard/org/staff')

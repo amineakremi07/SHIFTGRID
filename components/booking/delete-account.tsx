@@ -47,7 +47,7 @@ export function DeleteAccount({ upcomingCount }: { upcomingCount: number }) {
     const result = await deleteMyAccountAction({ password, confirmation })
     setBusy(false)
     if (!result.success) return void setError(result.error)
-    toast.success('Your account was deleted. Your personal data has been erased.')
+    toast.success('Votre compte a été supprimé. Vos données personnelles ont été effacées.')
     router.push('/')
     router.refresh()
   }
@@ -55,36 +55,36 @@ export function DeleteAccount({ upcomingCount }: { upcomingCount: number }) {
   return (
     <section aria-labelledby="delete-account-heading" className="mt-14 rounded-xl border border-destructive/30 p-5" data-testid="delete-account">
       <h2 id="delete-account-heading" className="text-base font-semibold">
-        Delete my account
+        Supprimer mon compte
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Erase your personal data from ShiftGrid. This cannot be undone.
+        Effacez vos données personnelles de ShiftGrid. Cette action est irréversible.
       </p>
       <Button variant="outline" size="sm" className="mt-3 border-destructive/40 text-destructive" onClick={() => reset(true)}>
-        <Trash2 aria-hidden /> Delete my account
+        <Trash2 aria-hidden /> Supprimer mon compte
       </Button>
 
       <Dialog open={open} onOpenChange={(o) => !busy && reset(o)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete your account?</DialogTitle>
-            <DialogDescription>You are asking us to erase your personal data. Please read what happens:</DialogDescription>
+            <DialogTitle>Supprimer votre compte ?</DialogTitle>
+            <DialogDescription>Vous nous demandez d&apos;effacer vos données personnelles. Voici ce qui se passe :</DialogDescription>
           </DialogHeader>
 
           <ul className="list-disc space-y-1.5 pl-5 text-sm">
             <li>
-              <strong>Erased:</strong> your name, phone number and email, your login and password, and any notes or notification addresses tied to your bookings.
+              <strong>Effacés :</strong> votre nom, numéro de téléphone et e-mail, votre identifiant et mot de passe, ainsi que les notes ou adresses de notification liées à vos réservations.
             </li>
             <li>
-              <strong>Kept, anonymously:</strong> your past bookings, so the clubs&apos; accounting stays correct, and your no-show count and trust score, as anonymous statistics (your name becomes &ldquo;Joueur Anonyme&rdquo;).
+              <strong>Conservés, de façon anonyme :</strong> vos réservations passées, afin que la comptabilité des clubs reste correcte, ainsi que votre nombre d&apos;absences et votre score de confiance, sous forme de statistiques anonymes (votre nom devient «&nbsp;Joueur Anonyme&nbsp;»).
             </li>
             <li>
-              <strong>Cancelled:</strong>{' '}
+              <strong>Annulées :</strong>{' '}
               {upcomingCount > 0
-                ? `your ${upcomingCount} upcoming booking${upcomingCount === 1 ? '' : 's'}, so the slot${upcomingCount === 1 ? ' is' : 's are'} released.`
-                : 'any upcoming booking (you have none right now).'}
+                ? `vos ${upcomingCount} réservation${upcomingCount === 1 ? '' : 's'} à venir, afin que ${upcomingCount === 1 ? 'le créneau soit libéré' : 'les créneaux soient libérés'}.`
+                : 'toute réservation à venir (vous n\'en avez aucune pour le moment).'}
             </li>
-            <li>You will be signed out everywhere and cannot recover the account.</li>
+            <li>Vous serez déconnecté partout et ne pourrez pas récupérer le compte.</li>
           </ul>
 
           <form onSubmit={submit} className="grid gap-3" noValidate>
@@ -94,22 +94,22 @@ export function DeleteAccount({ upcomingCount }: { upcomingCount: number }) {
               </p>
             )}
             <div className="grid gap-1.5">
-              <Label htmlFor="del-password">Your password</Label>
+              <Label htmlFor="del-password">Votre mot de passe</Label>
               <Input id="del-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={busy} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="del-confirm">
-                Type <strong>DELETE</strong> to confirm
+                Saisissez <strong>DELETE</strong> pour confirmer
               </Label>
               <Input id="del-confirm" autoComplete="off" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} disabled={busy} />
             </div>
             <DialogFooter className="gap-2 sm:justify-end">
               <Button type="button" variant="outline" onClick={() => reset(false)} disabled={busy}>
-                Keep my account
+                Conserver mon compte
               </Button>
               <Button type="submit" variant="destructive" disabled={busy || password === '' || confirmation !== 'DELETE'}>
                 {busy && <Loader2 className="animate-spin" aria-hidden />}
-                Delete my account
+                Supprimer mon compte
               </Button>
             </DialogFooter>
           </form>

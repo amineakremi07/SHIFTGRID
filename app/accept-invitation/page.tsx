@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 
 /** A personal page reached from an email link: never cached, indexed or leaked by referrer. */
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Accept invitation', robots: { index: false, follow: false }, referrer: 'no-referrer' as const }
+export const metadata = { title: 'Accepter l\'invitation', robots: { index: false, follow: false }, referrer: 'no-referrer' as const }
 
 const TOKEN = /^[0-9a-f]{64}$/
 
@@ -42,13 +42,13 @@ export default async function AcceptInvitationPage({ searchParams }: { searchPar
 
   if (!user) {
     return (
-      <Notice title="Open your invitation link">
+      <Notice title="Ouvrez votre lien d'invitation">
         <p>
-          Open the link from your invitation email to join the club. If it has expired, or you were already set up, sign in below; otherwise ask the club
-          owner to send a new invitation.
+          Ouvrez le lien de votre e-mail d&apos;invitation pour rejoindre le club. S&apos;il a expiré, ou si votre compte est déjà configuré, connectez-vous ci-dessous ; sinon demandez au propriétaire du club
+          d&apos;envoyer une nouvelle invitation.
         </p>
         <Button asChild className="w-full">
-          <Link href="/login-owner">Go to login</Link>
+          <Link href="/login-owner">Aller à la connexion</Link>
         </Button>
       </Notice>
     )
@@ -57,10 +57,10 @@ export default async function AcceptInvitationPage({ searchParams }: { searchPar
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
   if (profile) {
     return (
-      <Notice title="You are already set up">
-        <p>This account already belongs to a club, so there is nothing left to accept.</p>
+      <Notice title="Votre compte est déjà configuré">
+        <p>Ce compte appartient déjà à un club : il n&apos;y a plus rien à accepter.</p>
         <Button asChild className="w-full">
-          <Link href={profile.role === 'platform_admin' ? '/admin/verification' : '/dashboard/org/bookings'}>Continue</Link>
+          <Link href={profile.role === 'platform_admin' ? '/admin/verification' : '/dashboard/org/bookings'}>Continuer</Link>
         </Button>
       </Notice>
     )
@@ -69,12 +69,12 @@ export default async function AcceptInvitationPage({ searchParams }: { searchPar
   const invite = await findPendingInviteForEmail(user.email)
   if (!invite) {
     return (
-      <Notice title="No open invitation">
+      <Notice title="Aucune invitation ouverte">
         <p>
-          There is no open invitation for <strong>{user.email}</strong>. It may have expired or been withdrawn: ask the club owner to send a new one.
+          Il n&apos;y a aucune invitation ouverte pour <strong>{user.email}</strong>. Elle a peut-être expiré ou été retirée : demandez au propriétaire du club d&apos;en envoyer une nouvelle.
         </p>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/">Back to ShiftGrid</Link>
+          <Link href="/">Retour à ShiftGrid</Link>
         </Button>
       </Notice>
     )

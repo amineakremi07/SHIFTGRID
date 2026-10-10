@@ -27,7 +27,7 @@ export function ClubLocation({
   return (
     <section aria-labelledby="club-map-heading" className="space-y-3">
       <h2 id="club-map-heading" className="text-lg font-semibold">
-        Find us
+        Nous trouver
       </h2>
       {address && (
         <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
@@ -40,7 +40,7 @@ export function ClubLocation({
         // stacking context below the dialogs, drawers and toasts (z-50+).
         className="relative isolate z-0 h-72 overflow-hidden rounded-xl border border-border sm:h-80"
         role="region"
-        aria-label={`Map showing the location of ${name}`}
+        aria-label={`Carte indiquant l'emplacement de ${name}`}
         data-testid="club-map"
       >
         <ClubMap latitude={latitude} longitude={longitude} name={name} />
@@ -52,7 +52,7 @@ export function ClubLocation({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 underline-offset-4 hover:underline"
         >
-          <Navigation className="size-4" aria-hidden /> Get directions
+          <Navigation className="size-4" aria-hidden /> Itinéraire
         </a>
         <a
           href={osmLink(latitude, longitude)}
@@ -60,7 +60,7 @@ export function ClubLocation({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 underline-offset-4 hover:underline"
         >
-          <ExternalLink className="size-4" aria-hidden /> Open in OpenStreetMap
+          <ExternalLink className="size-4" aria-hidden /> Ouvrir dans OpenStreetMap
         </a>
       </p>
     </section>

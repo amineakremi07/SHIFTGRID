@@ -79,22 +79,22 @@ test('templates: user text is escaped, links are our own, text parts exist', () 
 
 test('templates: each email says what the recipient needs', () => {
   const split = splitInviteEmail({ ...facts, organizerName: 'Ali', share: 22.5, joinUrl: 'https://shiftgrid.test/join?token=y' })
-  expect(split.subject).toContain('Ali invited you')
+  expect(split.subject).toContain("Ali vous invite à jouer")
   expect(split.html).toContain('href="https://shiftgrid.test/join?token=y"')
   expect(split.html).toContain('22.50 TND')
 
   const refunded = cancellationEmail({ ...facts, recipientName: 'Sam', reason: null, refundAmount: 90, cancelledBy: 'club' })
-  expect(refunded.html).toContain('refund of 90 TND')
-  expect(refunded.html).toContain('Padel Tunis cancelled this booking')
+  expect(refunded.html).toContain('Un remboursement de 90 TND')
+  expect(refunded.html).toContain("Padel Tunis a annulé cette réservation")
   const unpaid = cancellationEmail({ ...facts, recipientName: 'Sam', reason: null, refundAmount: 0, cancelledBy: 'you' })
-  expect(unpaid.html).toContain('nothing to refund')
+  expect(unpaid.html).toContain('rien à rembourser')
 
   const cash = reminderEmail({ ...facts, recipientName: 'Sam', state: 'pay_at_club', dueAtClub: 90, unpaidShares: 0, passUrl: null })
   expect(cash.subject).toContain('18:00')
-  expect(cash.html).toContain('pay 90 TND in cash')
+  expect(cash.html).toContain('payer 90 TND en espèces')
   expect(cash.html).toContain('ABCD1234') // a guest has no pass link, so the reference is quoted
   const shares = reminderEmail({ ...facts, recipientName: 'Sam', state: 'awaiting_shares', dueAtClub: 0, unpaidShares: 2, passUrl: 'https://shiftgrid.test/p' })
-  expect(shares.html).toContain('2 shares are still unpaid')
+  expect(shares.html).toContain('2 parts restent impayées')
   expect(shares.html).toContain('href="https://shiftgrid.test/p"')
 })
 
@@ -102,18 +102,18 @@ test('templates: each email says what the recipient needs', () => {
 
 async function openClub(page: Page, dayOffset: number) {
   await page.goto(`/courts/${clubId}?date=${daysFromNow(dayOffset)}`)
-  await expect(page.getByRole('button', { name: /Available/ }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /Disponible/ }).first()).toBeVisible()
 }
 async function pickPadel(page: Page) {
-  await page.getByRole('button', { name: /Padel Court 1.*Available/ }).first().click()
-  await expect(page.getByText('Reserve your slot')).toBeVisible()
+  await page.getByRole('button', { name: /Padel Court 1.*Disponible/ }).first().click()
+  await expect(page.getByText('Réservez votre créneau')).toBeVisible()
   await drawer(page).getByTestId('step-next').click() // step 1 -> payment
 }
 const drawer = (page: Page) => page.getByRole('dialog')
 const toConfirm = (page: Page) => drawer(page).getByTestId('step-next').click() // payment -> confirm
 
 async function bookingIdFromPass(page: Page): Promise<string> {
-  await drawer(page).getByRole('link', { name: 'View your pass' }).click()
+  await drawer(page).getByRole('link', { name: 'Voir votre pass' }).click()
   await expect(page).toHaveURL(/\/reservations\/[0-9a-f-]{36}\?token=/)
   return new URL(page.url()).pathname.split('/').pop()!
 }
@@ -121,24 +121,24 @@ async function bookingIdFromPass(page: Page): Promise<string> {
 test('a guest booking with an email: confirmation recorded once, address remembered, nothing secret stored', async ({ page }) => {
   await openClub(page, 44)
   await pickPadel(page)
-  await drawer(page).getByRole('radio', { name: /Pay all now/ }).check()
+  await drawer(page).getByRole('radio', { name: /Tout payer maintenant/ }).check()
   await toConfirm(page)
-  await drawer(page).getByRole('tab', { name: 'Guest' }).click()
+  await drawer(page).getByRole('tab', { name: 'Invité' }).click()
   await drawer(page).locator('#guest-name').fill('E2E Mail Guest')
   await drawer(page).locator('#guest-phone').fill('98121212')
 
   await drawer(page).locator('#guest-consent').check()
   await drawer(page).locator('#guest-email').fill('E2E.Mail.Guest@Example.com')
-  await drawer(page).getByRole('button', { name: /Pay 90 TND & Reserve/ }).click()
-  await expect(drawer(page)).toContainText('Booking confirmed')
-  const cancelLink = await drawer(page).getByLabel('Cancellation link').inputValue()
+  await drawer(page).getByRole('button', { name: /Payer 90 TND et réserver/ }).click()
+  await expect(drawer(page)).toContainText('Réservation confirmée')
+  const cancelLink = await drawer(page).getByLabel("Lien d'annulation").inputValue()
   const bookingId = await bookingIdFromPass(page)
 
   const rows = await waitForOutbox(bookingId, (r) => r.some((x) => x.kind === 'booking_confirmation' && x.status !== 'pending') && r)
   const confirmation = rows.find((r) => r.kind === 'booking_confirmation')!
   expect(confirmation.recipient).toBe('e2e.mail.guest@example.com') // normalised
   expect(DELIVERY_OK).toContain(confirmation.status)
-  expect(confirmation.subject).toContain('Booking confirmed')
+  expect(confirmation.subject).toContain('Réservation confirmée')
   expect(rows.filter((r) => r.kind === 'booking_confirmation')).toHaveLength(1)
 
   // The guest's address is stored for the reminder and the cancellation notice.
@@ -151,9 +151,9 @@ test('a guest booking with an email: confirmation recorded once, address remembe
 
   // Cancelling through the private link sends a cancellation notice that mentions the refund.
   await page.goto(cancelLink)
-  await page.getByRole('button', { name: 'Cancel this booking' }).click()
-  await page.getByRole('button', { name: 'Yes, cancel' }).click()
-  await expect(page.getByText(/cancelled/i).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Annuler cette réservation' }).click()
+  await page.getByRole('button', { name: 'Oui, annuler' }).click()
+  await expect(page.getByText(/annulée/i).first()).toBeVisible()
 
   const after = await waitForOutbox(bookingId, (r) => r.some((x) => x.kind === 'cancellation') && r)
   const cancellation = after.find((r) => r.kind === 'cancellation')!
@@ -167,18 +167,18 @@ test('a guest booking with an email: confirmation recorded once, address remembe
 test('a split booking emails each tagged player their link; a blank box sends nothing', async ({ page }) => {
   await openClub(page, 45)
   await pickPadel(page)
-  await drawer(page).getByRole('radio', { name: /Split ·/ }).check()
-  await drawer(page).getByLabel('Email for player 2').fill('e2e.friend.one@example.com')
-  await drawer(page).getByLabel('Email for player 4').fill('e2e.friend.three@example.com')
+  await drawer(page).getByRole('radio', { name: /Partager ·/ }).check()
+  await drawer(page).getByLabel('E-mail du joueur 2').fill('e2e.friend.one@example.com')
+  await drawer(page).getByLabel('E-mail du joueur 4').fill('e2e.friend.three@example.com')
   await toConfirm(page)
-  await drawer(page).getByRole('tab', { name: 'Guest' }).click()
+  await drawer(page).getByRole('tab', { name: 'Invité' }).click()
   await drawer(page).locator('#guest-name').fill('E2E Split Organizer')
   await drawer(page).locator('#guest-phone').fill('98343434')
 
   await drawer(page).locator('#guest-consent').check()
   await drawer(page).locator('#guest-email').fill('e2e.organizer@example.com')
-  await drawer(page).getByRole('button', { name: /Pay 22\.50 TND & Reserve/ }).click()
-  await expect(drawer(page)).toContainText('waiting for your players')
+  await drawer(page).getByRole('button', { name: /Payer 22\.50 TND et réserver/ }).click()
+  await expect(drawer(page)).toContainText('en attente de vos joueurs')
   const bookingId = await bookingIdFromPass(page)
 
   const rows = await waitForOutbox(
@@ -189,7 +189,7 @@ test('a split booking emails each tagged player their link; a blank box sends no
   expect(invites.map((r) => r.recipient).sort()).toEqual(['e2e.friend.one@example.com', 'e2e.friend.three@example.com'])
   for (const row of invites) {
     expect(DELIVERY_OK).toContain(row.status)
-    expect(row.subject).toContain('E2E Split Organizer invited you')
+    expect(row.subject).toContain("E2E Split Organizer vous invite à jouer")
     expect(row.payload).toBeNull() // invite emails carry a secret link: nothing to re-render from
   }
   expect(rows.find((r) => r.kind === 'booking_confirmation')!.recipient).toBe('e2e.organizer@example.com')
@@ -199,12 +199,12 @@ test('a split booking emails each tagged player their link; a blank box sends no
 test('a bad invite address is caught before booking, not silently dropped', async ({ page }) => {
   await openClub(page, 46)
   await pickPadel(page)
-  await drawer(page).getByRole('radio', { name: /Split ·/ }).check()
-  await drawer(page).getByLabel('Email for player 2').fill('not-an-email')
+  await drawer(page).getByRole('radio', { name: /Partager ·/ }).check()
+  await drawer(page).getByLabel('E-mail du joueur 2').fill('not-an-email')
   await toConfirm(page) // the typo stops the player on the payment step
-  await expect(drawer(page).getByRole('alert')).toContainText('does not look like an email address')
+  await expect(drawer(page).getByRole('alert')).toContainText('ne ressemble pas à une adresse e-mail')
   await expect(drawer(page).getByTestId('step-3')).toBeDisabled()
-  await expect(drawer(page)).not.toContainText('waiting for your players')
+  await expect(drawer(page)).not.toContainText('en attente de vos joueurs')
 })
 
 /* ---------------------------------- reminders ------------------------------------ */
@@ -261,7 +261,7 @@ test('reminders: due bookings are reminded once; last-minute and far-off ones ar
   expect(rows.map((r) => r.kind)).toEqual(['reminder_2h'])
   expect(rows[0].recipient).toBe('e2e.reminder.due@example.com')
   expect(DELIVERY_OK).toContain(rows[0].status)
-  expect(rows[0].subject).toContain('Reminder: you play at')
+  expect(rows[0].subject).toContain('Rappel : vous jouez à')
   expect(JSON.stringify(rows)).not.toMatch(TOKEN)
 
   expect(await outboxFor(lastMinute)).toHaveLength(0)
@@ -320,20 +320,20 @@ test('staff see a live alert when a slot is booked and when it is cancelled', as
   await page.waitForTimeout(3000)
 
   const id = await bookingStartingIn(48 * 60, 'E2E Alert Guest', { backdate: false })
-  await expect(page.locator('[data-sonner-toast]', { hasText: 'New booking' })).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('[data-sonner-toast]', { hasText: 'Nouvelle réservation' })).toBeVisible({ timeout: 30_000 })
   await expect(page.getByTestId('alerts-unread')).toHaveText('1')
 
   await adminClient().from('bookings').update({ status: 'cancelled', cancellation_reason: 'e2e' }).eq('id', id)
-  await expect(page.locator('[data-sonner-toast]', { hasText: 'Booking cancelled' })).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('[data-sonner-toast]', { hasText: 'Réservation annulée' })).toBeVisible({ timeout: 30_000 })
 
   // Opening the bell lists both, with who and what, and clears the badge.
   await bell.click()
   const items = page.getByTestId('alert-item')
   await expect(items).toHaveCount(2)
-  await expect(items.first()).toContainText('Booking cancelled')
+  await expect(items.first()).toContainText('Réservation annulée')
   await expect(items.first()).toContainText('E2E Alert Guest')
   await expect(items.first()).toContainText('Tennis Court 1')
-  await expect(items.nth(1)).toContainText('New booking')
+  await expect(items.nth(1)).toContainText('Nouvelle réservation')
   await expect(page.getByTestId('alerts-unread')).toHaveCount(0)
 })
 
@@ -355,7 +355,7 @@ test('the bookings board refreshes by itself when a booking arrives, alongside t
   await bookingStartingIn(startsInMinutes, 'E2E Board Guest', { backdate: false })
   // No reload: the board and the bell both hear about it through the one shared feed.
   await expect(page.getByText('E2E Board Guest').first()).toBeVisible({ timeout: 30_000 })
-  await expect(page.locator('[data-sonner-toast]', { hasText: 'New booking' })).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('[data-sonner-toast]', { hasText: 'Nouvelle réservation' })).toBeVisible({ timeout: 30_000 })
 })
 
 test('with the realtime socket blocked, the bell and the board still catch up by polling', async ({ page }) => {
@@ -374,12 +374,12 @@ test('with the realtime socket blocked, the bell and the board still catch up by
   await expect(page.getByTestId('alerts-bell')).toBeVisible()
   await page.waitForTimeout(3000) // the socket has been refused by now
   await page.getByTestId('alerts-bell').click()
-  await expect(page.getByText(/Reconnecting/)).toBeVisible()
+  await expect(page.getByText(/Reconnexion/)).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByText('E2E Poll Guest')).toHaveCount(0)
 
   await bookingStartingIn(startsInMinutes, 'E2E Poll Guest', { backdate: false })
   // No event can arrive; the fast fallback poll (~10 s) finds it.
-  await expect(page.locator('[data-sonner-toast]', { hasText: 'New booking' })).toBeVisible({ timeout: 40_000 })
+  await expect(page.locator('[data-sonner-toast]', { hasText: 'Nouvelle réservation' })).toBeVisible({ timeout: 40_000 })
   await expect(page.getByText('E2E Poll Guest').first()).toBeVisible({ timeout: 40_000 })
 })
